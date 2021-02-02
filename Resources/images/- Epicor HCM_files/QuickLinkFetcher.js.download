@@ -1,0 +1,129 @@
+﻿/// <reference path="vswd-ext_2.2.js" />
+Ext.namespace('QuickLink');
+
+var MOVEUP_ACTION = 'moveUpToDo';
+var MOVEDOWN_ACTION = 'moveDownToDo';
+var DELETE_ACTION = 'deleteToDo';
+
+var _contextMenu, _currentTabId, _containerId, _toDoGuid, _toDoGroupGuid, _showAssignTo;
+
+QuickLink.deleteToDoItem = function() {
+    var container = Ext.get(_containerId);
+    if (container != null) {
+        Ext.MessageBox.confirm('Confirm', 'Are you sure you want to delete this item?', 
+        function(btn) {
+            if (btn == "yes") {
+                QuickLink.doPostBack(DELETE_ACTION, _currentTabId, _containerId, _toDoGuid);
+            }
+        });
+    }
+}
+
+QuickLink.showToDoMenu = function(imageId, currentTabId, containerId, guid){
+    _currentTabId = currentTabId;
+    _containerId = containerId;
+    _toDoGuid = guid;
+    _contextMenu = new Ext.menu.Menu({
+        items: [{
+            id: 'change',
+            text: 'Change...',
+            handler: QuickLink.editItem,
+            icon: 'images/Pencil.gif'
+        }]
+    });
+    var image = Ext.get(imageId);
+    
+    if (image.dom.getAttribute('firstitem') != "true") {
+        _contextMenu.addMenuItem(new Ext.menu.Item({
+            text: 'Move Up',
+            menuAction: MOVEUP_ACTION,
+            handler: QuickLink.menuAction,
+            icon: 'images/up.gif'
+        }));
+    }
+    if (image.dom.getAttribute('lastitem') != "true") {
+        _contextMenu.addMenuItem(new Ext.menu.Item({
+            text: 'Move Down',
+            menuAction: MOVEDOWN_ACTION,
+            handler: QuickLink.menuAction,
+            icon: 'images/dn.gif'
+        }));
+    }
+    _contextMenu.addMenuItem(new Ext.menu.Item({
+        text: 'Assign to someone else...',
+        handler: QuickLink.assignToDoItem,
+        icon: 'images/AssignToSomeone.gif'
+    }));
+    _contextMenu.addMenuItem(new Ext.menu.Item({
+        text: 'Remove this item',
+        handler: QuickLink.deleteToDoItem,
+        icon: 'images/LogicalDelete.gif'
+    }));
+    _contextMenu.showAt([Ext.get(imageId).getX()+10, Ext.get(imageId).getY()+5]);
+}
+
+QuickLink.menuAction = function() {
+    if (_contextMenu != null) {
+        _contextMenu.hide();
+    }
+    QuickLink.doPostBack(this.menuAction, _currentTabId, _containerId, _toDoGuid);
+}
+
+QuickLink.doPostBack = function(action, currentTabId, containerId, guid) {
+    var container = Ext.get(containerId);
+    if (container != null) {
+        Ext.get(containerId).load({
+            url:'API/QuickLinkFetcher.aspx?linktype=MyToDoList&currenttabid=' + currentTabId + '&todoguid=' + guid + '&action=' + action + '&container=' + containerId, 
+            method: 'GET', 
+            scripts: true, 
+            text: 'Loading...'
+        });
+    }
+}
+
+QuickLink.editItem = function() {
+    var parms = "";
+    if (_currentTabId != null) {
+        parms += '&currenttabid=' + _currentTabId;
+    }
+    if (_toDoGuid != null) {
+        parms += '&todoguid=' + _toDoGuid;
+    }
+    if (_containerId != null) {
+        parms += '&containerid=' + _containerId;
+    }
+    if (_toDoGroupGuid != null) {
+        parms += '&todogroupguid=' + _toDoGroupGuid;
+    }
+    if (_showAssignTo != null) {
+        parms += '&showassignto=' + _showAssignTo;
+    }
+    if (_contextMenu != null) {
+        _contextMenu.hide();
+    }
+
+    new Shr.WebControls.Dialog({
+        title: 'To Do Item',
+        sourceControl: 'MyToDoChange',
+        urlParams: params,
+        showOkCancel: true,
+        width: 300,
+        height: 200
+    }).show();
+
+    return false;
+}
+
+QuickLink.addItem = function(currentTabId, containerId, toDoGroupGuid) {
+    _currentTabId = currentTabId;
+    _containerId = containerId;
+    _toDoGroupGuid = toDoGroupGuid;
+    _toDoGuid = null;
+    QuickLink.editItem();
+}
+
+QuickLink.assignToDoItem = function() {
+    _showAssignTo = true;
+    QuickLink.editItem();
+    _showAssignTo = false;
+}

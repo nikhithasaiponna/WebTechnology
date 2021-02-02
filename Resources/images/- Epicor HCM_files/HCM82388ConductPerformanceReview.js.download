@@ -1,0 +1,247 @@
+﻿/**************************************************************************
+*  Main panel function 
+ * NAdapala May 2015
+ * HCM 5.9.0.483
+ * Usage:  Used on the base panel Default.aspx.
+ * NAdapala01 Added new field UnAnswered Question Count to the Conduct a performance review panel
+***************************************************************************/
+Shr.panel.HCM82388ConductPerformanceReview = {
+    baseJsonFetcherUrl: 'API/JsonFetcher.svc/Invoke',
+
+    /**************************************************************************
+    * Init function 
+    ***************************************************************************/
+    init: function (config) {
+        Ext.apply(this, config);
+        perf = this;
+        if (this.submitState != undefined) {
+            this.setSubmit(this.submitState);
+        }
+        Ext.select('.PerformanceReview-GroupHeader',true).each(function (childEl) {
+            childEl.on("click", Shr.panel.HCM82388ConductPerformanceReview.toggleGroup, childEl.nextSibling);
+        });
+    },
+
+    setSubmit: function (submitState) {
+        var submitCmd = Ext.get(Shr.panel.HCM82388ConductPerformanceReview.submitCmd);
+        if (submitCmd != null && submitState.submitText != undefined) {
+            if (submitState.readyToSubmit == true) {
+                submitCmd.removeCls('shr-displaynone');
+                if (Ext.isIE) {
+                    submitCmd.dom.innerText = submitState.submitText;
+                } else {
+                    submitCmd.dom.textContent = submitState.submitText;
+                }
+            } else {
+                submitCmd.addCls('shr-displaynone');
+            }
+        }
+
+        var performedDateCtl = Ext.get(Shr.panel.HCM82388ConductPerformanceReview.performedDateCtl);
+        if (performedDateCtl != null && submitState != undefined) {
+            if (submitState.displayPerformedDate == true) {
+                performedDateCtl.removeCls('shr-displaynone');
+            }
+            else {
+                performedDateCtl.addCls('shr-displaynone');
+            }
+        }
+
+        var reviewStatus = Ext.getDom(Shr.panel.HCM82388ConductPerformanceReview.reviewStatus);
+        if (reviewStatus != null && submitState.reviewStatus != undefined) {
+            if (Ext.isIE) {
+                reviewStatus.innerText = submitState.reviewStatus;
+            } else {
+                reviewStatus.textContent = submitState.reviewStatus;
+            }
+        }
+    },
+
+    updateScores: function (scores) {
+        var myCalculatedScore = Ext.getDom(Shr.panel.HCM82388ConductPerformanceReview.myCalculatedScore);
+        if (myCalculatedScore != null) {
+            if (Ext.isIE) {
+                myCalculatedScore.innerText = scores.participantCalculatedScore;
+            } else {
+                myCalculatedScore.textContent = scores.participantCalculatedScore;
+            }
+        }
+        var calculatedScore = Ext.getDom(Shr.panel.HCM82388ConductPerformanceReview.calculatedScore);
+        if (calculatedScore != null) {
+            if (Ext.isIE) {
+                calculatedScore.innerText = scores.calculatedScore;
+            } else {
+                calculatedScore.textContent = scores.calculatedScore;
+            }
+        }
+		//NAdapala01 start
+		var unansweredQuestions = Ext.getDom(Shr.panel.HCM82388ConductPerformanceReview.unansweredQuestions);
+        if (unansweredQuestions != null) {
+            if (Ext.isIE) {
+                unansweredQuestions.innerText = scores.uansweredQuestions;
+            } else {
+                unansweredQuestions.textContent = scores.uansweredQuestions;
+            }
+        }
+		//NAdapala01 end
+        var finalScore = Ext.getDom(Shr.panel.HCM82388ConductPerformanceReview.finalScore);
+        if (finalScore != null) {
+            if (Ext.isIE) {
+                finalScore.innerText = scores.finalScore;
+            } else {
+                finalScore.textContent = scores.finalScore;
+            }
+        }
+        var employeeFinalScore = Ext.getDom(Shr.panel.HCM82388ConductPerformanceReview.employeeFinalScore);
+        if (employeeFinalScore != null) {
+            if (Ext.isIE) {
+                employeeFinalScore.innerText = scores.employeeFinalScore;
+            } else {
+                employeeFinalScore.textContent = scores.employeeFinalScore;
+            }
+        }
+
+        Shr.panel.HCM82388ConductPerformanceReview.setSubmit(scores);
+    },
+
+    toggleGroup: function (event, element) {
+        var headerEl = Ext.get(element);
+
+        if (headerEl.dom.className == "x-fa fa-minus-square-o" || headerEl.dom.className == "x-fa fa-plus-square-o")
+            headerEl = headerEl.up();
+
+        var bodyEl = headerEl.next();
+        if (bodyEl.hasCls("WhenCollapsed")) {
+            Shr.panel.HCM82388ConductPerformanceReview.expandQuestion(headerEl);
+        }
+        else {
+            Shr.panel.HCM82388ConductPerformanceReview.collapseQuestion(headerEl);
+        }
+    },
+
+    expandAll: function () {
+        Ext.select('.PerformanceReview-GroupHeader').each(function (headerEl) {
+            Shr.panel.HCM82388ConductPerformanceReview.expandQuestion(headerEl);
+        });
+    },
+
+    collapseAll: function () {
+        Ext.select('.PerformanceReview-GroupHeader').each(function (headerEl) {
+            Shr.panel.HCM82388ConductPerformanceReview.collapseQuestion(headerEl);
+        });
+    },
+
+    expandQuestion: function (headerEl) {
+        var bodyEl = headerEl.next();
+        bodyEl.removeCls("WhenCollapsed");
+        headerEl.down("i").removeCls("fa-plus-square-o");
+        headerEl.down("i").addCls("fa-minus-square-o");
+    },
+
+    collapseQuestion: function (headerEl) {
+        var bodyEl = headerEl.next();
+        bodyEl.addCls("WhenCollapsed");
+        headerEl.down("i").removeCls("fa-minus-square-o");
+        headerEl.down("i").addCls("fa-plus-square-o");
+    },
+
+    getSuggestedComments: function (sourceID, targetID) {
+        var current = this;
+        var comboBoxControl = Ext.get(sourceID);
+        var textControl = Ext.get(targetID);
+
+        var SuggestedCommentsStore = new Ext.data.JsonStore(
+        {
+            url: current.baseJsonFetcherUrl,
+            baseParams: { svcprovider: 'JsGetSuggestedComments', codeValue: comboBoxControl.getValue() },
+            root: 'records',
+            fields: [{ comments: 'suggestedComments'}]
+        });
+
+        SuggestedCommentsStore.load({ params: { sourceID: sourceID, targetID: targetID }, callback: function (record, options, success) {
+            if (options.params.targetID != "") {
+                var extTextArea = Ext.getCmp(options.params.targetID);
+                if (extTextArea != null && record.length > 0 && record[0].json.suggestedComments != '') {
+                    var oldValue = extTextArea.getValue();
+                    var newValue = oldValue + (oldValue != "" ? " " : "") + record[0].json.suggestedComments
+                    extTextArea.setValue(newValue);
+                    extTextArea.events.change.fire();
+                }
+                else {
+                    Ext.MessageBox.alert(perf.getSuggestedCommentsText, perf.thereAreNoSuggestedCommentsForThisResponse);
+                }
+            }
+        }
+        });
+
+    },
+	
+	saveAllowEmployeeToSeeAttachmentFlag: function (AllowEmployeeToSeeAttachmentFlag, performanceGuid, attachmentType, saveAllowEmployeeToSeeAttachmentFlagLabel) {
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsUpdateOverallAllowEmployeeToSeeAttachmentFlag',
+                allowEmployeeToSeeAttachmentFlag: AllowEmployeeToSeeAttachmentFlag.checked,
+                performanceGuid: performanceGuid,
+                attachmentType: attachmentType
+            },
+            success: function (resp) {
+                if (resp.responseText == 'NOATTACHMENT') {
+                    Ext.MessageBox.alert('', saveAllowEmployeeToSeeAttachmentFlagLabel);
+                    AllowEmployeeToSeeAttachmentFlag.checked = false;
+                }
+            }
+        });
+    },
+	
+    updateOverallCommentsForParticipantType: function (sourceID, targetID) {
+        var current = this;
+        var command = Ext.get(sourceID);
+        var textAreaToUpdate = Ext.get(targetID);
+
+        if (textAreaToUpdate != null && command != null) {
+            var personPerformanceGuid = command.dom.getAttribute('performanceGuid');
+            var participantType = command.dom.getAttribute('participantType');
+
+            if (personPerformanceGuid != null && personPerformanceGuid != ''
+                && participantType != null && participantType != '') {
+                Ext.Msg.show({
+                    title: perf.updateOverallComments,
+                    msg: perf.areYouSureThatYouWantToPopulateTheOverallCommentsForThisParticipantTypeThisWillCombineEachParticipantsCommentsIntoOneOverallComment,
+                    buttons: Ext.Msg.YESNO,
+                    fn: function (response) {
+                        if (response == 'yes') {
+                            var overallCommentsStore = new Ext.data.JsonStore(
+                    {
+                        url: current.baseJsonFetcherUrl,
+                        baseParams: {
+                            svcprovider: 'JsRollupAndUpdatePersonPerformanceOverallComments',
+                            personPerformanceGuid: personPerformanceGuid,
+                            participantType: participantType
+                        },
+                        root: 'records',
+                        fields: [{ overallComments: 'overallComments'}]
+                    });
+
+                            overallCommentsStore.load({ params: { sourceID: sourceID, targetID: targetID }, callback: function (record, options, success) {
+                                if (options.params.targetID != "") {
+                                    var extTextArea = Ext.getCmp(options.params.targetID);
+                                    if (extTextArea != null && record.length > 0 && record[0].json.overallComments != '') {
+                                        extTextArea.setValue(record[0].json.overallComments);
+                                    }
+                                    else if (extTextArea == null && record.length > 0 && record[0].json.overallComments != '') {
+                                        Ext.MessageBox.alert(perf.getOverallCommentsText, perf.unableToFindAppropriateTextAreaToUpdateButHereAreTheParticipantsCommentsToCopyAndPaste + ' ' + record[0].json.overallComments);
+                                    }
+                                }
+                            }
+                            });
+                        }
+                    },
+                    icon: Ext.MessageBox.QUESTION
+
+                });
+            }
+        }
+    }
+};
+

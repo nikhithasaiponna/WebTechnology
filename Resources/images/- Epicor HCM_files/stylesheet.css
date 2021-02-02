@@ -1,0 +1,1610 @@
+.shr-field
+{
+    color: Black;
+	overflow: visible;
+    display: block;
+    padding: 0px 20px 5px 5px;
+    font-size: small;
+}
+
+.shr-field-picker
+{
+    color: Black;
+	overflow: visible;
+    display: block;
+    padding: 0px 20px 5px 0px;
+    font-size: small;
+}
+
+/* This is to allow for enough room for validation warnings to display without being cutoff by subsequent fields */
+.shr-field.shr-field-with-help
+{
+    padding-right: 35px;
+}
+
+.shr-field.shr-displaynone
+{
+    color: Black;
+	overflow: visible;
+    display: none;
+    padding: 0px 20px 5px 5px;
+    font-size: small;
+}
+
+.shr-field SPAN,
+.shr-field-inline SPAN
+{
+    display:block;
+    display: -moz-inline-block;
+	overflow:hidden;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis-word;
+}
+
+.shr-field-label-upper-position {
+    color: #336699;
+    font-size: small;
+}
+
+/* Prevent checkbox label from displaying on a new line when it's on the right */
+.shr-position-after SPAN
+{
+    display: inline;
+}
+
+.shr-field SPAN.shr-field-label,
+.shr-field LABEL.shr-field-label
+{
+    display:block;
+	position:static;
+    padding-left: 2px;
+	margin-top: 7px;
+    color: #336699;
+	overflow:visible;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis-word;
+}
+
+.shr-field LABEL.shr-field-label.shr-position-after
+{
+    display:inline;
+    padding-top: 0px;
+    padding-left: 5px;
+    margin-top: 2px;
+}
+
+.shr-field LABEL.shr-field-label.shr-position-before
+{
+    float:left;
+    display:inline;
+    padding-top: 0px;
+    padding-right: 8px;
+    margin-top: 2px;
+    line-height: 30px;
+}
+
+DIV.shr-field-inline
+{
+    float: left;
+}
+
+/*************************************************
+* Need special formatting for Ext trigger fields
+* within task fields. This overrides the formatting
+* above for shr-field span
+*************************************************/
+.shr-field SPAN.x-form-twin-triggers
+{
+	overflow-x: visible;
+	overflow: visible;
+	display:inline;
+	position:relative;
+	white-space:nowrap;
+}
+
+.x-combo-list .search-item 
+{
+    font-size: smaller;
+    padding: 2px;
+    display: block;
+}
+
+.shr-field .x-form-field-wrap
+{
+	float: left;
+}
+
+.shr-field SPAN.shr-field-required,
+.shr-field LABEL.shr-field-required
+{
+    font-weight: bold;
+}
+
+.shr-field INPUT[type=text], .shr-field INPUT[type=password]
+{
+	border-color:#B3C5E1 rgb(241, 239, 233) rgb(241, 239, 233) rgb(179, 197, 225);
+	border-width:1px;
+	height:18px;
+    font-size: small;
+}
+
+.shr-field-readOnly-red-font
+{
+     color: Red;   
+}
+
+
+.shr-field INPUT[type=text].shr-disabled, .shr-field INPUT[type=password].shr-disabled
+{
+	color:#808080;
+	font-style:italic;
+	font-weight:bold;
+}
+
+.shr-field INPUT[type=radio]
+{
+	margin-left: 9px;
+	margin-right: 2px;
+	position: relative;
+	top: 2px;
+}
+.shr-field INPUT[type=checkbox]
+{
+	padding-top: 3px;
+}
+
+.shr-field TEXTAREA
+{
+    font-size: small;
+    color: #303030;
+    padding: 3px;
+    /*border: 1px solid #D0E0F0;*/
+}
+
+.shr-field TEXTAREA.shr-disabled
+{
+	color:#808080;
+	font-style:italic;
+	font-weight:bold;
+}
+
+.shr-field-error
+{
+    color: red !important;
+}
+
+.shr-field-error SPAN, SPAN.shr-field-error
+{
+    color: red !important;
+}
+
+.shr-field-highlight
+{
+    cursor: pointer;
+    border: solid 2px red;
+}
+
+.shr-composite .shr-field
+{
+    padding: 0px 20px 0px 0px;    
+}
+
+.shr-field-regex
+{
+}
+
+.shr-field-regex-cmd
+{
+}
+
+.shr-field-hyperlink
+{
+    clear: both;
+    white-space:normal;
+    display: inline;
+    float: left;
+}
+.shr-composite .shr-field-info
+{
+    clear: none;
+}
+
+.shr-field-info-medium
+{
+	padding-bottom:10px;
+	font-weight:bold;
+	font-size:medium;
+    clear: both;
+    white-space:normal;
+    display: inline;
+    float: none;
+    color: Black;
+}
+
+.shr-field-info-heavy
+{
+	padding-bottom:10px;
+	font-weight:bold;
+	font-size:larger;
+    clear: both;
+    white-space:normal;
+    display: inline;
+    float: none;
+    color: Black;
+}
+
+.shr-field .shr-field-label .shr-linethrough
+{
+	text-decoration: line-through;
+}
+
+.shr-linethrough,  .shr-linethrough .x-grid3-cell-inner
+{ 
+	text-decoration: line-through;
+}
+
+.shr-field .shr-field-picker
+{
+    width:240px;
+}
+
+.shr-field-listpicker
+{
+	 vertical-align:middle;
+	 text-align:center;	
+}
+
+.shr-list-select SPAN
+{
+    display: block;
+    font-size:medium;
+	position:static;
+    padding-left: 2px;
+    color: #336699;
+	overflow:visible;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis-word;
+}
+
+SPAN.shr-ListPickerListboxCaption
+{
+    font-size:small;
+	margin-top: 2px;
+}
+
+.shr-ListPickerListbox
+{
+}
+
+.shr-field-listpicker-button
+{
+	width: 55px;
+	margin: 1px 5px 0px 5px;
+}
+
+/******************************************
+* Special CSS for the Spell check button on
+* a TextArea field.
+******************************************/
+.x-form-field-wrap .x-form-spell-trigger{
+    background-image: url(images/spell-trigger.gif);
+    cursor:pointer;
+    width: 17px;
+    height: 21px;
+    float: left;
+}
+
+.x-form-field-wrap .x-form-trigger-over{
+    background-position:-17px 0;
+}
+
+.x-form-item
+{
+    float: left;
+}
+
+
+SPAN.shr-field-label.shr-position-before
+{
+	padding-top: 2px;
+	margin-top: 0px;
+	float:left;
+	margin-right:5px;
+}
+SPAN.shr-field-label.shr-position-after
+{
+	padding-top: 0px;
+	margin-top: 0px;
+    display: inline;
+	white-space:normal;
+    margin-left: 3px;
+}
+
+.shr-field SPAN.shr-break,
+.shr-break
+{
+	display:inline;
+	clear:right;
+	height: 0px;
+	overflow:visible;
+}
+.shr-break-image
+{
+	white-space: nowrap;
+	/* we're just displaying &nbsp;, so make it large to make it easier to drag the item */
+	font-size: x-large;
+	color: white; /* and hide the text */ 
+}
+
+TD.shr-history
+{
+	width: 200px;
+	vertical-align:top;
+	padding-top: 6px;
+}
+
+.shr-history-left TD
+{
+	width: 20px;
+	vertical-align:top;
+	text-align: left;
+}
+
+.shr-history-label
+{
+	color:#336699;
+	border-bottom: 1px solid gainsboro;
+	padding-top: 7px;
+}
+
+.shr-history-label-information
+{
+	width: 50px;
+	color:#336699;
+	padding-top: 7px;
+}
+
+.shr-history-currentval
+{
+	color:black;
+	border-bottom:solid 1px gainsboro;
+	padding-top: 6px;
+}
+
+.shr-history-newval
+{
+	color:black;
+	border-bottom:solid 1px gainsboro;
+	padding-top: 6px;
+}
+
+/*****************************************************
+* IE has trouble displaying the RadTabStrip properly
+* due to element positioning, so these must be set.
+*****************************************************/
+.tabstrip DIV, .tabstrip SPAN, .tabstrip LI, .tabstrip UL {
+	position:static;
+	overflow:visible;
+}
+
+/**********************************************************
+* This fixes the RadTabStrip subtab display when scrolling
+* is used so the subtabs have a background the full screen
+* width, when there aren't a full screen's width of tabs.
+**********************************************************/
+.RadTabStrip_dnn .level2 div {
+	background-image:url(../../RadControls/Tabstrip/Skins/dnn/img/subTabBack.gif);
+	background-repeat: repeat-x;
+	width:100%;
+}
+
+.shr-listbox
+{
+	background:white;
+}
+
+.shr-listbox-border
+{
+    border: solid 1px #FF0000;
+}
+
+.shr-listbox .shr-field-search
+{
+	padding-left: 2px;
+	padding-top: 2px;
+	padding-bottom: 2px;
+	background: #DDDDDD;
+	height: 28px;
+}
+.shr-listbox .shr-field-search INPUT[type=text]
+{
+	margin-top:0px;
+}
+
+.shr-listbox-item
+{
+    font-size: small;
+}
+
+.shr-listbox-item:focus, .shr-listbox-item:active
+{
+    /* This isn't working */
+    outline: 1px solid white; 
+    -moz-outline: none; 
+}
+
+.shr-listbox-item a
+{
+	cursor: pointer;
+    display: block;
+    text-decoration: none;
+    color: Black;
+    font-size: small;
+    white-space: nowrap;
+    padding: 7px 7px 7px 20px;
+	overflow: hidden;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis-word;
+    background-color: #E0E0E0;
+}
+
+.shr-listbox-item a:hover
+{
+    background-color:#214C77;
+    color:White;
+    text-decoration:none;
+}
+
+.shr-listbox-item-selected
+{
+	color:Black;
+	font-size: small;
+    border-top: 1px solid #6392CE;
+    border-bottom: 1px solid #6392CE;
+    overflow:visible;
+    padding: 7px 7px 7px 20px;
+    position:static;
+}
+
+.shr-listbox-item-deleted
+{
+    text-decoration: line-through;
+}
+
+.shr-listbox-item-current
+{
+    background-image: url(images/list-item-current.gif);
+    background-position: 2px 7px;
+    background-repeat: no-repeat;
+}
+
+.shr-listbox-item-current a
+{
+    background-image: url(images/list-item-current.gif);
+    background-position: 2px 7px;
+    background-repeat: no-repeat;
+}
+
+.shr-listbox-item-invalid
+{
+    background-image: url(images/icon_warning.gif);
+    background-position: 2px 5px;
+    background-repeat: no-repeat;
+}
+
+.shr-listbox-item-invalid a
+{
+    background-image: url(images/icon_warning.gif);
+    background-position: 2px 5px;
+    background-repeat: no-repeat;
+}
+
+.shr-tabularlayout
+{
+    clear:both;
+}
+
+.shr-tabularlayout .shr-field-label
+{
+    float:none;
+}
+.shr-tabularlayout-emptycell
+{
+	width: 100%;
+	height: 45px;
+}
+TD .shr-tabularlayout-emptycell
+{
+	padding: 0px;
+	margin: 0px;
+}
+
+.shr-tabular-header
+{
+	font-size: small;
+	color: gray;
+	padding: 2px 2px 3px 20px;
+	background: #F3F2E7 url('images/DragIcon.gif') no-repeat 3px;
+	border-bottom: solid 1px #D3D3D3;
+}
+.shr-tabularlayout td
+{
+	border: none;
+}
+
+TABLE.shr-group
+{
+	width: 100%;	 
+    border-collapse: separate;
+}
+
+TABLE.shr-group-active .shr-group-contents
+{
+    background: #FFFFD0;
+}
+
+.shr-group-header A:link
+{
+	color: #29509E;
+	background: url(../../Images/pencil.gif) no-repeat;
+	padding-left: 18px;
+    font-size:small;
+}
+.shr-group-header A:visited
+{
+	color: #29509E;
+	background: url(../../Images/pencil.gif) no-repeat;
+	padding-left: 18px;
+    font-size:small;
+}
+.shr-group-header A:active
+{
+	color: #29509E;
+	background: url(../../Images/pencil.gif) no-repeat;
+	padding-left: 18px;
+    font-size:small;
+}
+.shr-group-header A:hover
+{
+	color:#800000;
+	background: url(../../Images/pencil.gif) no-repeat;
+	padding-left: 18px;
+    font-size:small;
+}
+.shr-group-header-left
+{
+	padding-left:10px;
+	width:10px;
+	height:30px;
+    background-image: url(images/group-header-left.gif);
+    background-repeat: no-repeat;
+    background-position: bottom left;
+}
+.shr-group-header-image
+{
+	height:30px;
+    padding: 0px 2px 5px 2px;
+    background-image: url(images/group-header-center.gif);
+    background-repeat: repeat-x;
+    background-position: bottom;
+}
+
+.shr-group-header-text
+{
+    font-size: large;
+    font-weight:bold;
+	height:30px;
+    color:white;
+    text-align: left;
+    padding: 5px 15px 2px 2px;
+	overflow:hidden;
+    overflow-x: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis-word;
+    background-image: url(images/group-header-center.gif);
+    background-repeat: repeat-x;
+    background-position: bottom;
+	vertical-align:middle;
+}
+
+.shr-group-header-link
+{
+    font-weight: bold;
+	font-size: medium;
+	height:30px;
+    color:#000000;
+    width:2000px;
+    text-align: right;
+    padding: 0px 2px 2px 2px;
+	vertical-align:bottom;
+}
+
+.shr-group-header-link td
+{
+    white-space: nowrap;
+}
+
+.ext-ie7 .shr-group-header-link-link  A 
+{
+    display:inline-block;
+}
+.ext-ie7 .shr-group-header-link-print  A
+{
+    display:inline-block;
+}
+
+
+
+.shr-group-header-link-link A:link 
+{
+    color: #29509E;
+    background: url(../../Images/pencil.gif) no-repeat;
+    font-size:small;
+}
+
+.shr-group-header-link-link A:visited
+{
+    color: #29509E;
+    background: url(../../Images/pencil.gif) no-repeat;
+    font-size:small;
+}
+
+
+.shr-group-header-link-print A:link 
+{
+    color: #29509E;
+    background: url(../../Images/print.gif) no-repeat;
+    font-size:small;
+    
+}
+
+.shr-group-header-link-print A:visited
+{
+    color: #29509E;
+    background: url(../../Images/print.gif) no-repeat;
+    font-size:small;
+}
+
+.shr-group-header-print
+{
+    font-weight: bold;
+	font-size: medium;
+	height:30px;
+    color:#000000;
+    width:2000px;
+    text-align: right;
+    padding: 0px 2px 2px 2px;
+	vertical-align:bottom;
+}
+
+
+.shr-group-header-right
+{
+	height:30px;
+	padding-right:10px;
+	width:10px;
+    background-image: url(images/group-header-right.gif);
+    background-repeat: no-repeat;
+    background-position: bottom right;
+}
+
+.shr-group-contents
+{
+	vertical-align:top;
+    border: 1px solid #B3C5E1;
+    padding: 5px 5px 5px 5px;
+}
+
+DIV.shr-group-ext
+{
+	width: 100%;
+    margin-bottom: 20px;
+    border-collapse: separate;    
+}
+
+.shr-group-ext-contents
+{
+	vertical-align:top;
+    padding: 0px 0px 0px 0px;
+}
+
+.shr-esignature
+{
+	padding: 5px 10px 5px 10px;
+}
+
+.shr-collapse 
+{
+	width: 20px;
+	background: url(images/Collapse.gif) no-repeat 2px;
+	cursor: pointer;
+}
+
+.shr-expand {
+	width: 20px;
+	background: url(images/Expand.gif) no-repeat 2px;
+	cursor: pointer;
+}
+
+.GridCommandRow {
+    height: 40px;
+    background-color: white;
+    border-bottom: 1px solid #e4e4e4;
+}
+
+.shr-toolbar {
+    display: block;
+    font-size: small;
+    position: relative;
+    height: 30px;
+}
+.shr-toolbar td, .shr-toolbar span, .shr-toolbar input, .shr-toolbar div, .shr-toolbar select, .shr-toolbar label{
+	white-space: nowrap;
+    vertical-align: middle;
+}
+
+.shr-toolbar a
+{
+	text-decoration: none;	
+}
+
+.shr-toolbar .disabled {
+	color:gray;
+	cursor:default;
+	opacity:.6;
+	-moz-opacity:.6;
+	filter:alpha(opacity=60);
+}
+.shr-toolbar .disabled * {
+	color:gray;
+	cursor:default;
+}
+.shr-toolbar .btn-pager {
+	height: 16px;
+	width: 16px;
+	cursor: pointer;
+    padding:5px;
+}
+
+.shr-toolbar .btn-pager.disabled  {
+    cursor: default;
+}
+
+.shr-toolbar .btn {
+	cursor:pointer;	
+	padding: 5px 5px 0 5px;
+	color: #919191;
+    margin-left: 5px;
+    border: 1px solid #e4e4e4;
+    height: 30px;
+    background-color: #f6f6f6;
+}
+.shr-toolbar .btn .disabled {
+	cursor:default;
+}
+.shr-toolbar .sep {
+    width: 5px;
+	border-right: 1px solid #e4e4e4;
+}
+.shr-toolbar .page-number 
+{
+    margin-top: -1px;
+	width:30px;
+    height: 18px !important;
+    border: 1px solid #b5b8c8;
+    top:0px;
+    text-align:right;
+    vertical-align:middle;
+    line-height:16px;
+    padding: 1px 3px 0px 3px;
+    font-size:small;
+}
+.shr-toolbar .filler {
+    width:100%;
+}
+
+.shr-toolbar-contextlist
+{
+    width:100%;
+}
+
+.shr-toolbar-contextlist .shr-field
+{
+    padding-bottom:0px;
+}
+
+.shr-toolbar-contextlist .shr-field LABEL.shr-field-label
+{
+    padding-top: 1px;
+    color:Black;
+}
+
+.ToolbarAddButton, .ToolbarCopyButton, .ToolbarDeleteButton, .ToolbarUndoButton, 
+    .ToolbarAddButtonDisabled, .ToolbarCopyButtonDisabled, .ToolbarDeleteButtonDisabled, .ToolbarUndoButtonDisabled, .ToolbarAddOption
+{
+    height: 20px;
+    background-repeat: no-repeat; 
+    background-position: left center; 
+    padding-left: 20px;
+}
+.ToolbarAddButton
+{
+    background-image: url(images/toolbar-new.gif);
+    float: left
+}
+.ToolbarAddOption {
+
+   background-image: url(images/New.gif);
+}
+.ToolbarCopyButton
+{
+    background-image: url(images/toolbar-copy.gif);
+}
+.ToolbarDeleteButton
+{
+    background-image: url(images/toolbar-delete.gif);
+}
+.ToolbarUndoButton
+{
+    background-image: url(images/toolbar-undelete.gif);
+}
+.ToolbarAddButtonDisabled
+{
+    background-image: url(images/toolbar-new-disabled.gif);
+}
+.ToolbarCopyButtonDisabled
+{
+    background-image: url(images/toolbar-copy-disabled.gif);
+}
+.ToolbarDeleteButtonDisabled
+{
+    background-image: url(images/toolbar-delete-disabled.gif);
+}
+.ToolbarUndoButtonDisabled
+{
+    background-image: url(images/toolbar-undelete-disabled.gif);
+}
+
+#loading
+{
+	background:#C3DAF9 url(images/tb-blue.gif) repeat-x scroll 0pt -16px;
+	border:1px solid #6593CF;
+	padding:2px;
+	position:absolute;
+	left: 45%;
+	top: 40%;
+	z-index:20001;
+	margin:0pt;
+	text-align: left;
+}
+
+#loading .loading-indicator 
+{
+	background:#EEEEEE url( ) no-repeat scroll 5px;
+	line-height:16px;
+	padding:5px 10px 5px 10px;
+	border:1px solid #A3BAD9;
+	color:#333333;
+	cursor:wait;
+	font-size:medium;
+	font-size-adjust:none;
+	font-stretch:normal;
+	font-style:normal;
+	font-variant:normal;
+	font-weight:normal;
+	margin:0pt;
+	text-align: left;
+}
+
+.shr-morebutton
+{
+	background: transparent url(images/search-trigger.gif) no-repeat 0 0;
+	background-position:-51px 0;
+    cursor:pointer;
+	width:17px;
+	height:22px;
+	border:0px;
+	position:relative;
+}
+
+.shr-morebutton, .shr-autonumber
+{
+	background: transparent url(images/ellipsis.gif) no-repeat 0 0;
+	background-position: -2px 0;
+	display:inline;
+}
+
+.shr-icon-button
+{
+	display:block;
+	float:left;
+	padding-right: 10px;
+}
+
+.shr-hidden-text
+{
+    width:3px;
+    visibility:hidden;
+}
+
+.shr-popup-text
+{
+	overflow: hidden;
+	float: left;
+	cursor:pointer;
+	height: 16px;
+	padding: 2px 8px 0 8px;
+}
+.shr-grid
+{
+    display: inline-block;
+	border-top: 1px solid #b3c5e1;
+	border-bottom: 1px solid #d3e5ff;
+	border-left: 1px solid #b3c5e1;
+	border-right: 1px solid #b3c5e1;
+}
+
+.shr-gridHighlightedRow
+{
+    background-color: gainsboro;
+    cursor: pointer;
+}
+
+.AlignRight
+{
+	text-align: right;
+}
+
+.AlignCenter
+{
+	text-align: center;
+}
+
+.shr-field-label-red
+{
+	color: #FF0000;
+}
+
+.shr-grid.shr-scrollable
+{
+	overflow-y:scroll;
+}
+
+.ext-ie .shr-grid.shr-scrollable
+{
+	overflow-y:scroll;
+	padding-right: 15px;
+}
+
+.shr-detail-grid
+{
+}
+
+.shr-grid .shr-field
+{
+	padding: 0px;
+	border:0px;
+	min-height:0px;
+	overflow:visible;
+    display:block;
+    float:none;
+    padding: 1px 0px 0px 0px;
+}
+
+.shr-list-select SPAN
+{
+    display: block;
+    font-size:medium;
+	position:static;
+    padding-left: 2px;
+    color: #336699;
+	overflow:visible;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis-word;
+}
+
+.shr-grid .shr-text-area-ellipsis
+{
+	display:block;
+	font-size: small;
+	font-family: Arial;
+	overflow-x: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis-word;
+    float: none;
+}
+
+.shr-grid .shr-text-area-ellipsis .shr-text-area-ellipsis-label
+{	
+	overflow: hidden;
+	white-space: nowrap;    
+    margin-right: 30px;
+}
+
+.shr-grid .shr-text-area-ellipsis .shr-text-area-ellipsis-button
+{
+	width: 25px;	  
+}
+
+.shr-text-area-ellipsis-button-absolute
+{
+	position: absolute;
+    right: 0;
+    top: 0; 
+}
+
+.shr-text-area-ellipsis-button-absolute-20top
+{
+	position: absolute;
+    right: 0;
+    top: 20px; 
+}
+
+.shr-grid .shr-toolbar
+{
+    border-top: 1px solid #99bbe8;
+}
+
+.shr-grid TBODY .shr-toolbar
+{
+    border-top: 0px;
+}
+
+.shr-history .shr-field .x-form-invalid-icon
+{
+	position:relative;
+}
+
+.shr-grid .shr-field-label
+{
+    float:none;
+    white-space:normal;
+    display:block;
+    overflow: hidden;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis-word;
+}
+
+.shr-grid caption
+{
+	color:#167abc;
+    font-size:large;
+    font-size-adjust:none;
+    font-style:normal;
+    font-variant:normal;
+    font-weight:bold;
+    line-height:15px;
+	padding: 5px 0px 5px 2px;
+	border-bottom: solid 1px #f1efe9;
+	text-align:left;
+}
+
+.MasterTable
+{
+	width: 100%;
+	empty-cells: show;
+	table-layout:fixed;
+    border-collapse: separate !important;
+	background: white;
+    border-color: #d0d0d0;
+}
+
+.MasterTable .NoRecords
+{
+    padding: 2px 0 3px 3px;
+}
+
+.GridHeader a
+{
+	color: #244272;
+}
+
+.GridColumnTotal
+{
+	border-top: solid 2px black;
+    font-weight: bold;
+}
+
+.GridRow,
+.GridAltRow,
+.GridEditRow
+{
+	height: 20px;
+	padding: 5px;
+}
+.GridRow TD,
+.GridAltRow TD
+{
+	overflow:hidden;
+	vertical-align:top;
+	padding: 3px 3px 3px 5px;
+	border-bottom: solid 1px #f1efe9;
+	border-right: solid 1px #f1efe9;
+	vertical-align:top;
+}
+
+.PrintDetailGrid  TD
+{
+	overflow:hidden;
+	vertical-align:top;
+	padding: 3px 3px 3px 5px;
+	vertical-align:top;
+	border-bottom: solid 0px #fff;
+	border-right: solid 0px #fff;
+	font-family: Arial;
+	font-size:Small;
+}
+
+
+
+.GridEditRow
+{
+	background:#efefef;
+}
+
+.SelectedRow
+{
+	background:#DFE8F6!important;border:1px dotted #a3bae9;	
+	background-color:#B8CFEE!important;color:black;
+}
+
+.GridEditRow td
+{
+	padding:1px 4px 2px;
+	border-right: solid 1px #ffffe1;
+	border-bottom: solid 1px #f1efe9;
+	vertical-align:top;
+}
+
+.x-grid3-row-over {
+    background-color: #f6f6f6;
+    cursor: pointer;
+}
+
+.Collapse
+{
+    background-image: url(images/Grid/SingleMinus.gif); 
+    background-repeat:no-repeat;
+    background-position: 1px 1px;
+    height: 20px;
+}
+
+.Expand
+{
+    background-image: url(images/Grid/SinglePlus.gif); 
+    background-repeat:no-repeat;
+    background-position:1px 1px;
+    height: 20px;
+}
+
+.GridEditRow input
+{
+	font-size: small;
+}
+
+.GroupPanel
+{
+	background: #ecf5ff url('images/Grid/GroupPanel.gif') repeat-x;
+	height: 24px;
+	border-collapse: collapse;
+	border: solid 1px #d0e6f3;
+	width: 100%;
+	margin-bottom: 3px;
+}
+
+.GroupPanel td
+{
+	padding-left: 4px;
+}
+
+.GroupPanel Table
+{
+	border-collapse: collapse;
+	border: 0;
+}
+
+.GroupPanelItems
+{
+	color: #7797c7;
+	border: solid 1px #c3d9f9;
+	background: #f1f8ff;
+}
+
+.GroupHeader
+{
+	background: #f1efe9;
+	font-weight: bold;
+	color: #244272;
+	height: 22px;
+}
+.GroupHeader TD
+{
+	vertical-align:middle;
+}
+
+.GroupHeader p
+{
+	margin: 3px 0 0 10px;
+}
+
+.shr-detail-grid .GridFooter td
+{
+    padding: 2px 5px 2px 4px;
+}
+
+.shr-detail-grid .DetailGrid
+{
+	table-layout:fixed;
+    border-collapse: separate !important;
+    background-color: #fff; 
+    margin: 0px 0px 10px 0px;
+    width:100%;
+}
+
+
+.shr-group-topheader-left
+{
+	padding-left:10px;
+	width:10px;
+	height:30px;
+    background-image: url(images/group-header-top-left.gif);
+    background-repeat: no-repeat;
+    background-position: bottom left;
+}
+
+.shr-group-topheader-center
+{
+    background-image: url(images/group-header-top-center.gif);
+    background-repeat: repeat;
+}
+
+.bt {
+	background:url(Scripts/WebControls/images/box.png) no-repeat 100% 0;
+	margin:0 0 0 18px;
+	height:17px;
+}
+
+.html-editor-mask 
+{
+     filter:alpha(opacity=60); 
+    -moz-opacity: 0.6; 
+    opacity: 0.6; 
+    height:100%;
+    left:0;
+    opacity:0.0;
+    position:absolute;
+    top:0;
+    width:100%;
+    z-index:20000;
+}
+
+.shr-grid-link
+{
+	overflow: visible;
+    display: block;
+	float: left;
+	padding: 0px 5px 5px 5px;
+	cursor:pointer;
+	font-family:tahoma,arial,verdana,sans-serif;
+    font-size:12px;
+	text-decoration:underline;
+	color:blue;
+	text-transform: uppercase;
+}
+
+.shr-color-picker-display 
+{
+    width: 30px; 
+    background-image: none
+}
+
+.shr-color-palette
+{
+    /* Set the palette size to display rows with 7 colors in each */
+    width: 126px;
+    height: 71px;
+}
+
+.shr-color-picker-container
+{
+    top: -22px; 
+    left: 37px;
+}
+
+TABLE.x-btn
+{
+    margin-left: 3px;
+    margin-right: 3px;
+    display:inline;
+    vertical-align:top;
+}
+
+TABLE .x-btnPersonSummary
+{
+     display:inline-table;
+}
+
+.ext-gecko TABLE.x-btn,
+.ext-safari TABLE.x-btn,
+.ext-chrome TABLE.x-btn
+{
+    display:inline-table;
+}
+
+.x-btn BUTTON,
+.ext-webkit .x-btn BUTTON,
+.ext-gecko .x-btn BUTTON
+{
+    padding-right: 8px;
+    vertical-align: top;
+    height:16px;
+    border:0;
+    margin:0;
+}
+
+BUTTON.shr-btn-text:focus,
+BUTTON.shr-btn-text-icon:focus
+{
+    outline: dotted 1px;
+}
+
+.x-btn-mc:hover
+{
+	background-position: 0 -2168px;
+}
+
+.ext-webkit .x-btn BUTTON.shr-btn-text,
+.ext-gecko .x-btn BUTTON.shr-btn-text,
+BUTTON.shr-btn-text
+{
+    padding-left:8px;
+}
+
+
+.ext-webkit .x-btn BUTTON.shr-btn-text-icon,
+.ext-gecko .x-btn BUTTON.shr-btn-text-icon,
+BUTTON.shr-btn-text-icon
+{
+    background-position: 4px center;
+	background-repeat: no-repeat;
+    padding-left:24px;
+}
+
+.shr-btn-menu
+{
+    background-image: url(images/TaskMoreMenuIcon.gif) !important;
+}
+
+.shr-btn-text-icon IMG
+{
+    margin-top:-2px;
+    vertical-align:top;
+    padding-left: 10px;
+}
+
+.x-box-mc 
+{
+	font-size:.9em;
+}
+
+.x-box-mc ul 
+{
+    list-style-type:disc;
+    padding-left:20px;
+    font-weight:bold;
+}
+
+
+.bubblepanelheader
+{
+    float:right;
+    color:#15428B;
+    font-family:tahoma,arial,verdana,sans-serif;
+    font-size:20px;
+    font-size-adjust:none;
+    font-style:normal;
+    font-variant:normal;
+    font-weight:bold;
+    line-height:25px;
+}
+
+.radwindow
+{   
+    z-index:13000 !important;   
+}   
+
+.ext-strict .ext-ie7 .x-date-menu{
+    height: 220px;
+}
+.ext-strict .ext-ie9 .x-date-menu{
+    height: 220px;
+}
+
+.x-form-trigger.shr-trigger-browse
+{
+    background-image:url(../images/browse-trigger.gif);
+}
+
+.shr-field-with-help
+{
+    display: inline-table;
+}
+
+.shr-help
+{
+    position: relative;
+    bottom: -10px;
+}
+
+.shr-btn-help-icon
+{
+    width: 16px;
+    height: 18px;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-image: url("../../images/FAQ_Help_16.gif");
+    margin-top: 16px;
+}
+
+/* Some controls display differently, so they need their own styling tweaks */
+.shr-btn-help-icon.checkbox
+{
+    margin-top: 10px;
+}
+
+.shr-btn-help-icon.textarea
+{
+    margin-top: -45px;
+}
+
+.shr-btn-help-icon.listselect
+{
+    margin-top: -85px;
+}
+
+.GridHeader .shr-btn-help-icon
+{
+    width: 16px;
+    height: 16px;
+    background-position: center center;
+    margin-top: 0px;
+}
+
+.shr-field-info-medium-no-bold
+{
+	padding-bottom:10px;
+	font-size:medium;
+    clear: both;
+    white-space:normal;
+    display: inline;
+    float: none;
+    color: Black;
+}
+
+.shr-field-label-bold
+{  
+    display:block;
+	position:static;
+    padding-left: 5px;
+    font-weight:bold;
+    color: #336699;
+    font-size: small;
+}
+
+.shr-field-error-icon
+{
+    background: url(images/icon_error.gif) no-repeat;
+}
+
+.shr-field-multilanguage
+{
+    background: url("../../Images/Pencil.gif") no-repeat;
+}
+/* End of control specific styling tweaks for help icons*/
+
+/*Style for the menu items eg. [More...] button*/
+
+.x-menu-item-image {    
+    vertical-align:top;
+    padding-left: 7px;
+}
+
+.x-menu-item-image-left {    
+    background-size: 16px 16px;
+}
+
+.x-btn-pad
+{
+    padding: 0px 3px;
+}
+
+/*************************************************
+* Error field style
+*************************************************/
+
+.x-autocontainer-innerCt .x-btn
+{
+
+}
+
+.shr-field-error-icon:hover
+{
+    cursor: default;
+}
+    
+
+/*************************************************
+* Shr.WebControls.TimeField : Time label
+*************************************************/
+.shr-time-field-Label
+{
+
+}
+
+div.shr-field-minpadding
+{
+    padding: 0px 8px 5px 5px
+}
+
+/*************************************************
+* Shr.WebControls.SearchField, Error tooltip look
+ alike 5.11 (ExtJS 6.2)
+*************************************************/
+
+.x-tip-body-form-invalid
+{
+    padding: 4px 6px 4px 6px;
+    margin: 2px;
+    background-image: none;
+}
+
+/**/
+
+/*************************************************
+* ReviewResumes Applicant/requisition summary 
+    details
+*************************************************/
+
+.link-type {
+    color: blue; 
+    text-decoration: underline;
+}
+
+.link-type:hover {
+    cursor: pointer;
+}
+
+/*************************************************
+* My requisition component checkbox
+*************************************************/
+
+.checkbox-label {
+    padding-left: 5px;
+    margin-top: 6px;
+    font: normal 11px arial,tahoma,helvetica,sans-serif;
+}
+
+
+/*************************************************
+* Clock in out info button
+*************************************************/
+
+.x-cico{
+    pointer-events: all;
+}
+
+.x-cico:hover {
+    cursor: default;
+}

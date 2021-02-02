@@ -1,0 +1,2840 @@
+﻿/**
+* Create A Salary Plan JS
+*/
+Shr.panel.CreateASalaryPlan = {
+    basePayGridStore: null,
+    otherPayGridStore: null,
+    employeeStore: null,
+    employeeGridPanel: null,
+    draftId: null,
+    routingInstanceHistoryGuid: null,
+    employeeRecordBasePayGrid: null,
+    employeeRecordOtherPayGrid: null,
+    doUpdateLayout: true,
+
+    init: function (config) {
+        Ext.apply(this, config);
+        var me = this;
+        this.employeeStore = Shr.panel.CreateEmployeeStore(config);
+        this.draftId = config.draftId;
+        this.routingInstanceHistoryGuid = config.routingInstanceHistoryGuid;
+        this.employeeRecordBasePayGrid = [];
+        this.employeeRecordOtherPayGrid = [];
+
+        this.employeePicker = new Shr.WebControls.PickerField({
+            id: 'addPeople',
+            multiSelectPicker: true,
+            dataType: 'PersonJobHistory',
+            preFilter: 'Person_ActiveEmployees',
+            pickerControl: 'PersonJobHistPicker.ascx'
+        });
+
+        // Attach a listener to the employee picker that
+        // populates the employee grid
+        this.employeePicker.on('change', me.addPeople);
+
+        //in create mode only show the add people button
+        if (config.salaryPlanStatus == 'CREATED') {
+            var employeeToolBar = new Ext.Toolbar({
+                id: 'employeeToolBar',
+                enableOverflow: false,
+                items: [{
+                    id: 'actionAddPeople',
+                    iconCls: 'x-fa fa-plus',
+                    text: this.labels.addPeople,
+                    handler: function (btn) {
+                        me.employeePicker.removeAll();
+                        me.employeePicker.showPickerDialog();
+                        return false;
+                    }
+                },  {
+                    id: 'actionRefreshPeople',
+                    iconCls: 'x-fa fa-refresh',
+                    text: this.labels.refreshPeople,
+                    handler: function (btn) {
+                        Shr.panel.CreateASalaryPlan.refreshEmployees();
+                        return false;
+                    }
+                }]
+            });
+        }
+
+        var employeeSelectionModel = {};
+        // in modify mode only show the mark all done button
+        if (config.salaryPlanStatus == 'APPROVEMODEL' && config.salaryPlanType == '3') {
+            employeeSelectionModel = new Ext.selection.CheckboxModel({
+                checkOnly: true,
+                hidden: true,
+                width: 200,
+                headerText: config.labels.doneWithQuestionMark,
+                showHeaderCheckbox: true,
+                listeners: {
+                    select: function (cmp, record, index, eOpts) { //Call Action Request to Add Column to Query
+                        var me = this;
+                        if (record.data.IsComplete == 'true') return;
+                        Shr.panel.CreateASalaryPlan.setIsComplete(record.data.RecordGuid, true);
+                        record.data.IsComplete = 'true';
+                    },
+                    deselect: function (cmp, record, index, eOpts) { //Call Action Request to delete column from query
+                        var me = this;
+                        if (record.data.IsComplete == 'false') return;
+                        Shr.panel.CreateASalaryPlan.setIsComplete(record.data.RecordGuid, false);
+                        record.data.IsComplete = 'false';
+                    }
+                },
+                onHeaderClick: function (headerCt, header, e) {
+                    if (header.isCheckerHd) {
+                        e.stopEvent();
+                        var me = this, isChecked = header.el.hasCls(Ext.baseCSSPrefix + 'grid-hd-checker-on');
+                        me.preventFocus = true;
+                        Ext.Ajax.request({
+                            url: 'API/JsonFetcher.svc/Invoke',
+                            params: {
+                                svcprovider: 'JsSalaryPlanningActions',
+                                draftId: me.view.grid.draftId,
+                                routingInstanceHistoryGuid: me.view.grid.routingInstanceHistoryGuid,
+                                actionType: 'MarkAllDone'
+                            },
+                            success: function (resp) {
+                                //Shr.panel.CreateASalaryPlan.refreshEmployees();
+                            }
+                        });
+                        if (isChecked) {
+                            me.deselectAll(true); // Pass true as a parameter to prevent selectionchanged and select events firing
+                            me.fireEvent('deselectall', me);
+                            Shr.panel.CreateASalaryPlan.setCompleteAll(me.view.grid.getStore().data.items, false);
+                        } else {
+                            me.selectAll(true); // Pass true as a parameter to prevent selectionchanged and select events firing
+                            me.fireEvent('selectall', me);
+                            Shr.panel.CreateASalaryPlan.setCompleteAll(me.view.grid.getStore().data.items, true);
+                        }
+                    }
+                }
+            });
+        }
+        me.employeeStore.load();
+
+        var configEmployeeGrid = {
+            id: 'employeeGrid',
+            draftId: config.draftId,
+            selModel: employeeSelectionModel,
+            routingInstanceHistoryGuid: config.routingInstanceHistoryGuid,
+            salaryPlanType: config.salaryPlanType,
+            store: me.employeeStore,
+            tbar: employeeToolBar,
+            bbar: {
+                xtype: 'pagingtoolbar',
+                displayInfo: true, 
+                displayMsg: config.labels.displayExtGridRecordSize
+            },
+            forceFit: true,
+            scrollable: true,
+            mainConfig: config,
+            sortableColumns: false,
+            minHeight: 250,
+            plugins: [],
+            renderTo: config.gridDivId,
+            viewConfig: {
+                listeners: {
+                    refresh: function (dataview) {
+                        Ext.each(dataview.panel.columns, function (column) {
+                            if (column.getRootHeaderCt()) column.autoSize();
+                        })
+                    },
+                    expandbody: function( rowNode , record , expandRow , eOpts ) {
+                        var detailData = Ext.DomQuery.select("div.detailData", expandRow);
+                        Shr.panel.CreateASalaryPlan.doUpdateLayout = true;
+                        if( detailData[0].childNodes.length ==0) {
+                            var subGridPanel = Shr.panel.CreateASalaryPlan.getDetailGrids(record, rowNode, config);                             
+                            subGridPanel.render(detailData[0]);
+                        }
+                        
+                    }
+                }
+            },
+            columns: [{
+                    id: "Name",
+                    text: config.labels.employee,
+                    tooltip: config.labels.employee,
+                    dataIndex: "Name"                    
+                }, {
+                    text: config.labels.position,
+                    tooltip: config.labels.position,
+                    dataIndex: 'JobTitle'
+                }, {
+                    text: config.labels.oldSalary,
+                    tooltip: config.labels.oldSalary,
+                    dataIndex: "OldSalary",
+                    align: 'right'
+                }, {
+                    text: config.labels.newSalary,
+                    tooltip: config.labels.newSalary,
+                    dataIndex: 'NewSalary',
+                    align: 'right',
+                    renderer: this.rendererSalaryPlanColumn
+                }, {
+                    text: config.labels.payChange,
+                    tooltip: config.labels.payChange,
+                    dataIndex: 'PayChange',
+                    align: 'right',
+                    renderer: this.rendererSalaryPlanColumn
+                }, {
+                    text: config.labels.percentChange,
+                    tooltip: config.labels.percentChange,
+                    dataIndex: 'PercentChange',
+                    align: 'right',
+                    renderer: this.rendererSalaryPlanColumn
+                }, {
+                    text: config.labels.oldCompaRatio,
+                    tooltip: config.labels.oldCompaRatio,
+                    dataIndex: 'OldCompaRatio',
+                    align: 'right',
+                }, {
+                    text: config.labels.newCompaRatio,
+                    tooltip: config.labels.newCompaRatio,
+                    dataIndex: 'NewCompaRatio',
+                    align: 'right',
+                    renderer: this.rendererSalaryPlanColumn
+                }, {
+                    text: config.labels.performanceScoreRating,
+                    tooltip: config.labels.performanceScoreRating,
+                    dataIndex: 'PerformanceScoreRating',
+                    align: 'left',
+                    renderer: this.rendererSalaryPlanColumn
+                }, {
+                    text: config.labels.infoWarning,
+                    tooltip: config.labels.infoWarning,
+                    dataIndex: 'info',
+                    sortable: false,
+                    renderer: this.infoColumnRenderer
+                }, {
+                    text: config.labels.percentageRange,
+                    tooltip: config.labels.percentageRange,
+                    dataIndex: 'PercentageRange',
+                    align: 'left',
+                    renderer: this.rendererSalaryPlanColumn
+                }, {
+                    dataIndex: 'action',
+                    xtype: 'actioncolumn',
+                    hidden: config.salaryPlanStatus == 'CREATED' ? false: true,
+                    items: [{
+                        handler: function (view, rowIndex, colIndex, item, e, record, row) {
+                            Shr.panel.CreateASalaryPlan.rowDeleteAction(view.grid, record);
+                        }, 
+                        getClass: function (v, meta, record) {
+                            return record.data.IsDeleted ? 'x-fa fa-undo darkblue-text' : 'x-fa fa-times red-text';
+                        },
+                        getTip: function(value, metadata, record, row, col, store) {
+                            return record.data.IsDeleted ? config.labels.undeleteThisRow : config.labels.deleteThisRow;
+                        }                          
+                    }] 
+                }],
+            listeners: {
+                afteredit: function (e) {
+                    Shr.updateTaskField(e.grid.draftId, e.grid.routingInstanceHistoryGuid, e.grid.store.extraParams.businessObject, e.record.data.RecordGuid, e.field, e.value);
+                },
+                resize: function(cmp, width, height, oldWidth, oldHeight, eOpts){
+                    MainLayout.setResizeToPanelContainer();
+                }
+            }
+        }
+
+        if(config.salaryPlanStatus != 'CREATED'){ 
+           configEmployeeGrid.plugins.push({
+               ptype: 'rowexpander',
+               rowBodyTpl: new Ext.XTemplate('<div class="detailData"></div>')
+           }); 
+        }
+        
+        this.employeeGridPanel = new Ext.grid.Panel(configEmployeeGrid);
+        
+        //////Base pay
+        //We only use the base and other pay grids when in create mode
+        if (config.salaryPlanType == 0) {
+            this.basePayGridStore = Shr.panel.CreateBasePayStore(config);
+            var basePayTBarDef = null;
+            
+            //only show the new button if the plan is being created
+            if (config.salaryPlanStatus == 'CREATED' || config.salaryPlanStatus == 'SUBFORBDGETAPRV') {
+                if (config.salaryPlanStatus == 'CREATED') {
+                    basePayTBarDef = [{
+                        text: this.labels.newLabel,
+                        iconCls: 'x-fa fa-plus',
+                        handler: function () {
+                            Ext.Ajax.request({
+                                url: 'API/JsonFetcher.svc/Invoke',
+                                params: {
+                                    svcprovider: 'JsSalaryPlanningAddBasePay',
+                                    draftId: config.draftId,
+                                    routingInstanceHistoryGuid: config.routingInstanceHistoryGuid,
+                                },
+                                success: function (resp) {
+                                    var result = Ext.decode(resp.responseText);
+                                    var gridPanel = basePayGridPanel
+                                    var rec = new Ext.data.Record({
+                                        PersonBasePayReason: '',
+                                        PersonBasePayStartDate: '',
+                                        ScheduledBasePayReviewDate: '',
+                                        AmountChange: '',
+                                        AmountChangeFrequency: '',
+                                        PercentageChange: '',
+                                        BasePayTotal: ''                                    
+                                    });
+                                    rec.set('RecordGuid', result.recordId);
+                                    rec.commit();
+
+                                    if (gridPanel.editing) {
+                                        gridPanel.stopEditing();
+                                    }
+                                    gridPanel.store.add(rec);
+                                    gridPanel.plugins[0].startEditByPosition({row: gridPanel.store.getCount() - 1, column: 0});
+                                    
+                                }
+                            });
+                        }
+                    }];
+                }
+
+                //base pay grid
+                var basePayGridPanel = new Ext.grid.Panel({
+                    id: 'basePayGrid',
+                    draftId: config.draftId,
+                    routingInstanceHistoryGuid: config.routingInstanceHistoryGuid,
+                    salaryPlanType: config.salaryPlanType,
+                    store: this.basePayGridStore,
+                    autoHeight: true,
+                    loadMask: true,
+                    layout: 'fit',
+                    forceFit: true,
+                    renderTo: config.basePayGridDivId,
+                    viewConfig: {
+                        plugins: {
+                            ptype: 'gridviewdragdrop'
+                        }
+                    },
+                    selModel: {
+                        selType: 'cellmodel',
+                        mode   : 'SINGLE'
+                    },
+                    plugins: {
+                        ptype: 'cellediting',
+                        clicksToEdit: 1
+                    },
+                    columns: [{
+                        header: '* ' + config.labels.basePayReason,
+                        dataIndex: 'PersonBasePayReason',
+                        width: 150,
+                        sortable: false,
+                        editable: config.salaryPlanStatus == 'CREATED' ? true: false,
+                        editor: new Shr.panel.SalaryPlan.CodeCombobox({
+                            showClear: false,
+                            dataType: 'BasePayReason',
+                            filter: 'ShowInSalaryPlanningFlag = true',
+                            showDash: true
+                        }), 
+                        renderer: Shr.codeSalaryPlaningRenderer
+                    }, {
+                        header: '* ' + config.labels.effectiveDate,
+                        dataIndex: "PersonBasePayStartDate",
+                        width: 100,
+                        sortable: false,
+                        editable: config.salaryPlanStatus == 'CREATED' ? true: false,
+                        editor: new Ext.form.DateField({ selectOnFocus: true }), 
+                        renderer: function (value) { if (isNaN(value) || Ext.isEmpty(value)) return null; return Ext.Date.format(value, Shr.DATE_FORMAT); }
+                    }, {
+                        header: config.labels.reviewDate,
+                        dataIndex: "ScheduledBasePayReviewDate",
+                        width: 100,
+                        sortable: false,
+                        editable: config.salaryPlanStatus == 'CREATED' ? true: false,
+                        editor: new Ext.form.DateField({ selectOnFocus: true }), 
+                        renderer: function (value) { if (isNaN(value) || Ext.isEmpty(value)) return null; return Ext.Date.format(value, Shr.DATE_FORMAT); }
+                    }, {
+                        header: config.labels.amountPerEmployee,
+                        dataIndex: "AmountChange",
+                        width: 100,
+                        sortable: false,
+                        editable: config.salaryPlanStatus == 'CREATED' ? true: false,
+                        xtype: 'numbercolumn',
+                        editor: new Ext.form.NumberField({ selectOnFocus: true, style: 'text-align:left;' }),
+                        renderer: function(value) {return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );}
+                    },{
+                        header: config.labels.frecuency,
+                        dataIndex: "AmountChangeFrequency",
+                        width: 150,
+                        sortable: false,
+                        editable: config.salaryPlanStatus == 'CREATED' ? true: false,
+                        editor: new Shr.panel.SalaryPlan.CodeCombobox({
+                            showClear: false,
+                            dataType: 'Frequency',
+                            showDash: false
+                        }), 
+                        renderer: Shr.codeSalaryPlaningRenderer
+                    }, {
+                        header: config.labels.percentOfCurrentSalary,
+                        dataIndex: "PercentageChange",
+                        width: 100,
+                        sortable: false,
+                        editable: config.salaryPlanStatus == 'CREATED' ? true: false,
+                        xtype: 'numbercolumn',
+                        editor: new Ext.form.NumberField({ selectOnFocus: true, style: 'text-align:left;' }),
+                        renderer: function(value) {return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );}
+                    }, {
+                        header: config.labels.total,
+                        dataIndex: "BasePayTotal",
+                        width: 100,
+                        sortable: false,
+                        xtype: 'numbercolumn',
+                        renderer: function(value) {return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );}
+                    }, {
+                        dataIndex: 'warnings',
+                        sortable: false,
+                        width: 40,
+                        renderer: this.warnBPColumnRenderer                        
+                    }, {
+                        dataIndex: 'action',
+                        xtype: 'actioncolumn',
+                        width: 30,
+                        items: [{
+                            handler: function (view, rowIndex, colIndex, item, e, record, row) {
+                                Shr.panel.CreateASalaryPlan.rowDeleteAction(view.grid, record);
+                            }, 
+                            getClass: function (v, meta, record) {
+                                return record.data.IsDeleted ? 'x-fa fa-undo darkblue-text' : 'x-fa fa-times red-text'
+                            },
+                            getTip: function(value, metadata, record, row, col, store) {
+                                return record.data.IsDeleted ? config.labels.undeleteThisRow : config.labels.deleteThisRow;
+                            }                          
+                        }]                    
+                    }],
+                    tbar: basePayTBarDef,
+                    listeners: {
+                        edit: function(editor, e){
+                            if(Shr.panel.isValidChange(e.originalValue, e.value))
+                                return true;
+
+                            return Shr.panel.CreateASalaryPlan.onBasePayFieldChanged(e);
+                        },
+                        drop: function (node , data , overModel , dropPosition , dropHandlers , eOpts ) { 
+                            var me = this;
+                            //Update the section records in the draft
+                            Ext.Ajax.request({
+                                url: 'API/JsonFetcher.svc/Invoke',
+                                params: {
+                                    svcprovider: 'JsTaskSectionRecordReorder',
+                                    draftId: data.view.grid.draftId,
+                                    routingInstanceHistoryGuid: data.view.grid.routingInstanceHistoryGuid,
+                                    businessObject: data.view.grid.store.extraParams.businessObject,
+                                    recordId: data.records[0].data.RecordGuid, // we're only moving one row at a time, so just use the first row
+                                    newSortOrder: data.view.grid.getStore().indexOf(data.records[0])
+                                },
+                                success: function (resp) {
+                                }
+                            });
+                        },
+                        resize: function(cmp, width, height, oldWidth, oldHeight, eOpts){
+                            MainLayout.setResizeToPanelContainer();
+                        }
+                    }
+                });
+
+
+                //////Other pay
+                this.otherPayGridStore = Shr.panel.CreateOtherPayStore(config);
+
+                var totalOtherPay = [{}]; // this is where the grid totaling of the total column will go also show current salary
+                var otherPayTBarDef = null;
+                //only show the new button if the plan is being created
+                if (config.salaryPlanStatus == 'CREATED') {
+                    otherPayTBarDef = [{
+                        text: this.labels.newLabel,
+                        iconCls: 'x-fa fa-plus',
+                        handler: function () {
+                            Ext.Ajax.request({
+                                url: 'API/JsonFetcher.svc/Invoke',
+                                params: {
+                                    svcprovider: 'JsSalaryPlanningAddOtherPay',
+                                    draftId: config.draftId,
+                                    routingInstanceHistoryGuid: config.routingInstanceHistoryGuid,
+                                },
+                                success: function (resp) {
+                                    var result = Ext.decode(resp.responseText);
+                                    var gridPanel = otherPayGridPanel
+                                    var otherPayRecord = gridPanel.getStore().recordType;
+
+                                    var rec = new Ext.data.Record({
+                                        PersonOtherPayReason: '',
+                                        PersonOtherPayType: '',
+                                        PersonOtherPayStartDate: '',
+                                        PersonOtherPayEndDate: '',
+                                        AmountChange: '',
+                                        AmountChangeFrequency: '',
+                                        PercentageChange: '',
+                                        OtherPayTotal: ''
+                                    });
+                                    rec.set('RecordGuid', result.recordId);
+                                    rec.commit();
+                                    gridPanel.store.add(rec);
+                                    gridPanel.plugins[0].startEditByPosition({row: gridPanel.store.getCount() - 1, column: 0});
+                                }
+                            });
+                        }
+                    }]
+                }
+
+                //other pay grid
+                var otherPayGridPanel = new Ext.grid.Panel({
+                    id: 'otherPayGrid',
+                    draftId: config.draftId,
+                    routingInstanceHistoryGuid: config.routingInstanceHistoryGuid,
+                    salaryPlanType: config.salaryPlanType,
+                    store: this.otherPayGridStore,
+                    loadMask: true,
+                    layout: 'fit',
+                    forceFit: true,
+                    renderTo: config.otherPayGridDivId,
+                    plugins: {
+                        ptype: 'cellediting',
+                        clicksToEdit: 1
+                    },
+                    columns: [{
+                        header: "* " + config.labels.otherPayReason,
+                        dataIndex: "PersonOtherPayReason",
+                        width: 150,
+                        sortable: true,
+                        editable: config.salaryPlanStatus == 'CREATED' ? true: false,
+                        editor: new Shr.panel.SalaryPlan.CodeCombobox({
+                            showClear: false,
+                            dataType: 'OtherPayReason',
+                            showDash: false}),
+                        renderer: Shr.codeSalaryPlaningRenderer
+                        }, {
+                            header: "* " + config.labels.otherPayType,
+                            dataIndex: "PersonOtherPayType",
+                            width: 150,
+                            sortable: true,
+                            editable: config.salaryPlanStatus == 'CREATED' ? true: false,
+                            editor: new Shr.panel.SalaryPlan.CodeCombobox({
+                                showClear: false,
+                                dataType: 'OtherPayType',
+                                showDash: false}),
+                            renderer: Shr.codeSalaryPlaningRenderer
+                        }, {
+                            header: "* " + config.labels.startDate,
+                            dataIndex: "PersonOtherPayStartDate",
+                            width: 100,
+                            sortable: true,
+                            editable: config.salaryPlanStatus == 'CREATED' ? true: false,
+                            editor: new Ext.form.DateField({ selectOnFocus: true }), 
+                            renderer: function (value) { if (isNaN(value) || Ext.isEmpty(value)) return null; return Ext.Date.format(value, Shr.DATE_FORMAT); }
+                        },{
+                            header: config.labels.endDate,
+                            dataIndex: "PersonOtherPayEndDate",
+                            width: 100,
+                            sortable: true,
+                            editable: config.salaryPlanStatus == 'CREATED' ? true: false,
+                            editor: new Ext.form.DateField({ selectOnFocus: true }), 
+                            renderer: function (value) { if (isNaN(value) || Ext.isEmpty(value)) return null; return Ext.Date.format(value, Shr.DATE_FORMAT); }                        
+                        }, {
+                            header: config.labels.amountPerEmployee,
+                            dataIndex: "AmountChange",
+                            width: 100,
+                            sortable: false,
+                            xtype: 'numbercolumn',
+                            editor: new Ext.form.NumberField({ selectOnFocus: true, style: 'text-align:left;' }),
+                            renderer: function(value) {return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );}                        
+                        }, {
+                            header: config.labels.frecuency,
+                            dataIndex: "AmountChangeFrequency",
+                            width: 150,
+                            sortable: true,
+                            editable: config.salaryPlanStatus == 'CREATED' ? true: false,
+                            editor: new Shr.panel.SalaryPlan.CodeCombobox({
+                                showClear: false,
+                                dataType: 'Frequency',
+                                showDash: false}),
+                            renderer: Shr.codeSalaryPlaningRenderer
+                        }, {
+                            header: config.labels.calculateOtherPayOnCurrentFlag ? config.labels.percentOfCurrentSalary : config.labels.percentOfNewSalary,
+                            dataIndex: "PercentageChange",
+                            width: 100,
+                            sortable: false,
+                            xtype: 'numbercolumn',
+                            editor: new Ext.form.NumberField({ selectOnFocus: true, style: 'text-align:left;' }),
+                            renderer: function(value) {return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );}                        
+                        }, {
+                            header: config.labels.total,
+                            dataIndex: "OtherPayTotal",
+                            width: 100,
+                            sortable: false,
+                            xtype: 'numbercolumn',                            
+                            renderer: function(value) {return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );}
+                        }, {
+                            dataIndex: 'warnings',
+                            sortable: false,
+                            width: 40,
+                            renderer: this.warnBPColumnRenderer                        
+                        }, {
+                            dataIndex: 'action',
+                            xtype: 'actioncolumn',
+                            width: 30,
+                            hidden: config.salaryPlanStatus == 'CREATED' ? false: true,
+                            items: [{
+                                handler: function (view, rowIndex, colIndex, item, e, record, row) {
+                                    Shr.panel.CreateASalaryPlan.rowDeleteAction(view.grid, record);
+                                }, 
+                                getClass: function (v, meta, record) {
+                                    return record.data.IsDeleted ? 'x-fa fa-undo darkblue-text' : 'x-fa fa-times red-text'
+                                },
+                                getTip: function(value, metadata, record, row, col, store) {
+                                    return record.data.IsDeleted ? config.labels.undeleteThisRow : config.labels.deleteThisRow;
+                                }                          
+                            }]      
+                        }],
+                    tbar: otherPayTBarDef,
+                    listeners: {
+                        edit: function(editor, e){
+                            if(Shr.panel.isValidChange(e.originalValue, e.value))
+                                return true;
+
+                            return Shr.panel.CreateASalaryPlan.onOtherPayFieldChanged(e);
+                        },
+                        resize: function(cmp, width, height, oldWidth, oldHeight, eOpts){
+                            MainLayout.setResizeToPanelContainer();
+                        }
+                    }
+                });
+            }
+        }
+    },
+    //end init
+
+    // Shows person job hist picker, once selection is made if any
+    // then we rebuild the grid.  This is done by the onchange event
+    // attached to the employeePicker field.
+    addPeople: function (e) {
+        var me = this;
+        //Add a mask
+        Ext.getBody().mask(Shr.panel.CreateASalaryPlan.labels.loading);
+
+        // AJAX request to add selected people to draft
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsSalaryPlanningAddPeople',
+                draftId: Shr.panel.CreateASalaryPlan.draftId,
+                routingInstanceHistoryGuid: Shr.panel.CreateASalaryPlan.routingInstanceHistoryGuid,
+                guids: me.selectedValues.keys
+            },
+            success: function (response) {
+                var result = Ext.decode(response.responseText);
+                if (result.warning != '') {
+                    Ext.Msg.show({
+                        title: Shr.panel.CreateASalaryPlan.labels.warning,
+                        msg: result.warning,
+                        buttons: Ext.Msg.OK
+                    });
+                }
+                //turn off the mask
+                Ext.getBody().unmask();
+
+                Shr.panel.CreateASalaryPlan.refreshEmployees();
+                Shr.panel.CreateASalaryPlan.refreshCreateASalaryPlan();
+            }
+        });
+    },
+
+    onBasePayFieldChanged: function (e) {
+        var amountChangeFrequencyValue = e.record.data.AmountChangeFrequency;
+        var message = null;
+        var fieldsToClear = [];
+        if (e.field == "AmountChange" && !Ext.isEmpty(e.value) && !Ext.isEmpty(e.record.data.PercentageChange)) {
+            message = this.labels.overridePercent;
+            fieldsToClear.push("PercentageChange");
+        }
+        else if (e.field == "PercentageChange" && !Ext.isEmpty(e.value)
+            && (!Ext.isEmpty(e.record.data.AmountChange) || (!Ext.isEmpty(amountChangeFrequencyValue) && amountChangeFrequencyValue.hasOwnProperty("Value") && (!Ext.isEmpty(amountChangeFrequencyValue.Value))))) {
+            message = this.labels.overrideAmount;
+            fieldsToClear.push("AmountChange");
+            fieldsToClear.push("AmountChangeFrequency");
+        }
+        if (message != null) {
+            Ext.Msg.show({
+                title: this.labels.warning,
+                msg: message,
+                buttons: Ext.Msg.OKCANCEL,
+                eventArgs: e,
+                fieldsToClear: fieldsToClear,
+                fn: function (btn, text, config) {
+                    if (btn == 'ok') {
+                        e = config.eventArgs;
+                        for (var i = 0; i < config.fieldsToClear.length; i++) {
+
+                            //special handling for the frequency field
+                            if (config.fieldsToClear[i] == "AmountChangeFrequency") {
+                                Shr.updateTaskField(e.grid.draftId,e.grid.routingInstanceHistoryGuid,e.grid.store.extraParams.businessObject, e.record.data.RecordGuid, config.fieldsToClear[i], '-');
+                            }
+                            else {
+                                Shr.updateTaskField(e.grid.draftId,e.grid.routingInstanceHistoryGuid, e.grid.store.extraParams.businessObject, e.record.data.RecordGuid, config.fieldsToClear[i], null);
+                            }
+                            e.record.set(config.fieldsToClear[i], '');
+                        }
+
+                        //Add a mask
+                        Ext.getBody().mask(Shr.panel.CreateASalaryPlan.labels.loading);
+
+                        var basePayValue = !(e.value == null || Ext.isEmpty(e.value.Value)) ? e.value.Value : e.value;
+                        Ext.Ajax.request({
+                            url: 'API/JsonFetcher.svc/Invoke',
+                            params: {
+                                svcprovider: 'JsUpdateTaskField',
+                                draftId: e.grid.draftId,
+                                routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,  
+                                businessObject: e.grid.store.extraParams.businessObject,
+                                recordId: e.record.data.RecordGuid,
+                                fieldId: e.field,
+                                value: basePayValue
+                            },
+                            success: function (resp) {
+                                Ext.Ajax.request({
+                                    url: 'API/JsonFetcher.svc/Invoke',
+                                    params: {
+                                        svcprovider: 'JsSalaryPlanningActions',
+                                        draftId: e.grid.draftId,
+                                        routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                        recordId: e.record.data.RecordGuid,
+                                        actionType: 'CalculateBasePayRowTotal'
+                                    },
+                                    success: function (resp) {
+                                        var result = Ext.decode(resp.responseText);
+                                        Ext.Ajax.request({
+                                            url: 'API/JsonFetcher.svc/Invoke',
+                                            params: {
+                                                svcprovider: 'JsUpdateTaskField',
+                                                draftId: e.grid.draftId,
+                                                routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                businessObject: e.grid.store.extraParams.businessObject,
+                                                recordId: e.record.data.RecordGuid,
+                                                fieldId: 'BasePayTotal',
+                                                value: result.total
+                                            },
+                                            success: function (resp) {
+                                                e.record.set('BasePayTotal', result.total);
+                                                Shr.panel.CreateASalaryPlan.refreshCreateASalaryPlan();
+                                                //turn off the mask
+                                                Ext.getBody().unmask();
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+
+                        return true;
+                    }
+                    else {
+                        // restore previous value
+                        e.record.set(e.field, '');
+                        return false;
+                    }
+                },
+                icon: Ext.MessageBox.QUESTION
+            });
+        }
+        else {
+            var basePayValue = !(e.value == null || Ext.isEmpty(e.value.Value)) ? e.value.Value : e.value
+            //special handling for the frequency field
+            if (e.field == "AmountChangeFrequency" && !Ext.isEmpty(e.value)) {
+                if (e.value.hasOwnProperty("Name") && Ext.isEmpty(e.value.Name)) {
+                    basePayValue = '-';
+                }
+            } else if ((e.field == "AmountChangeFrequency" && e.value === null) 
+                        || (e.field == "AmountChangeFrequency" && e.value === '')
+                        || (e.field == "AmountChangeFrequency" && Ext.isEmpty(e.value))) {
+                basePayValue = '-';
+            }
+            Ext.Ajax.request({
+                url: 'API/JsonFetcher.svc/Invoke',
+                params: {
+                    svcprovider: 'JsUpdateTaskField',
+                    draftId: e.grid.draftId,
+                    routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                    businessObject: e.grid.store.extraParams.businessObject,
+                    recordId: e.record.data.RecordGuid,
+                    fieldId: e.field,
+                    value: basePayValue
+                },
+                success: function (resp) {
+                    //we only need to recalc for specific fields
+                    if (e.field == "PersonBasePayStartDate" || e.field == "AmountChange" || e.field == "AmountChangeFrequency" || e.field == "PercentageChange") {
+                        //Add a mask
+                        Ext.getBody().mask(Shr.panel.CreateASalaryPlan.labels.loading);
+
+                        Ext.Ajax.request({
+                            url: 'API/JsonFetcher.svc/Invoke',
+                            params: {
+                                svcprovider: 'JsSalaryPlanningActions',
+                                draftId: e.grid.draftId,
+                                routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                recordId: e.record.data.RecordGuid,
+                                actionType: 'CalculateBasePayRowTotal'
+                            },
+                            success: function (resp) {
+                                var result = Ext.decode(resp.responseText);
+
+                                Ext.Ajax.request({
+                                    url: 'API/JsonFetcher.svc/Invoke',
+                                    params: {
+                                        svcprovider: 'JsUpdateTaskField',
+                                        draftId: e.grid.draftId,
+                                        routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                        businessObject: e.grid.store.extraParams.businessObject,
+                                        recordId: e.record.data.RecordGuid,
+                                        fieldId: 'BasePayTotal',
+                                        value: result.total
+                                    },
+                                    success: function (resp) {
+                                        e.record.set('BasePayTotal', result.total);
+                                        Shr.panel.CreateASalaryPlan.refreshCreateASalaryPlan();
+                                        //turn off the mask
+                                        Ext.getBody().unmask();
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+            });
+
+            return true;
+        }
+    },
+
+    onOtherPayFieldChanged: function (e) {
+        var amountChangeFrequencyValue = e.record.data.AmountChangeFrequency;
+        var message = null;
+        var fieldsToClear = [];
+        if (e.field == "AmountChange" && !Ext.isEmpty(e.value) && !Ext.isEmpty(e.record.data.PercentageChange)) {
+            message = this.labels.overridePercent;
+            fieldsToClear.push("PercentageChange");
+        }
+        else if (e.field == "PercentageChange" && !Ext.isEmpty(e.value)
+             && (!Ext.isEmpty(e.record.data.AmountChange) || (!Ext.isEmpty(amountChangeFrequencyValue) && amountChangeFrequencyValue.hasOwnProperty("Value") && (!Ext.isEmpty(amountChangeFrequencyValue.Value))))) {
+            message = this.labels.overrideAmount;
+            fieldsToClear.push("AmountChange");
+            fieldsToClear.push("AmountChangeFrequency");
+        }
+        if (message != null) {
+            Ext.Msg.show({
+                title: this.labels.warning,
+                msg: message,
+                buttons: Ext.Msg.OKCANCEL,
+                eventArgs: e,
+                fieldsToClear: fieldsToClear,
+                fn: function (btn, text, config) {
+                    if (btn == 'ok') {
+                        e = config.eventArgs;
+                        for (var i = 0; i < config.fieldsToClear.length; i++) {
+                            //special handling for the frequency field
+                            if (config.fieldsToClear[i] == "AmountChangeFrequency") {
+                                Shr.updateTaskField(e.grid.draftId, e.grid.routingInstanceHistoryGuid, e.grid.store.extraParams.businessObject, e.record.data.RecordGuid, config.fieldsToClear[i], '-');
+                            }
+                            else {
+                                Shr.updateTaskField(e.grid.draftId, e.grid.routingInstanceHistoryGuid, e.grid.store.extraParams.businessObject, e.record.data.RecordGuid, config.fieldsToClear[i], null);
+                            }
+
+                            e.record.set(config.fieldsToClear[i], '');
+                        }
+                        //Add a mask
+                        Ext.getBody().mask(Shr.panel.CreateASalaryPlan.labels.loading);
+
+                        var otherPayValue = !(e.value == null || Ext.isEmpty(e.value.Value)) ? e.value.Value : e.value
+                        Ext.Ajax.request({
+                            url: 'API/JsonFetcher.svc/Invoke',
+                            params: {
+                                svcprovider: 'JsUpdateTaskField',
+                                draftId: e.grid.draftId,
+                                routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                businessObject: e.grid.store.extraParams.businessObject,
+                                recordId: e.record.data.RecordGuid,
+                                fieldId: e.field,
+                                value: otherPayValue
+                            },
+                            success: function (resp) {
+                                Ext.Ajax.request({
+                                    url: 'API/JsonFetcher.svc/Invoke',
+                                    params: {
+                                        svcprovider: 'JsSalaryPlanningActions',
+                                        draftId: e.grid.draftId,
+                                        routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                        recordId: e.record.data.RecordGuid,
+                                        actionType: 'CalculateOtherPayRowTotal'
+                                    },
+                                    success: function (resp) {
+                                        var result = Ext.decode(resp.responseText);
+                                        Ext.Ajax.request({
+                                            url: 'API/JsonFetcher.svc/Invoke',
+                                            params: {
+                                                svcprovider: 'JsUpdateTaskField',
+                                                draftId: e.grid.draftId,
+                                                routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                businessObject: e.grid.store.extraParams.businessObject,
+                                                recordId: e.record.data.RecordGuid,
+                                                fieldId: 'OtherPayTotal',
+                                                value: result.total
+                                            },
+                                            success: function (resp) {
+                                                e.record.set('OtherPayTotal', result.total);
+                                                Shr.panel.CreateASalaryPlan.calculatePlanTotals();
+                                                //turn off the mask
+                                                Ext.getBody().unmask();
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                        return true;
+                    }
+                    else {
+                        // restore previous value
+                        e.record.set(e.field, '');
+                        return false;
+                    }
+                },
+                icon: Ext.MessageBox.QUESTION
+            });
+        }
+        else {
+            var otherPayValue = !(e.value == null || Ext.isEmpty(e.value.Value)) ? e.value.Value : e.value
+            //special handling for the frequency field
+            if (e.field == "AmountChangeFrequency" && !Ext.isEmpty(e.value)) {
+                if (e.value.hasOwnProperty("Name") && Ext.isEmpty(e.value.Name)) {
+                    otherPayValue = '-';
+                }
+            } else if ((e.field == "AmountChangeFrequency" && e.value === null) 
+                        || (e.field == "AmountChangeFrequency" && e.value === '')
+                        || (e.field == "AmountChangeFrequency" && Ext.isEmpty(e.value))) {
+                otherPayValue = '-';
+            }
+            Ext.Ajax.request({
+                url: 'API/JsonFetcher.svc/Invoke',
+                params: {
+                    svcprovider: 'JsUpdateTaskField',
+                    draftId: e.grid.draftId,
+                    routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                    businessObject: e.grid.store.extraParams.businessObject,
+                    recordId: e.record.data.RecordGuid,
+                    fieldId: e.field,
+                    value: otherPayValue
+                },
+                success: function (resp) {
+                    if (e.field == "PersonOtherPayStartDate" || e.field == "PersonOtherPayEndDate" || e.field == "AmountChange" || e.field == "AmountChangeFrequency" || e.field == "PercentageChange") {
+                        //Add a mask
+                        Ext.getBody().mask(Shr.panel.CreateASalaryPlan.labels.loading);
+
+                        Ext.Ajax.request({
+                            url: 'API/JsonFetcher.svc/Invoke',
+                            params: {
+                                svcprovider: 'JsSalaryPlanningActions',
+                                draftId: e.grid.draftId,
+                                routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                recordId: e.record.data.RecordGuid,
+                                actionType: 'CalculateOtherPayRowTotal'
+                            },
+                            success: function (resp) {
+                                var result = Ext.decode(resp.responseText);
+                                Ext.Ajax.request({
+                                    url: 'API/JsonFetcher.svc/Invoke',
+                                    params: {
+                                        svcprovider: 'JsUpdateTaskField',
+                                        draftId: e.grid.draftId,
+                                        routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                        businessObject: e.grid.store.extraParams.businessObject,
+                                        recordId: e.record.data.RecordGuid,
+                                        fieldId: 'OtherPayTotal',
+                                        value: result.total
+                                    },
+                                    success: function (resp) {
+                                        e.record.set('OtherPayTotal', result.total);
+                                        Shr.panel.CreateASalaryPlan.calculatePlanTotals();
+                                        //turn off the mask and load grid store.
+                                        Ext.getBody().unmask();
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+            });
+            return true;
+        }
+    },
+
+    onEmployeeBasePayFieldChanged: function (e, personGuid) {
+        var basePayValue = !(e.value == null || Ext.isEmpty(e.value.Value)) ? e.value.Value : e.value;
+        Shr.panel.CreateASalaryPlan.doUpdateLayout = false;
+
+        //special handling for the frequency field
+        if (e.field == "PersonBasePayFrequency" && !Ext.isEmpty(e.value)) {
+            if (e.value.hasOwnProperty("Name") && Ext.isEmpty(e.value.Name)) {
+                basePayValue = '-';
+            }
+        }
+
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsUpdateTaskField',
+                draftId: e.grid.draftId,
+                routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                businessObject: e.grid.store.extraParams.businessObject,
+                recordId: e.record.data.RecordGuid,
+                fieldId: e.field,
+                value: basePayValue
+            },
+            success: function (resp) {
+                if (e.field == "PersonBasePayStartDate" || e.field == "PersonBasePayChangeAmount" || e.field == "PersonBasePayFrequency" || e.field == "PercentageChange") {
+                    var changedColumn;
+                    switch (e.field) {
+                        case "PersonBasePayChangeAmount":
+                            changedColumn = "amount";
+                            break;
+                        case "PersonBasePayFrequency":
+                            changedColumn = "frequency";
+                            break;
+                        case "PercentageChange":
+                            changedColumn = "percentage";
+                            break;
+                        case "PersonBasePayStartDate":
+                            changedColumn = "percentage";
+                            break;
+                    }
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsSalaryPlanningActions',
+                            draftId: e.grid.draftId,
+                            routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                            recordId: e.record.data.RecordGuid,
+                            changedColumn: changedColumn,
+                            actionType: 'CalculateEmployeeBasePayRowTotal'
+                        },
+                        success: function (resp) {
+                            var result = Ext.decode(resp.responseText);
+                            Ext.Ajax.request({
+                                url: 'API/JsonFetcher.svc/Invoke',
+                                params: {
+                                    svcprovider: 'JsUpdateTaskField',
+                                    draftId: e.grid.draftId,
+                                    routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                    businessObject: e.grid.store.extraParams.businessObject,
+                                    recordId: e.record.data.RecordGuid,
+                                    fieldId: 'EmployeeBasePayTotal',
+                                    value: result.total
+                                },
+                                success: function (resp) {
+                                    Ext.Ajax.request({
+                                        url: 'API/JsonFetcher.svc/Invoke',
+                                        params: {
+                                            svcprovider: 'JsUpdateTaskField',
+                                            draftId: e.grid.draftId,
+                                            routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                            businessObject: e.grid.store.extraParams.businessObject,
+                                            recordId: e.record.data.RecordGuid,
+                                            fieldId: 'PersonBasePayChangeAmount',
+                                            value: result.personBasePayChangeAmount
+                                        },
+                                        success: function (resp) {
+                                            Ext.Ajax.request({
+                                                url: 'API/JsonFetcher.svc/Invoke',
+                                                params: {
+                                                    svcprovider: 'JsUpdateTaskField',
+                                                    draftId: e.grid.draftId,
+                                                    routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                    businessObject: e.grid.store.extraParams.businessObject,
+                                                    recordId: e.record.data.RecordGuid,
+                                                    fieldId: 'PercentageChange',
+                                                    value: result.percentageChange
+                                                },
+                                                success: function (resp) {
+                                                    //we need to set the PercentageChange and PersonBaserPayChangeAmount along with the total after the calcs
+                                                    e.record.set('PersonBasePayChangeAmount', result.personBasePayChangeAmount);
+                                                    e.record.set('PercentageChange', result.percentageChange);
+                                                    e.record.set('EmployeeBasePayTotal', result.total);
+
+                                                    if (Shr.panel.CreateASalaryPlan.cummulativeCalculationFlag) {
+                                                                Shr.panel.CreateASalaryPlan.calculateActualsAndDifferences();
+                                                                Ext.Ajax.request({
+                                                                    url: 'API/JsonFetcher.svc/Invoke',
+                                                                    params: {
+                                                                        svcprovider: 'JsSalaryPlanningActions',
+                                                                        draftId: e.grid.draftId,
+                                                                        routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                                        personGuid: personGuid,
+                                                                        actionType: 'CalculateEmployeeBasePayTotal', 
+                                                                        gridId: e.grid.id
+                                                                    },
+                                                                    success: function (resp) {
+                                                                        var result = Ext.decode(resp.responseText);
+                                                                        //Ext.getCmp(resp.request.params.gridId).getDockedItems('toolbar[dock="bottom"]')[0].items.items[0].setText(result.employeeBasePayTotal, false);
+
+                                                                        //we need to recalculate the employee other pay totals if they are based on the new annual salary
+                                                                        if (!Shr.panel.CreateASalaryPlan.calculateOtherPayOnCurrentFlag) {
+                                                                            Ext.Ajax.request({
+                                                                                url: 'API/JsonFetcher.svc/Invoke',
+                                                                                params: {
+                                                                                    svcprovider: 'JsSalaryPlanningActions',
+                                                                                    draftId: e.grid.draftId,
+                                                                                    routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                                                    personGuid: personGuid,
+                                                                                    actionType: 'CalculateOtherPayRows'
+                                                                                },
+                                                                                success: function (resp) {
+                                                                                    var otherPayGrid = Shr.panel.CreateASalaryPlan.employeeRecordOtherPayGrid[e.record.data.ParentGuid];
+                                                                                    //otherPayGrid.store.load();
+                                                                                    //now update the other pay total for the grid
+                                                                                    Ext.Ajax.request({
+                                                                                        url: 'API/JsonFetcher.svc/Invoke',
+                                                                                        params: {
+                                                                                            svcprovider: 'JsSalaryPlanningActions',
+                                                                                            draftId: e.grid.draftId,
+                                                                                            routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                                                            personGuid: personGuid,
+                                                                                            actionType: 'CalculateEmployeeOtherPayTotal',
+                                                                                            gridId: e.grid.id
+                                                                                        },
+                                                                                        success: function (resp) {
+                                                                                            var result = Ext.decode(resp.responseText);
+                                                                                            //otherPayGrid.getDockedItems('toolbar[dock="bottom"]')[0].items.items[0].setText(result.employeeOtherPayTotal);
+                                                                                        }
+                                                                                    });
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                        Shr.panel.CreateASalaryPlan.calculateSingleEmployeeTotals(e.grid.draftId,e.grid.routingInstanceHistoryGuid, personGuid);
+                                                                    }
+                                                                });
+//                                                            }
+//                                                        });
+                                                    }
+                                                    else {
+                                                        Shr.panel.CreateASalaryPlan.calculateActualsAndDifferences();
+                                                        Ext.Ajax.request({
+                                                            url: 'API/JsonFetcher.svc/Invoke',
+                                                            params: {
+                                                                svcprovider: 'JsSalaryPlanningActions',
+                                                                draftId: e.grid.draftId,
+                                                                routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                                personGuid: personGuid,
+                                                                actionType: 'CalculateEmployeeBasePayTotal',
+                                                                gridId: e.grid.id
+                                                            },
+                                                            success: function (resp) {
+                                                                var result = Ext.decode(resp.responseText);
+                                                                Ext.getCmp(resp.request.params.gridId).getDockedItems('toolbar[dock="bottom"]')[0].items.items[0].setText(result.employeeBasePayTotal, false);
+
+
+                                                                //we need to recalculate the employee other pay totals if they are based on the new annual salary
+                                                                if (!Shr.panel.CreateASalaryPlan.calculateOtherPayOnCurrentFlag) {
+                                                                    Ext.Ajax.request({
+                                                                        url: 'API/JsonFetcher.svc/Invoke',
+                                                                        params: {
+                                                                            svcprovider: 'JsSalaryPlanningActions',
+                                                                            draftId: e.grid.draftId,
+                                                                            routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                                            personGuid: personGuid,
+                                                                            actionType: 'CalculateOtherPayRows'
+                                                                        },
+                                                                        success: function (resp) {
+                                                                            var otherPayGrid = Shr.panel.CreateASalaryPlan.employeeRecordOtherPayGrid[e.record.data.ParentGuid];
+                                                                            otherPayGrid.store.load();
+                                                                            //now update the other pay total for the grid
+                                                                            Ext.Ajax.request({
+                                                                                url: 'API/JsonFetcher.svc/Invoke',
+                                                                                params: {
+                                                                                    svcprovider: 'JsSalaryPlanningActions',
+                                                                                    draftId: e.grid.draftId,
+                                                                                    routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                                                    personGuid: personGuid,
+                                                                                    actionType: 'CalculateEmployeeOtherPayTotal',
+                                                                                    gridId: e.grid.id
+                                                                                },
+                                                                                success: function (resp) {
+                                                                                    var result = Ext.decode(resp.responseText);
+                                                                                    otherPayGrid.getDockedItems('toolbar[dock="bottom"]')[0].items.items[0].setText(result.employeeOtherPayTotal, false);
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                    });
+                                                                }
+                                                                Shr.panel.CreateASalaryPlan.calculateSingleEmployeeTotals(e.grid.draftId,e.grid.routingInstanceHistoryGuid, personGuid);
+                                                            }
+                                                        });
+                                                    }
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    },
+
+    onEmployeeOtherPayFieldChanged: function (e, personGuid) {
+        var otherPayValue = !(e.value == null || Ext.isEmpty(e.value.Value)) ? e.value.Value : e.value;
+        //special handling for the frequency field
+        if (e.field == "PersonOtherPayChangeAmountFrequency" && !Ext.isEmpty(e.value)) {
+            if (e.value.hasOwnProperty("Name") && Ext.isEmpty(e.value.Name)) {
+                otherPayValue = '-';
+            }
+        }
+
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsUpdateTaskField',
+                draftId: e.grid.draftId,
+                routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                businessObject: e.grid.store.extraParams.businessObject,
+                recordId: e.record.data.RecordGuid,
+                fieldId: e.field,
+                value: otherPayValue
+            },
+            success: function (resp) {
+                if (e.field == "PersonOtherPayStartDate" || e.field == "PersonOtherPayEndDate" || e.field == "PersonOtherPayChangeAmount" || e.field == "PersonOtherPayChangeAmountFrequency" || e.field == "PercentageChange") {
+                    var changedColumn;
+                    switch (e.field) {
+                        case "PersonOtherPayChangeAmount":
+                            changedColumn = "amount";
+                            break;
+                        case "PersonOtherPayChangeAmountFrequency":
+                            changedColumn = "frequency";
+                            break;
+                        case "PercentageChange":
+                            changedColumn = "percentage";
+                            break;
+                        case "PersonOtherPayStartDate":
+                            changedColumn = "percentage";
+                            break;
+                    }
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsSalaryPlanningActions',
+                            draftId: e.grid.draftId,
+                            routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                            recordId: e.record.data.RecordGuid,
+                            changedColumn: changedColumn,
+                            actionType: 'CalculateEmployeeOtherPayRowTotal'
+                        },
+                        success: function (resp) {
+                            var result = Ext.decode(resp.responseText);
+                            Ext.Ajax.request({
+                                url: 'API/JsonFetcher.svc/Invoke',
+                                params: {
+                                    svcprovider: 'JsUpdateTaskField',
+                                    draftId: e.grid.draftId,
+                                    routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                    businessObject: e.grid.store.extraParams.businessObject,
+                                    recordId: e.record.data.RecordGuid,
+                                    fieldId: 'EmployeeOtherPayTotal',
+                                    value: result.total
+                                },
+                                success: function (resp) {
+                                    Ext.Ajax.request({
+                                        url: 'API/JsonFetcher.svc/Invoke',
+                                        params: {
+                                            svcprovider: 'JsUpdateTaskField',
+                                            draftId: e.grid.draftId,
+                                            routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                            businessObject: e.grid.store.extraParams.businessObject,
+                                            recordId: e.record.data.RecordGuid,
+                                            fieldId: 'PersonOtherPayChangeAmount',
+                                            value: result.personOtherPayChangeAmount
+                                        },
+                                        success: function (resp) {
+                                            Ext.Ajax.request({
+                                                url: 'API/JsonFetcher.svc/Invoke',
+                                                params: {
+                                                    svcprovider: 'JsUpdateTaskField',
+                                                    draftId: e.grid.draftId,
+                                                    routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                    businessObject: e.grid.store.extraParams.businessObject,
+                                                    recordId: e.record.data.RecordGuid,
+                                                    fieldId: 'PercentageChange',
+                                                    value: result.percentageChange
+                                                },
+                                                success: function (resp) {
+                                                    //we need to set the PercentageChange and PersonOtherPayChangeAmount along with the total after the calcs
+                                                    e.record.set('PersonOtherPayChangeAmount', result.personOtherPayChangeAmount);
+                                                    e.record.set('PercentageChange', result.percentageChange);
+                                                    e.record.set('EmployeeOtherPayTotal', result.total);
+
+                                                    Shr.panel.CreateASalaryPlan.calculateActualsAndDifferences();
+                                                    Ext.Ajax.request({
+                                                        url: 'API/JsonFetcher.svc/Invoke',
+                                                        params: {
+                                                            svcprovider: 'JsSalaryPlanningActions',
+                                                            draftId: e.grid.draftId,
+                                                            routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                            personGuid: personGuid,
+                                                            actionType: 'CalculateEmployeeOtherPayTotal',
+                                                            gridId: e.grid.id
+                                                        },
+                                                        success: function (resp) {
+                                                            var result = Ext.decode(resp.responseText);
+                                                            Ext.getCmp(resp.request.params.gridId).getDockedItems('toolbar[dock="bottom"]')[0].items.items[0].setText(result.employeeOtherPayTotal);
+                                                            //caclulate the new employee totals
+                                                            Ext.Ajax.request({
+                                                                url: 'API/JsonFetcher.svc/Invoke',
+                                                                params: {
+                                                                    svcprovider: 'JsSalaryPlanningActions',
+                                                                    draftId: e.grid.draftId,
+                                                                    routingInstanceHistoryGuid: e.grid.routingInstanceHistoryGuid,
+                                                                    personGuid: personGuid,
+                                                                    actionType: 'GetSalaryPlanningEmployeeTotals'
+                                                                },
+                                                                success: function (resp) {
+                                                                    var result = Ext.decode(resp.responseText);
+                                                                    //update the employee row totals
+                                                                    Shr.panel.CreateASalaryPlan.calculateSingleEmployeeTotals(e.grid.draftId,e.grid.routingInstanceHistoryGuid, personGuid);
+                                                                }
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    },
+
+    refreshEmployees: function () {
+        this.employeeStore.load();
+    },
+
+    refreshCreateASalaryPlan: function () {
+        var otherPayGridStore = this.otherPayGridStore;
+        this.basePayGridStore.load({
+            callback: function (r, options, success) {
+
+                //we need to update the base pay totals before we load the other pay grid
+                Ext.Ajax.request({
+                    url: 'API/JsonFetcher.svc/Invoke',
+                    params: {
+                        svcprovider: 'JsSalaryPlanningActions',
+                        draftId: Shr.panel.CreateASalaryPlan.draftId,   
+                        routingInstanceHistoryGuid: Shr.panel.CreateASalaryPlan.routingInstanceHistoryGuid,                   
+                        actionType: 'CalculatePlanTotals'
+                    },
+                    success: function (resp) {
+                        var result = Ext.decode(resp.responseText);
+                        Ext.Ajax.request({
+                            url: 'API/JsonFetcher.svc/Invoke',
+                            params: {
+                                svcprovider: 'JsUpdateTaskField',
+                                draftId: Shr.panel.CreateASalaryPlan.draftId,
+                                routingInstanceHistoryGuid: Shr.panel.CreateASalaryPlan.routingInstanceHistoryGuid,                                                   
+                                businessObject: 'SysSalaryPlan',
+                                recordId: null,
+                                fieldId: 'BasePayTotal',
+                                value: result.totalBasePay
+                            },
+                            success: function (resp) {
+                            }
+                        });
+                        Ext.Ajax.request({
+                            url: 'API/JsonFetcher.svc/Invoke',
+                            params: {
+                                svcprovider: 'JsUpdateTaskField',
+                                draftId: Shr.panel.CreateASalaryPlan.draftId,
+                                routingInstanceHistoryGuid: Shr.panel.CreateASalaryPlan.routingInstanceHistoryGuid,                                                   
+                                businessObject: 'SysSalaryPlan',
+                                recordId: null,
+                                fieldId: 'TotalCurrentSalary',
+                                value: result.totalCurrentSalary
+                            },
+                            success: function (resp) {
+                                otherPayGridStore.load({
+                                    callback: function (r, options, success) {
+                                        Shr.panel.CreateASalaryPlan.calculatePlanTotals();
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    },
+
+    deleteBasePayRow: function () {
+        var gridPanel = Ext.getCmp('basePayGrid');
+        if (gridPanel.editing) {
+            gridPanel.stopEditing();
+        }
+        var rec = gridPanel.store.getAt(gridPanel.lastEdit.row);
+        gridPanel.store.remove(rec);
+    },
+
+    deleteOtherPayRow: function () {
+        var gridPanel = Ext.getCmp('otherPayGrid');
+        if (gridPanel.editing) {
+            gridPanel.stopEditing();
+        }
+        var rec = gridPanel.store.getAt(gridPanel.lastEdit.row);
+        gridPanel.store.remove(rec);
+    },
+
+    rendererSalaryPlanColumn: function(value, metadata, record, rowIndex, colIndex, store) {
+        return '<div parentGuid=' + record.data.PersonGuid + ' fieldName= ' + metadata.column.dataIndex + '>' + Shr.formatNumber(value) + '</div>'
+    },
+
+    isCompleteRenderer: function (val, col, rec) {
+        if (rec.data.IsComplete == "true") {
+            return '<img recordguid="' + rec.data.RecordGuid + '" src="' + getPathRoot() + '/images/checkmark.gif" ' +
+            'onmouseover="this.style.cursor=\'pointer\';" ' +
+            'onclick="Shr.panel.CreateASalaryPlan.setIsComplete(\'' + rec.data.RecordGuid + '\', false);" ' +
+            'iscomplete="true"' +
+            'title="Mark as Incomplete" />';
+        }
+        else {
+            return '<img recordguid="' + rec.data.RecordGuid + '" src="' + getPathRoot() + '/images/CheckboxUnchecked.gif" ' +
+            'onmouseover="this.style.cursor=\'pointer\';" ' +
+            'onclick="Shr.panel.CreateASalaryPlan.setIsComplete(\'' + rec.data.RecordGuid + '\', true);" ' +
+            'iscomplete="false"' +
+            'title="Mark as Done" />';
+        }
+    },
+
+    infoColumnRenderer: function (val, col, rec) {
+        var warnings = rec.data.Warnings;
+        var warningCount = rec.data.WarningsCount;
+        var linkWrapperOpenTag = '<div parentGuid="' + rec.data.PersonGuid + '" fieldName="Warnings" style="display: inline;">';
+        var linkWrappedCloseTag = '</div>';
+
+        warnings = Shr.panel.CreateASalaryPlan.getWarningsHtml(warnings);
+
+        var infoDiv = '<i class="x-fa fa-info-circle fa-lg darkblue-text" ' +
+            'onmouseover="this.style.cursor=\'pointer\';" ' +
+            'onclick="Shr.panel.CreateASalaryPlan.viewEmployeeHistory(\'' + rec.data.PersonGuid + '\');" ' +
+            'title="View this employee\'s history"></i>&nbsp;';
+
+        var badge = '';
+        if (warningCount && warningCount > 1) {
+            badge = '<sub style="position:relative;font-weight:bold;">' + warningCount + '</sub>';
+        }
+
+        return infoDiv + linkWrapperOpenTag + warnings + badge + linkWrappedCloseTag;
+    },
+
+    getWarningsHtml: function (warnings) {
+        if (warnings != '') {
+            return '<i class="x-fa fa-exclamation-circle fa-lg red-text" onmouseover="this.style.cursor=\'pointer\';" title="' + warnings + '"></i>';
+        }
+        else {
+            return '&nbsp;';
+        }
+    },
+
+    getwarningCountHtml: function(warningCount) {
+        if (warningCount && warningCount > 1) {
+            return '<sub style="position:relative;font-weight:bold;">' + warningCount + '</sub>';
+        }
+        else {
+            return '&nbsp;';
+        }
+    },
+
+    warnBPColumnRenderer: function (val, col, rec) {
+        var warnings = typeof(rec.data.Warnings) != "undefined" ? rec.data.Warnings : "";
+        var warningCount = rec.data.WarningsCount;
+        var linkWrapperOpenTag = '<div fieldName="Warnings" style="display: inline;">';
+        var linkWrappedCloseTag = '</div>';
+
+        warnings = Shr.panel.CreateASalaryPlan.getWarningsHtml(warnings);
+
+        var badge = "";
+        if (warningCount && warningCount > 1) {
+            badge = '<sub style="position:relative;font-weight:bold;">' + warningCount + '</sub>';
+        }
+
+        return linkWrapperOpenTag + warnings + badge + linkWrappedCloseTag;
+    },
+
+    viewEmployeeHistory: function (guid) {
+        new Shr.WebControls.Dialog({
+            title: this.labels.ViewEmployeeHistory,
+            sourceControl: 'ViewEmployeeHistory',
+            urlParams: "Person=" + guid,
+            height: 'max',
+            width: 'max'
+        }).show();
+        return false;
+    },
+
+    calculateActualsAndDifferences: function () {
+        //first we need to recalculate the actuals
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsSalaryPlanningActions',
+                draftId: this.draftId,
+                routingInstanceHistoryGuid: this.routingInstanceHistoryGuid,
+                actionType: 'CalculateActualsAndDifferences'
+            },
+            success: function (resp) {
+                var result = Ext.decode(resp.responseText);
+                var readOnlyActualBasePayTotal = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyActualBasePayTotal);
+                var readOnlyActualOtherPayTotal = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyActualOtherPayTotal);
+                var readOnlyActualTotal = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyActualTotal);
+
+                var readOnlyBasePayDifference = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyBasePayDifference);
+                var readOnlyOtherPayDifference = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyOtherPayDifference);
+                var readOnlyTotalDifference = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyTotalDifference);
+
+                if (readOnlyActualBasePayTotal != null) {
+                    Shr.panel.getReadOnlyValueFormat(readOnlyActualBasePayTotal, result.readOnlyActualBasePayTotal);
+                }
+
+                if (readOnlyActualOtherPayTotal != null) {
+                    Shr.panel.getReadOnlyValueFormat(readOnlyActualOtherPayTotal, result.readOnlyActualOtherPayTotal);
+                }
+
+                if (readOnlyActualTotal != null) {
+                    Shr.panel.getReadOnlyValueFormat(readOnlyActualTotal, result.readOnlyActualTotal);
+                }
+
+                if (readOnlyBasePayDifference != null) {
+                    Shr.panel.getReadOnlyValueFormat(readOnlyBasePayDifference, result.readOnlyBasePayDifference);
+                }
+
+                if (readOnlyOtherPayDifference != null) {
+                    Shr.panel.getReadOnlyValueFormat(readOnlyOtherPayDifference, result.readOnlyOtherPayDifference);
+                }
+
+                if (readOnlyTotalDifference != null) {
+                    Shr.panel.getReadOnlyValueFormat(readOnlyTotalDifference, result.readOnlyTotalDifference);
+                }
+            }
+        });
+    },
+
+    addBasePayOtherPayBudget: function () {
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsSalaryPlanningActions',
+                draftId: this.draftId,
+                routingInstanceHistoryGuid: this.routingInstanceHistoryGuid,
+                actionType: 'AddBasePayOtherPayBudget'
+            },
+            success: function (resp) {
+                var result = Ext.decode(resp.responseText);
+                var readOnlyTotalBudget = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyTotalBudget);
+                var readOnlyBasePayBudget = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyBasePayBudget);
+                var readOnlyOtherPayBudget = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyOtherPayBudget);
+
+                if (readOnlyTotalBudget != null) {
+                    Shr.panel.getReadOnlyValueFormat(readOnlyTotalBudget, result.readOnlyTotalBudget);
+                }
+
+                if (readOnlyBasePayBudget != null) {
+                    Shr.panel.getReadOnlyValueFormat(readOnlyBasePayBudget, result.readOnlyBasePayBudget);
+                }
+
+                if (readOnlyOtherPayBudget != null) {
+                    Shr.panel.getReadOnlyValueFormat(readOnlyOtherPayBudget, result.readOnlyOtherPayBudget);
+                }
+            }
+        });
+    },
+
+    basePayBudgetStartDate_OnClientChange: function () {
+        Shr.panel.CreateASalaryPlan.refreshEmployees();
+    },
+
+    basePayBudget_OnClientChange: function () {
+        //first we need to update the draft with the new base pay budget amount because it will be used by the functions below
+        //Add a mask
+        Ext.getBody().mask(Shr.panel.CreateASalaryPlan.labels.loading);
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsUpdateTaskField',
+                draftId: this.draftId,
+                routingInstanceHistoryGuid: this.routingInstanceHistoryGuid,
+                businessObject: 'SysSalaryPlan',
+                recordId: null,
+                fieldId: 'BasePayBudget',
+                value: Ext.getDom(Shr.panel.CreateASalaryPlan.BasePayBudget + '_fieldText').value
+            },
+            success: function (resp) {
+                Shr.panel.CreateASalaryPlan.calculatePlanTotals();
+                //turn off the mask
+                Ext.getBody().unmask();
+            }
+        });
+    },
+
+    otherPayBudget_OnClientChange: function () {
+        //first we need to update the draft with the new other pay budget amount because it will be used by the functions below
+        //Add a mask
+        Ext.getBody().mask(Shr.panel.CreateASalaryPlan.labels.loading);
+
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsUpdateTaskField',
+                draftId: this.draftId,
+                routingInstanceHistoryGuid: this.routingInstanceHistoryGuid,  
+                businessObject: 'SysSalaryPlan',
+                recordId: null,
+                fieldId: 'OtherPayBudget',
+                value: Ext.getDom(Shr.panel.CreateASalaryPlan.OtherPayBudget + '_fieldText').value
+            },
+            success: function (resp) {
+                Shr.panel.CreateASalaryPlan.calculatePlanTotals();
+                //turn off the mask
+                Ext.getBody().unmask();
+
+            }
+        });
+    },
+
+    calculatePlanTotals: function () {
+        var draftId = this.draftId; // save for later use below
+        var routingInstanceHistoryGuid = this.routingInstanceHistoryGuid;
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsSalaryPlanningActions',
+                draftId: this.draftId,
+                routingInstanceHistoryGuid: this.routingInstanceHistoryGuid,
+                actionType: 'CalculatePlanTotals'
+            },
+            success: function (resp) {
+                if(resp.responseText.lenght > 0){
+                    var result = Ext.decode(resp.responseText);
+
+                    var totalCurrentSalary = Ext.getDom(Shr.panel.CreateASalaryPlan.TotalCurrentSalary);
+                    if (totalCurrentSalary != null) {
+                        Shr.panel.getReadOnlyValueFormat(totalCurrentSalary, result.totalCurrentSalary);
+                    }
+
+                    var totalBasePay = Ext.getDom(Shr.panel.CreateASalaryPlan.TotalBasePay);
+                    if (totalBasePay != null) {
+                        Shr.panel.getReadOnlyValueFormat(totalBasePay, result.totalBasePay);
+                    }
+                    //write this total out to the draft for future use
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsUpdateTaskField',
+                            draftId: draftId,
+                            routingInstanceHistoryGuid: routingInstanceHistoryGuid,
+                            businessObject: 'SysSalaryPlan',
+                            recordId: null,
+                            fieldId: 'BasePayTotal',
+                            value: result.totalBasePay
+                        },
+                        success: function (resp) {
+                        }
+                    });
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsUpdateTaskField',
+                            draftId: draftId,
+                            routingInstanceHistoryGuid: routingInstanceHistoryGuid,
+                            businessObject: 'SysSalaryPlan',
+                            recordId: null,
+                            fieldId: 'TotalCurrentSalary',
+                            value: result.totalCurrentSalary
+                        },
+                        success: function (resp) {
+                        }
+                    });
+
+                    var totalOtherPay = Ext.getDom(Shr.panel.CreateASalaryPlan.TotalOtherPay);
+                    if (totalOtherPay != null) {
+                        Shr.panel.getReadOnlyValueFormat(totalOtherPay, result.totalOtherPay);
+                    }
+
+                    var readOnlyBasePayBudgetDifference = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyBasePayBudgetDifference);
+                    var readOnlyBasePayBudgetPercentDifference = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyBasePayBudgetPercentDifference);
+
+                    var readOnlyOtherPayBudgetDifference = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyOtherPayBudgetDifference);
+                    var readOnlyOtherPayBudgetPercentDifference = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyOtherPayBudgetPercentDifference);
+
+                    var totalBudget = Ext.getDom(Shr.panel.CreateASalaryPlan.TotalBudget);
+                    var readOnlyTotalBudgetDifference = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyTotalBudgetDifference);
+                    var readOnlyTotalBudgetPercentDifference = Ext.getDom(Shr.panel.CreateASalaryPlan.ReadOnlyTotalBudgetPercentDifference);
+
+                    if (readOnlyBasePayBudgetDifference != null) {
+                        Shr.panel.getReadOnlyValueFormat(readOnlyBasePayBudgetDifference, result.readOnlyBasePayBudgetDifference);
+                    }
+
+                    if (readOnlyBasePayBudgetPercentDifference != null) {
+                        Shr.panel.getReadOnlyValueFormat(readOnlyBasePayBudgetPercentDifference, result.readOnlyBasePayBudgetPercentDifference);
+                    }
+
+                    if (readOnlyOtherPayBudgetDifference != null) {
+                        Shr.panel.getReadOnlyValueFormat(readOnlyOtherPayBudgetDifference, result.readOnlyOtherPayBudgetDifference);
+                    }
+
+                    if (readOnlyOtherPayBudgetPercentDifference != null) {
+                        Shr.panel.getReadOnlyValueFormat(readOnlyOtherPayBudgetPercentDifference, result.readOnlyOtherPayBudgetPercentDifference);
+                    }
+
+                    if (totalBudget != null) {
+                        Shr.panel.getReadOnlyValueFormat(totalBudget, result.totalBudget);
+                    }
+
+                    if (readOnlyTotalBudgetDifference != null) {
+                        Shr.panel.getReadOnlyValueFormat(readOnlyTotalBudgetDifference, result.readOnlyTotalBudgetDifference);
+                    }
+
+                    if (readOnlyTotalBudgetPercentDifference != null) {
+                        Shr.panel.getReadOnlyValueFormat(readOnlyTotalBudgetPercentDifference, result.readOnlyTotalBudgetPercentDifference);
+                    }
+
+                    var basePayBudget = Ext.getDom(Shr.panel.CreateASalaryPlan.BasePayBudget + '_fieldText');
+                    if (basePayBudget != null) {
+                        basePayBudget.value = result.basePayBudget;
+                    }
+                    var otherPayBudget = Ext.getDom(Shr.panel.CreateASalaryPlan.OtherPayBudget + '_fieldText')
+                    if (otherPayBudget != null) {
+                        otherPayBudget.value = result.otherPayBudget;
+                    }                
+                }
+                
+            }
+        });
+    },
+
+    calculateSingleEmployeeTotals: function (draftId, routingInstanceHistoryGuid, personGuid) {
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsSalaryPlanningActions',
+                draftId: draftId,
+                routingInstanceHistoryGuid: routingInstanceHistoryGuid,
+                personGuid: personGuid,
+                actionType: 'GetSalaryPlanningEmployeeTotals'
+            },
+            success: function (resp) {
+                // Update the employee row totals manually.
+                // Because we want to support tabbing through the fields
+                // we can't do this by updating the datastore because 
+                // that causes the row to get redisplayed, which collapses 
+                // the row. We can re-expand it, but it gets too busy.
+                var result = Ext.decode(resp.responseText);
+                var warningCount = result.payGradeWarning.split(/\r\n|\r|\n/g);
+                Ext.each(Ext.DomQuery.jsSelect('div[parentguid="' + personGuid + '"]'),
+                    function (el) {
+                        switch (el.getAttribute('fieldname')) {
+                            case "NewSalary":
+                                el.innerHTML = result.newSalary;
+                                if(Ext.isIE)
+                                    el.innerText = result.newSalary;
+                                break;
+                            case "PayChange":
+                                el.innerHTML = result.payChange;
+                                if(Ext.isIE)
+                                    el.innerText = result.payChange;
+                                break;
+                            case "PercentChange":
+                                el.innerHTML = result.percentChange;
+                                if(Ext.isIE)
+                                    el.innerText = result.percentChange;
+                                break;
+                            case "NewCompaRatio":
+                                el.innerHTML = result.newCompaRatio;
+                                if(Ext.isIE)
+                                    el.innerText = result.newCompaRatio;
+                                break;
+                            case "Warnings":
+                                el.innerHTML = Shr.panel.CreateASalaryPlan.getWarningsHtml(result.payGradeWarning) + Shr.panel.CreateASalaryPlan.getwarningCountHtml(warningCount.length);
+                                break;
+                        }
+                    }
+                );
+            }
+        });
+    },
+
+    // Returns an Ext component to display when a grid row is expanded.
+    // Called by createExpandingRowPanelItems in the RowExpander.
+    getDetailGrids: function (record, rowIndex, config) { 
+        var employeeBasePayStore =  new Shr.WebControls.JsonStore({
+        extraParams: {
+            svcprovider: 'JsGetSalaryPlanningEmployeeBasePayDetail',
+            draftId: config.draftId,
+            personGuid: record.data.PersonGuid,
+            pageNum: 1,
+            salaryPlanType: config.salaryPlanType,
+            businessObject: 'SysSalaryPlanBasePayPersonDetail'
+        },
+        rootProperty: 'records',
+        totalProperty: 'totalCount',
+        idProperty: 'RecordGuid', 
+        autoload: false,
+        fields: [{
+                    name: 'PersonBasePayReason',
+                    type: 'auto'
+                }, {
+                    name: 'RecordGuid',
+                    type: 'auto'
+                }, {
+                    name: 'PersonBasePayStartDate',
+                    type: 'auto'
+                }, {
+                    name: 'ScheduledBasePayReviewDate',
+                    type: 'auto'
+                }, {
+                    name: 'PersonBasePayChangeAmount',
+                    type: 'auto'
+                }, {
+                    name: 'PersonBasePayFrequency',
+                    type: 'auto'
+                }, {
+                    name: 'PersonBasePayChangeAmountFrequency',
+                    type: 'auto'
+                }, {
+                    name: 'PercentageChange',
+                    type: 'auto'
+                }, {
+                    name: 'SortOrder',
+                    type: 'auto'
+                }, {
+                    name: 'EmployeeBasePayTotal',
+                    type: 'auto'
+                }, {
+                    name: 'BasePayJustification',
+                    type: 'auto'
+                }, {
+                    name: 'IsDeleted',
+                    type: 'auto'
+                }, {
+                    name: 'ParentGuid',
+                    type: 'auto'
+                }]
+        });
+
+        var employeeBasePayColumns = [{
+                header: '* ' + config.labels.basePayReason,
+                tooltip: '* ' + config.labels.basePayReason,
+                dataIndex: 'PersonBasePayReason',
+                width: 200,
+                sortable: false,
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                editor: new Shr.panel.SalaryPlan.CodeCombobox({
+                    showClear: false,
+                    dataType: 'BasePayReason',
+                    filter: 'ShowInSalaryPlanningFlag = true',
+                    showDash: true 
+                }), 
+                renderer: Shr.codeSalaryPlaningRenderer            
+            }, {
+                header: '* ' + config.labels.effectiveDate,
+                tooltip: '* ' + config.labels.effectiveDate,
+                dataIndex: "PersonBasePayStartDate",
+                width: 100,
+                sortable: false,
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                editor: {
+                    xtype: 'datefield'
+                },
+                renderer: function (value) { if (isNaN(value) || Ext.isEmpty(value)) return null; return Ext.Date.format(value, Shr.DATE_FORMAT); }
+            }, {
+                header: config.labels.amountPerEmployee,
+                tooltip: config.labels.amountPerEmployee,
+                dataIndex: "PersonBasePayChangeAmount",
+                width: 120,
+                sortable: false,
+                xtype: 'numbercolumn',
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                renderer: function(value) {return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );},
+                editor: {
+                    xtype: 'numberfield',
+                    anchor: '100%'
+                }
+            },{
+                header: config.labels.frecuency,
+                tooltip: config.labels.frecuency,
+                dataIndex: "PersonBasePayFrequency",
+                width: 90,
+                sortable: false,
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                editor: new Shr.panel.SalaryPlan.CodeCombobox({
+                    showClear: false,
+                    dataType: 'Frequency',
+                    showDash: false
+                }), 
+                renderer: Shr.codeSalaryPlaningRenderer
+            }, {
+                header: config.labels.percentOfCurrentSalary,
+                tooltip: config.labels.percentOfCurrentSalary,
+                dataIndex: "PercentageChange",
+                width: 100,
+                sortable: false,
+                xtype: 'numbercolumn',
+                format: config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO,
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                editor: {
+                    xtype: 'numberfield',
+                    anchor: '100%'
+                },
+                renderer: function(value) {return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );}
+            }, {
+                header: config.labels.total,
+                tooltip: config.labels.total,
+                dataIndex: "EmployeeBasePayTotal",
+                width: 100,
+                sortable: false,
+                xtype: 'numbercolumn',
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                renderer: function(value) {return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );}
+            },{
+                header: config.labels.basePayJustification,
+                tooltip: config.labels.basePayJustification,
+                dataIndex: 'BasePayJustification',
+                width: 300,
+                parentRecord: record,
+                editor: new Ext.form.field.TextArea({ allowBlank: true}),
+                getEditor: function(record, defaultField){
+                    if((config.salaryPlanType == config.salaryPlanTypeModel || config.salaryPlanType ==  config.salaryPlanTypeCommit) && this.parentRecord.data.IsComplete == 'false')
+                        return this.editor;
+                    else 
+                        return null;
+                },
+                renderer: function(value, metaData, record, rowIndex, colIndex, store){
+                    metaData.css += ' shr-text-wrap'
+                    return value;
+                }
+            }, {
+                dataIndex: 'action',
+                xtype: 'actioncolumn',
+                width: 30,
+                hidden: !(config.allowAddRemoveBasePayFlag && config.salaryPlanType == config.salaryPlanTypeModel),
+                items: [{
+                    handler: function (view, rowIndex, colIndex, item, e, record, row) {
+                        Shr.panel.CreateASalaryPlan.rowDeleteAction(view.grid, record);
+                    }, 
+                    getClass: function (v, meta, record) {
+                        return record.data.IsDeleted ? 'x-fa fa-undo darkblue-text' : 'x-fa fa-times red-text'
+                    },
+                    getTip: function(value, metadata, record, row, col, store) {
+                        return record.data.IsDeleted ? config.labels.undeleteThisRow : config.labels.deleteThisRow;
+                    }, 
+                    renderer: function(cmp, eOpts){
+                        if(this.parentRecord.data.IsComplete == 'true')
+                            this.setHidden();
+                    }
+                }]    
+        }];
+
+        var basePayTBarDef;
+        if (Shr.panel.CreateASalaryPlan.allowAddRemoveBasePayFlag && Shr.panel.CreateASalaryPlan.salaryPlanType == '3') {
+            basePayTBarDef = [{
+                text: config.labels.newLabel,
+                iconCls: 'x-fa fa-plus',
+                handler: function () {
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsSalaryPlanningAddEmployeeBasePay',
+                            draftId: Shr.panel.CreateASalaryPlan.draftId,
+                            routingInstanceHistoryGuid: Shr.panel.CreateASalaryPlan.routingInstanceHistoryGuid,                             
+                            personGuid: record.data.PersonGuid
+                        },
+                        success: function (resp) {
+                            var result = Ext.decode(resp.responseText);
+                            var gridPanel = employeeBasePayGrid;
+                            var rec = new Ext.data.Record({
+                                PersonBasePayReason: '',
+                                PersonBasePayStartDate: '',
+                                PersonBasePayChangeAmount: '',
+                                PersonBasePayFrequency: 'YR',
+                                PercentageChange: '',
+                                EmployeeBasePayTotal: '',
+                                ParentGuid: result.employeeRecordId                                  
+                            });
+                            rec.set('RecordGuid', result.recordId);
+                            rec.commit();
+                            gridPanel.store.add(rec);
+                            gridPanel.plugins[0].startEditByPosition({row: gridPanel.store.getCount() - 1, column: 0});
+                        }
+                    });
+                }
+            }];
+        }
+
+        var employeeBasePayGrid = Ext.create('Ext.grid.Panel', {
+            store: employeeBasePayStore,
+            columns: employeeBasePayColumns,
+            gridGroupId: 'employeeBasePayGrid',
+            draftId: Shr.panel.CreateASalaryPlan.draftId,
+            routingInstanceHistoryGuid: Shr.panel.CreateASalaryPlan.routingInstanceHistoryGuid,
+            title: config.labels.basePayDetail,
+            tbar: basePayTBarDef,
+            forceFit: true,
+            parentRecord: record,
+            sortableColumns: false,
+            //width: 1400,
+            minHeight: 140,
+            plugins: {
+                ptype: 'cellediting',
+                clicksToEdit: 1
+            },
+            viewConfig: {
+                plugins: {
+                    ptype: 'gridviewdragdrop', 
+                    enableDrag: Shr.panel.CreateASalaryPlan.salaryPlanStatus == 'APPROVEMODEL' && Shr.panel.CreateASalaryPlan.salaryPlanType == '3' ? true : false
+                },
+                getRowClass: function (record, rowIndex, rowParams, store) {
+                    if (record.data.IsDeleted == true) {
+                        return "shr-linethrough";
+                    }
+                }                                                    
+            },
+            bbar: [{ 
+                xtype: 'tbtext', 
+                cls: 'x-toolbar-text x-box-item x-toolbar-item x-toolbar-text-default'
+                }
+            ],
+            listeners: {
+                render: function(cmp, eOpts){
+                    var personGuid = cmp.getStore().extraParams.personGuid;
+                    if(cmp.parentRecord.data.IsComplete == 'true')
+                            cmp.columnManager.columns[7].setHidden(true);
+
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsSalaryPlanningActions',
+                            draftId: cmp.draftId,
+                            routingInstanceHistoryGuid: cmp.routingInstanceHistoryGuid,
+                            personGuid: personGuid,
+                            actionType: 'CalculateEmployeeBasePayTotal',
+                            gridId: cmp.id
+                        },
+                        success: function (resp) {
+                            var result = Ext.decode(resp.responseText);
+                            Ext.getCmp(resp.request.params.gridId).getDockedItems('toolbar[dock="bottom"]')[0].items.items[0].setText(result.employeeBasePayTotal);
+                        }
+                    });                                        
+                },
+                edit: function(editor, e){
+                    if(Shr.panel.isValidChange(e.originalValue, e.value))
+                        return true;
+
+                    var personGuid = e.grid.getStore().extraParams.personGuid;
+                    return Shr.panel.CreateASalaryPlan.onEmployeeBasePayFieldChanged(e, personGuid);
+                }, 
+                drop: function (node , data , overModel , dropPosition , dropHandlers , eOpts ) { 
+                    var me = this;
+                    //Update the section records in the draft
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsTaskSectionRecordReorder',
+                            draftId: data.view.grid.draftId,
+                            routingInstanceHistoryGuid: data.view.grid.routingInstanceHistoryGuid,
+                            businessObject: data.view.grid.store.extraParams.businessObject,
+                            recordId: data.records[0].data.RecordGuid, // we're only moving one row at a time, so just use the first row
+                            newSortOrder: data.view.grid.getStore().indexOf(data.records[0]),
+                            personGuid: data.view.grid.getStore().extraParams.personGuid
+                        },
+                        success: function (resp) {
+                            Shr.panel.CreateASalaryPlan.calculateActualsAndDifferences();
+                            Ext.Ajax.request({
+                                url: 'API/JsonFetcher.svc/Invoke',
+                                params: {
+                                    svcprovider: 'JsSalaryPlanningActions',
+                                    draftId: data.view.grid.draftId,
+                                    routingInstanceHistoryGuid: data.view.grid.routingInstanceHistoryGuid,
+                                    personGuid: data.view.grid.getStore().extraParams.personGuid,
+                                    actionType: 'CalculateEmployeeBasePayTotal', 
+                                    gridId: data.view.grid.id
+                                },
+                                success: function (resp) {
+                                    var result = Ext.decode(resp.responseText);
+                                    Shr.panel.CreateASalaryPlan.calculateActualsAndDifferences();
+                                    Ext.getCmp(resp.request.params.gridId).getDockedItems('toolbar[dock="bottom"]')[0].items.items[0].setText(result.employeeBasePayTotal);
+                                    //caclulate the new employee totals
+                                    Ext.Ajax.request({
+                                        url: 'API/JsonFetcher.svc/Invoke',
+                                        params: {
+                                            svcprovider: 'JsSalaryPlanningActions',
+                                            draftId: data.view.grid.draftId,
+                                            routingInstanceHistoryGuid: data.view.grid.routingInstanceHistoryGuid,
+                                            personGuid: data.view.grid.getStore().extraParams.personGuid,
+                                            actionType: 'GetSalaryPlanningEmployeeTotals'
+                                        },
+                                        success: function (resp) {
+                                            var result = Ext.decode(resp.responseText);
+                                            //update the employee row totals
+                                            Shr.panel.CreateASalaryPlan.calculateSingleEmployeeTotals(data.view.grid.draftId,data.view.grid.routingInstanceHistoryGuid, data.view.grid.getStore().extraParams.personGuid);
+
+                                            //we need to recalculate the employee other pay totals if they are based on the new annual salary
+                                            if (!Shr.panel.CreateASalaryPlan.calculateOtherPayOnCurrentFlag) {
+                                                Ext.Ajax.request({
+                                                    url: 'API/JsonFetcher.svc/Invoke',
+                                                    params: {
+                                                        svcprovider: 'JsSalaryPlanningActions',
+                                                        draftId: data.view.grid.draftId,
+                                                        routingInstanceHistoryGuid: data.view.grid.routingInstanceHistoryGuid,
+                                                        personGuid: data.view.grid.getStore().extraParams.personGuid,
+                                                        actionType: 'CalculateOtherPayRows'
+                                                    },
+                                                    success: function (resp) {
+                                                        var otherPayGrid = Shr.panel.CreateASalaryPlan.employeeRecordOtherPayGrid[rows[0].data.ParentGuid];
+                                                        otherPayGrid.store.load();
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
+                            
+        Shr.panel.CreateASalaryPlan.employeeRecordBasePayGrid[record.data.RecordGuid] = employeeBasePayGrid;
+
+        var employeeOtherPayStore =  new Shr.WebControls.JsonStore({
+            extraParams: {
+                svcprovider: 'JsGetSalaryPlanningEmployeeOtherPayDetail',
+                draftId: config.draftId,
+                personGuid: record.data.PersonGuid,
+                pageNum: 1,
+                salaryPlanType: config.salaryPlanType,
+                businessObject: 'SysSalaryPlanOtherPayPersonDetail'
+            },
+            rootProperty: 'records',
+            totalProperty: 'totalCount',
+            idProperty: 'RecordGuid', 
+            autoload: false,
+            fields: [{
+                name: 'PersonOtherPayReason',
+                type: 'auto'
+            }, {
+                name: 'PersonOtherPayType',
+                type: 'auto'
+            }, {
+                name: 'RecordGuid',
+                type: 'auto'
+            }, {
+                name: 'PersonOtherPayStartDate',
+                type: 'auto'
+            }, {
+                name: 'PersonOtherPayEndDate',
+                type: 'auto'
+            }, {
+                name: 'PersonOtherPayChangeAmount',
+                type: 'auto'
+            }, {
+                name: 'PersonOtherPayFrequency',
+                type: 'auto'
+            }, {
+                name: 'PersonOtherPayChangeAmountFrequency',
+                type: 'auto'
+            }, {
+                name: 'PercentageChange',
+                type: 'auto'
+            }, {
+                name: 'EmployeeOtherPayTotal',
+                type: 'auto'
+            }, {
+                name: 'OtherPayJustification',
+                type: 'auto'
+            }, {
+                name: 'IsDeleted',
+                type: 'bool'
+            }, {
+                name: 'ParentGuid',
+                type: 'auto'
+            }]
+        });
+    
+        var employeeOtherPayColumns = [{
+            header: "* " + config.labels.otherPayReason,
+            dataIndex: "PersonOtherPayReason",
+            parentRecord: record,
+            tooltip: "* " + config.labels.otherPayReason,
+            getEditor: function(record, defaultField){
+                return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+            },
+            editor: new Shr.panel.SalaryPlan.CodeCombobox({
+                showClear: false,
+                dataType: 'OtherPayReason',
+                showDash: true}),
+            renderer: Shr.codeSalaryPlaningRenderer
+            }, {
+                header: "* " + config.labels.otherPayType,
+                tooltip: "* " + config.labels.otherPayType,
+                dataIndex: "PersonOtherPayType",
+                sortable: true,
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                editor: new Shr.panel.SalaryPlan.CodeCombobox({
+                    showClear: false,
+                    dataType: 'OtherPayType',
+                    showDash: true}),
+                renderer: Shr.codeSalaryPlaningRenderer
+            }, {
+                header: "* " + config.labels.startDate,
+                tooltip: "* " + config.labels.startDate,
+                dataIndex: "PersonOtherPayStartDate",
+                sortable: true,
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                editor: {
+                    xtype: 'datefield'
+                },
+                renderer: function (value) { if (isNaN(value) || Ext.isEmpty(value)) return null; return Ext.Date.format(value, Shr.DATE_FORMAT); }
+            },{
+                header: config.labels.endDate,
+                tooltip: config.labels.endDate,
+                dataIndex: "PersonOtherPayEndDate",
+                sortable: true,
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                editor: {
+                    xtype: 'datefield'
+                },
+                renderer: function (value) { if (isNaN(value) || Ext.isEmpty(value)) return null; return Ext.Date.format(value, Shr.DATE_FORMAT); }                        
+            }, {
+                header: config.labels.amountPerEmployee,
+                tooltip: config.labels.amountPerEmployee,
+                dataIndex: "PersonOtherPayChangeAmount",
+                sortable: false,
+                xtype: 'numbercolumn',
+                format: Shr.NUMBER_FORMAT_DECIMALTWO,
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                editor: {
+                    xtype: 'numberfield',
+                    anchor: '100%',
+                    numberFormat: Shr.NUMBER_FORMAT_DECIMALTWO,
+                    format: Shr.NUMBER_FORMAT_DECIMALTWO
+                },
+                renderer: function(value) {
+                    return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );
+                }                        
+            }, {
+                header: config.labels.frecuency,
+                tooltip: config.labels.frecuency,
+                dataIndex: "PersonOtherPayChangeAmountFrequency",
+                sortable: true,
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                editor: new Shr.panel.SalaryPlan.CodeCombobox({
+                    showClear: false,
+                    dataType: 'Frequency',
+                    showDash: false}),
+                renderer: Shr.codeSalaryPlaningRenderer
+            }, {
+                header: config.labels.calculateOtherPayOnCurrentFlag ? config.labels.percentOfCurrentSalary : config.labels.percentOfNewSalary,
+                tooltip: config.labels.calculateOtherPayOnCurrentFlag ? config.labels.percentOfCurrentSalary : config.labels.percentOfNewSalary,
+                dataIndex: "PercentageChange",
+                sortable: false,
+                xtype: 'numbercolumn',
+                format: Shr.NUMBER_FORMAT_DECIMALTWO,
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    return Shr.panel.GetEmployeeBasePayEditor(this, this.parentRecord, config);
+                },
+                editor: {
+                    xtype: 'numberfield',
+                    anchor: '100%',
+                    numberFormat: Shr.NUMBER_FORMAT_DECIMALTWO,
+                    format: Shr.NUMBER_FORMAT_DECIMALTWO
+                },
+                renderer: function(value) {
+                    return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );
+                }                        
+            }, {
+                header: config.labels.total,
+                tooltip: config.labels.total,
+                dataIndex: "EmployeeOtherPayTotal",
+                sortable: false,
+                xtype: 'numbercolumn',
+                parentRecord: record,
+                renderer: function(value) {return Ext.util.Format.number(value, config.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO );}
+            }, {
+                header: config.labels.otherPayJustification,
+                tooltip: config.labels.otherPayJustification,
+                dataIndex: 'OtherPayJustification',
+                width: 200,
+                editor: new Ext.form.TextArea({ allowBlank: true }),
+                parentRecord: record,
+                getEditor: function(record, defaultField){
+                    if((config.salaryPlanType == config.salaryPlanTypeModel || config.salaryPlanType ==  config.salaryPlanTypeCommit) && this.parentRecord.data.IsComplete == 'false')
+                        return this.editor;
+                    else 
+                        return null;
+                }
+            }, {
+                dataIndex: 'action',
+                xtype: 'actioncolumn',
+                hidden: !(config.allowAddRemoveOtherPayFlag && config.salaryPlanType == config.salaryPlanTypeModel),
+                items: [{
+                    handler: function (view, rowIndex, colIndex, item, e, record, row) {
+                        Shr.panel.CreateASalaryPlan.rowDeleteAction(view.grid, record);
+                    }, 
+                    getClass: function (v, meta, record) {
+                        return record.data.IsDeleted ? 'x-fa fa-undo darkblue-text' : 'x-fa fa-times red-text'
+                    },
+                    getTip: function(value, metadata, record, row, col, store) {
+                        return record.data.IsDeleted ? config.labels.undeleteThisRow : config.labels.deleteThisRow;
+                    }                          
+                }]      
+            }]
+
+        var otherPayTBarDef;
+        if (Shr.panel.CreateASalaryPlan.allowAddRemoveOtherPayFlag && Shr.panel.CreateASalaryPlan.salaryPlanType == '3') {
+            otherPayTBarDef = [{
+                text: this.labels.newLabel,
+                iconCls: 'x-fa fa-plus',
+                handler: function () {
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsSalaryPlanningAddEmployeeOtherPay',
+                            draftId: Shr.panel.CreateASalaryPlan.draftId, 
+                            routingInstanceHistoryGuid: Shr.panel.CreateASalaryPlan.routingInstanceHistoryGuid,                              
+                            personGuid: record.data.PersonGuid
+                        },
+                        success: function (resp) {
+                            var result = Ext.decode(resp.responseText);
+                            var gridPanel = employeeOtherPayGrid;
+                            var rec = new Ext.data.Record({
+                                PersonOtherPayReason: '',
+                                PersonOtherPayType: '',
+                                PersonOtherPayStartDate: '',
+                                PersonOtherPayEndDate: '',
+                                PersonOtherPayChangeAmount: '',
+                                PersonOtherPayChangeAmountFrequency: 'YR',
+                                PercentageChange: '',
+                                EmployeeOtherPayTotal: ''                                 
+                            });
+                            rec.set('RecordGuid', result.recordId);
+                            rec.commit();
+                            gridPanel.store.add(rec);
+                            gridPanel.plugins[0].startEditByPosition({row: gridPanel.store.getCount() - 1, column: 0});
+                        }
+                    });
+                }
+            }];
+        }
+        var employeeOtherPayGrid = Ext.create('Ext.grid.Panel', {
+            store: employeeOtherPayStore,
+            columns: employeeOtherPayColumns,
+            gridGroupId: 'employeeOtherPayGrid',
+            draftId: Shr.panel.CreateASalaryPlan.draftId,
+            routingInstanceHistoryGuid: Shr.panel.CreateASalaryPlan.routingInstanceHistoryGuid,
+            title: config.labels.otherPayDetail,
+            hidden: (Shr.panel.CreateASalaryPlan.salaryPlanStatus == 'SUBFORFINALAPRV' && employeeOtherPayStore.getCount() == 0) ? true : false,
+            tbar: otherPayTBarDef,
+            parentRecord: record,
+            sortableColumns: false,
+            forceFit: true,
+            minHeight: 140,
+            plugins: {
+                ptype: 'cellediting',
+                clicksToEdit: 1
+            },
+            viewConfig:{
+                getRowClass: function (record, rowIndex, rowParams, store) {
+                    if (record.data.IsDeleted == true) {
+                        return "shr-linethrough";
+                    }
+                }             
+            },
+            bbar: [{ 
+                    xtype: 'label', 
+                    cls: 'x-toolbar-text x-box-item x-toolbar-item x-toolbar-text-default'
+                }
+            ],
+            listeners: {
+                edit: function(editor, e){
+                    if(Shr.panel.isValidChange(e.originalValue, e.value))
+                        return true;
+
+                    var personGuid = e.grid.getStore().extraParams.personGuid;                                                                
+                    Shr.panel.CreateASalaryPlan.onEmployeeOtherPayFieldChanged(e, personGuid);
+                },
+                render: function(cmp, eOpts){
+                    var personGuid = cmp.getStore().extraParams.personGuid;
+                    if(cmp.parentRecord.data.IsComplete == 'true')
+                            cmp.columnManager.columns[9].setHidden(true);
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsSalaryPlanningActions',
+                            draftId: cmp.draftId,
+                            routingInstanceHistoryGuid: cmp.routingInstanceHistoryGuid,
+                            personGuid: personGuid,
+                            actionType: 'CalculateEmployeeOtherPayTotal',
+                            gridId: cmp.id
+                        },
+                        success: function (resp) {
+                            var result = Ext.decode(resp.responseText);
+                            Ext.getCmp(resp.request.params.gridId).getDockedItems('toolbar[dock="bottom"]')[0].items.items[0].setText(result.employeeOtherPayTotal);
+                        }
+                    });                                        
+                }
+            }
+        });
+        Shr.panel.CreateASalaryPlan.employeeRecordOtherPayGrid[record.data.RecordGuid] = employeeOtherPayGrid;
+
+
+        var subGridPanel = new Ext.panel.Panel({
+            layout: 'auto',
+            border: false,
+            items: [
+                { xtype: 'tbspacer', height: 10 },
+                employeeBasePayGrid,
+                { 
+                    xtype: 'tbtext', 
+                    cls: 'x-toolbar-text x-box-item x-toolbar-item x-toolbar-text-default'
+                },
+                {
+                    xtype: 'tbtext',
+                    text: (Shr.panel.CreateASalaryPlan.salaryPlanStatus == 'APPROVEMODEL' && Shr.panel.CreateASalaryPlan.salaryPlanType == '3') ? config.labels.salaryPlanningDragAndDropText : ''
+                },
+                { xtype: 'tbspacer', height: 20},
+                employeeOtherPayGrid,
+                { xtype: 'tbspacer', height: 20}
+            ],
+            listeners: {
+                afterlayout: function(cmp, layout, eOpts){
+                    if(Shr.panel.CreateASalaryPlan.doUpdateLayout){
+                        Ext.getCmp('employeeGrid').updateLayout();
+                    }
+                        
+                }
+            }                               
+        });
+        return subGridPanel;
+    },
+
+// Make detail grids editable/non-editable
+setEditableSubGrids: function (recordId, editable) {
+    var basePayGrid = Shr.panel.CreateASalaryPlan.employeeRecordBasePayGrid[recordId];
+    var otherPayGrid = Shr.panel.CreateASalaryPlan.employeeRecordOtherPayGrid[recordId];
+
+    if (basePayGrid == null || otherPayGrid == null) return;
+    
+    basePayGrid.plugins[0].enable(false);
+    if(Shr.panel.CreateASalaryPlan.allowAddRemoveBasePayFlag){
+        basePayGrid.columnManager.columns[7].setHidden(!editable);
+        if(basePayGrid.getDockedItems('toolbar[dock="top"]').length > 0)
+            basePayGrid.getDockedItems('toolbar[dock="top"]')[0].setVisible(editable);
+    }    
+    
+
+    otherPayGrid.plugins[0].enable(false);
+    if(Shr.panel.CreateASalaryPlan.allowAddRemoveOtherPayFlag){
+        otherPayGrid.columnManager.columns[9].setHidden(!editable);
+        if(otherPayGrid.getDockedItems('toolbar[dock="top"]').length > 0)
+            otherPayGrid.getDockedItems('toolbar[dock="top"]')[0].setVisible(editable);
+    }
+},
+
+deleteColumnRenderer: function (record, labels) {
+
+    var imageName = record.data.IsDeleted ? 'logicalundelete.gif' : 'logicaldelete.gif';
+    var image = '<img src="' + getPathRoot() + '/Scripts/WebControls//images/Grid/' + imageName + '" ' +
+            'onmouseover="this.style.cursor=\'pointer\';" ' +
+            'title="' + (record.data.IsDeleted ? labels.undeleteThisRow : labels.deleteThisRow) + '" ' +
+            'parentId="' + record.data.ParentGuid + '" ' +
+        '/>';
+
+    return image;
+},
+
+setIsComplete: function (recordId, isComplete) {
+    Ext.Ajax.request({
+        url: 'API/JsonFetcher.svc/Invoke',
+        params: {
+            svcprovider: 'JsSalaryPlanningSetIsComplete',
+            draftId: this.draftId,
+            routingInstanceHistoryGuid: this.routingInstanceHistoryGuid,
+            recordId: recordId,
+            isComplete: isComplete
+        },
+        success: function (resp) {
+            Shr.panel.CreateASalaryPlan.setEditableSubGrids(recordId, !isComplete);
+        }
+    });
+},
+
+setCompleteAll: function(records, isComplete){
+    Ext.each(records, function (record){
+        Shr.panel.CreateASalaryPlan.setIsComplete(record.data.RecordGuid, isComplete);
+        record.data.IsComplete = isComplete.toString();
+    });
+},
+
+rowDeleteAction: function (grid, record) {
+    if (grid.editing) {
+        grid.stopEditing();
+    }
+    var me = this;
+    me.activeGrid = grid;
+    var personGuid = grid.getStore().extraParams.personGuid;
+
+    Ext.Ajax.request({
+        url: 'API/JsonFetcher.svc/Invoke',
+        params: {
+            svcprovider: "JsSalaryPlanningRecordMarkDeleted",
+            draftId: grid.draftId,
+            routingInstanceHistoryGuid: grid.routingInstanceHistoryGuid,
+            businessObject: grid.store.extraParams.businessObject,
+            recordId: record.data.RecordGuid,
+            markDeleted: record.data.IsDeleted != true,
+            personGuid: personGuid
+        },
+        success: function (resp) {
+            me.activeGrid.store.load();
+            if (grid.store.extraParams.businessObject == 'SysSalaryPlanBasePayDetail' || grid.store.extraParams.businessObject == 'SysSalaryPlanOtherPayDetail' || grid.store.extraParams.businessObject == 'SysSalaryPlanPerson') {
+                Shr.panel.CreateASalaryPlan.refreshCreateASalaryPlan();
+            }
+            else {
+                Shr.panel.CreateASalaryPlan.calculateActualsAndDifferences();
+                if (grid.store.extraParams.businessObject == 'SysSalaryPlanBasePayPersonDetail') {
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsSalaryPlanningActions',
+                            draftId: grid.draftId,
+                            routingInstanceHistoryGuid: grid.routingInstanceHistoryGuid,
+                            personGuid: personGuid,
+                            actionType: 'CalculateEmployeeBasePayTotal', 
+                            gridId: grid.id
+                        },
+                        success: function (resp) {
+                            var result = Ext.decode(resp.responseText);
+                            Ext.getCmp(resp.request.params.gridId).getDockedItems('toolbar[dock="bottom"]')[0].items.items[0].setText(result.employeeBasePayTotal);
+                        }
+                    });
+
+                }
+                if (grid.store.extraParams.businessObject == 'SysSalaryPlanOtherPayPersonDetail') {
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsSalaryPlanningActions',
+                            draftId: grid.draftId,
+                            routingInstanceHistoryGuid: grid.routingInstanceHistoryGuid,
+                            personGuid: personGuid,
+                            actionType: 'CalculateEmployeeOtherPayTotal',
+                            gridId: grid.id
+                        },
+                        success: function (resp) {
+                            var result = Ext.decode(resp.responseText);
+                            Ext.getCmp(resp.request.params.gridId).getDockedItems('toolbar[dock="bottom"]')[0].items.items[0].setText(result.employeeOtherPayTotal);
+                        }
+                    });
+                }
+
+                if (grid.store.extraParams.businessObject == 'SysSalaryPlanBasePayPersonDetail' || grid.store.extraParams.businessObject == 'SysSalaryPlanOtherPayPersonDetail') {
+                    //caclulate the new employee totals
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsSalaryPlanningActions',
+                            draftId: grid.draftId,
+                            routingInstanceHistoryGuid: grid.routingInstanceHistoryGuid,
+                            personGuid: personGuid,
+                            actionType: 'GetSalaryPlanningEmployeeTotals'
+                        },
+                        success: function (resp) {
+                            var result = Ext.decode(resp.responseText);
+                            Shr.panel.CreateASalaryPlan.calculateSingleEmployeeTotals(grid.draftId,grid.routingInstanceHistoryGuid, personGuid);
+
+                            //we need to recalculate the employee other pay totals if they are based on the new annual salary
+                            if (!Shr.panel.CreateASalaryPlan.calculateOtherPayOnCurrentFlag) {
+                                Ext.Ajax.request({
+                                    url: 'API/JsonFetcher.svc/Invoke',
+                                    params: {
+                                        svcprovider: 'JsSalaryPlanningActions',
+                                        draftId: grid.draftId,
+                                        routingInstanceHistoryGuid: grid.routingInstanceHistoryGuid,
+                                        personGuid: personGuid,
+                                        actionType: 'CalculateOtherPayRows'
+                                    },
+                                    success: function (resp) {
+                                        var otherPayGrid = Shr.panel.CreateASalaryPlan.employeeRecordOtherPayGrid[record.data.ParentGuid];
+                                        otherPayGrid.store.load();
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    });
+}
+}
+
+Shr.panel.GetEmployeeBasePayEditor = function(cmp, record, config){
+    if(config.salaryPlanType == config.salaryPlanTypeModel)
+        if ((Shr.panel.CreateASalaryPlan.salaryPlanStatus == 'APPROVEMODEL') || (Shr.panel.CreateASalaryPlan.salaryPlanStatus == 'MODELCOMPLETE')) {
+                if(!(record.data.IsComplete == "true"))
+                    return cmp.editor;
+            }
+    else
+        return null;
+}
+
+Shr.panel.getReadOnlyValueFormat = function(element, value){
+    element.removeChild(element.lastChild);
+    return Ext.create('Ext.form.Label', {
+        text: value,
+        renderTo: element,
+        cls: value.indexOf('-') >= 0 ? 'shr-field-readOnly-red-font' : ''
+    }); 
+};
+
+Shr.panel.CreateEmployeeStore = function(config){
+    return new Shr.WebControls.JsonStore({
+            extraParams: {
+                svcprovider: 'JsGetSalaryPlanningEmployeeDetail',
+                draftId: config.draftId,
+                limit: config.limit, 
+                pageNum: 0, 
+                businessObject: 'SysSalaryPlanPerson', 
+                salaryPlanType: config.salaryPlanType
+            },
+            rootProperty: 'records',
+            totalProperty: 'totalCount',
+            groupField: 'Name',
+            idProperty: 'RecordGuid', 
+            autoload: true,
+            pageSize: config.pageSize,
+            fields: [{
+                name: 'IsComplete',
+                type: 'string'
+                }, {
+                    name: 'RecordGuid',
+                    type: 'string'
+                }, {
+                    name: 'Name',
+                    type: 'string'
+                }, {
+                    name: 'JobTitle',
+                    type: 'string'
+                }, {
+                    name: 'OldSalary',
+                    type: 'string'
+                }, {
+                    name: 'NewSalary',
+                    type: 'string'
+                }, {
+                    name: 'PayChange',
+                    type: 'string'
+                }, {
+                    name: 'PercentChange',
+                    type: 'string'
+                }, {
+                    name: 'OldCompaRatio',
+                    type: 'string'
+                }, {
+                    name: 'NewCompaRatio',
+                    type: 'string'
+                }, {
+                    name: 'PerformanceScoreRating',
+                    type: 'string'
+                }, {
+                    name: 'PersonGuid',
+                    type: 'string'
+                }, {
+                    name: 'Warnings',
+                    type: 'string'
+                }, {
+                    name: 'WarningsCount',
+                    type: 'string'
+                }, {
+                    name: 'PercentageRange',
+                    type: 'string'
+                }]
+        });
+}
+
+Shr.panel.CreateBasePayStore = function(config){
+      return new Shr.WebControls.JsonStore({
+            extraParams: {
+                svcprovider: 'JsSalaryPlanningActions',
+                draftId: config.draftId,
+                actionType: 'GetSalaryPlanningBasePayDetail',
+                businessObject: 'SysSalaryPlanBasePayDetail',
+                routingInstanceGuid: config.routingInstanceGuid,
+                routingInstanceHistoryGuid: config.InstanceHistoryGuid
+            },
+            rootProperty: 'records',
+            totalProperty: 'totalCount',
+            groupField: 'Name',
+            idProperty: 'RecordGuid', 
+            autoload: true,
+            fields: [{
+                        name: 'RecordGuid',
+                        type: 'auto'
+                    }, {
+                        name: 'PersonBasePayReason',
+                        type: 'auto'
+                    }, {
+                        name: 'PersonBasePayStartDate',
+                        type: 'auto'
+                    }, {
+                        name: 'ScheduledBasePayReviewDate',
+                        type: 'auto'
+                    }, {
+                        name: 'AmountChange',
+                        type: 'auto'
+                    }, {
+                        name: 'AmountChangeFrequency',
+                        type: 'auto'
+                    }, {
+                        name: 'PercentageChange',
+                        type: 'auto'
+                    }, {
+                        name: 'BasePayTotal',
+                        type: 'auto'
+                    }, {
+                        name: 'SortOrder',
+                        type: 'auto'
+                    }, {
+                        name: 'Warnings',
+                        type: 'auto'
+                    }, {
+                        name: 'WarningsCount',
+                        type: 'auto'
+                    }]
+        });
+}
+
+Shr.panel.CreateOtherPayStore = function(config){
+      return new Shr.WebControls.JsonStore({
+            extraParams: {
+                svcprovider: 'JsSalaryPlanningActions',
+                draftId: config.draftId,
+                actionType: 'GetSalaryPlanningOtherPayDetail',
+                businessObject: 'SysSalaryPlanOtherPayDetail',
+                routingInstanceGuid: config.routingInstanceGuid,
+                routingInstanceHistoryGuid: config.InstanceHistoryGuid
+            },
+            rootProperty: 'records',
+            totalProperty: 'totalCount',
+            groupField: 'Name',
+            idProperty: 'RecordGuid', 
+            autoload: true,
+            fields: [{
+                name: 'RecordGuid',
+                type: 'auto'
+            }, {
+                name: 'PersonOtherPayReason',
+                type: 'auto'
+            }, {
+                name: 'PersonOtherPayType',
+                type: 'auto'
+            }, {
+                name: 'PersonOtherPayStartDate',
+                type: 'auto'
+            }, {
+                name: 'PersonOtherPayEndDate',
+                type: 'auto'
+            }, {
+                name: 'AmountChange',
+                type: 'auto'
+            }, {
+                name: 'AmountChangeFrequency',
+                type: 'auto'
+            }, {
+                name: 'PercentageChange',
+                type: 'auto'
+            }, {
+                name: 'OtherPayTotal',
+                type: 'auto'
+            }, {
+                name: 'Warnings',
+                type: 'auto'
+            }, {
+                name: 'WarningsCount',
+                type: 'auto'
+            }]
+        });
+}
+
+Shr.codeSalaryPlaningRenderer = function (value, metaData, record, rowIndex, colIndex, store) {
+    if (Ext.isEmpty(value) || Ext.isEmpty(value.Name)) {
+        return '';
+    }
+    else {
+       
+        if (value.Name.indexOf('(') == -1)
+            // if the name already contains the value then we do not need to add it again
+            return !Ext.isEmpty(value.Value) ? value.Name : null;
+        else
+            return !Ext.isEmpty(value.Name) ? value.Name.substring(0, value.Name.indexOf('(') - 1) : null;
+    }
+}
+
+Shr.panel.isValidChange = function(originalValue, value){
+    if ((value === null && originalValue === null)
+        || (value != null && originalValue != null && value == originalValue) 
+        || (value != null && originalValue != null && Ext.isNumber(value) && Ext.util.Format.number(value, Shr.panel.CreateASalaryPlan.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO) == Ext.util.Format.number(originalValue, Shr.panel.CreateASalaryPlan.decimalDisplay == '4' ? Shr.NUMBER_FORMAT_DECIMALFOUR : Shr.NUMBER_FORMAT_DECIMALTWO ))
+        || (value && originalValue && value.Value && originalValue.Value && value.Value == originalValue.Value) 
+        || (value && originalValue && value.Name && originalValue.Name && value.Name == originalValue.Name)) {
+        return true;
+    }
+        return false;     
+}
+

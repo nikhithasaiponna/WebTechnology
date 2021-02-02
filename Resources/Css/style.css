@@ -1,0 +1,15 @@
+<style>
+        p{
+            background-color: black;
+            color: white;
+        }
+        #cat{
+            background-color: white;
+            color: red;
+        }
+        .class{
+            color:pink;
+            background-color: green;
+        }
+
+    </style>

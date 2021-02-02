@@ -1,0 +1,557 @@
+﻿Shr.panel.MyChecklists = Ext.extend(Ext.Panel, {
+    loadMask: null,
+    border: false,
+    store: null,
+
+    initComponent: function () {
+        this.store = this.createStore();
+
+        this.tbar = [{
+            text: this.labels.addNewList,
+            iconCls: 'x-fa fa-plus',
+            hidden: this.canCreateLists !== true,
+            handler: function (btn) {
+                this.addNewChecklist();
+            },
+            scope: this
+        }, '->', {
+            xtype: 'label',
+            text: this.labels.showClosedRange,
+            style: 'padding-right:5px;'
+        },  new Ext.form.field.ComboBox({
+                id: 'combo-closed-range',
+                width: 185,
+                store: this.store,
+                showClear: true,
+                queryMode: 'local',
+                displayField: 'Description',
+                valueField: 'Code',
+                emptyText: this.labels.openListsOnly,
+                listeners: {
+                    scope: this,
+                    select: this.showChecklists
+                },
+                triggers: {
+                    triggerClear: {
+                        cls: 'x-form-clear-trigger',
+                        handler: function () {
+                            this.setRawValue(null);
+                            this.clearValue();
+                            this.fireEvent('select', this);
+                        },
+                        scope: 'this'
+                    },
+                }
+
+        })];
+
+
+        Shr.panel.MyChecklists.superclass.initComponent.apply(this, arguments);
+    },
+
+    onRender: function () {
+        this.callParent(arguments);
+        this.showChecklists();
+    },
+
+    showChecklists: function () {
+        this.mask('Loading...');
+
+        var me = this;
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+	            svcprovider: 'JsGetMyChecklists',
+	            closedRange: Ext.getCmp('combo-closed-range').value
+            },
+            success: function(resp) {
+                me.removeAll();
+
+	            var checklistData = resp != null && !Ext.isEmpty(resp.responseText) ? Ext.decode(resp.responseText) : null;
+	            if (checklistData == null || checklistData.checklistCount == 0) return;
+
+                Ext.each(checklistData.checklists, function(checklist) {
+                    me.add(new Shr.panel.MyChecklists.ChecklistPanel({
+                        checklist: checklist,
+                        labels: me.labels,
+                        messages: me.messages,
+                        docReviewEntityId: me.docReviewEntityId,
+                        defaultPage: me.defaultPage,
+                    }));
+                });     
+            }
+        });
+        me.unmask();
+    },
+
+    createStore: function () {
+        var opts = Ext.create('Ext.data.Store', {
+            fields: ['Code', 'Description'],
+            data: this.rangeValues
+        });
+        return opts;
+    },
+
+    addNewChecklist: function() {
+        var me = this;
+        new Shr.panel.MyChecklists.ChecklistWnd({
+            title: me.labels.addNewList,
+            labels: me.labels,
+            listeners: {
+                'save': function(wnd) {
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            action: 'addchecklist',
+	                        svcprovider: 'JsDoMyChecklistsAction',
+	                        checklistInfo: Ext.util.JSON.encode({ description: wnd.getChecklistTitle() })
+                        },
+                        success: function(resp) {
+	                        var result = resp != null && !Ext.isEmpty(resp.responseText) ? Ext.decode(resp.responseText) : null;
+	                        if(result == null || result.checklist == null) return;
+
+                            me.add(new Shr.panel.MyChecklists.ChecklistPanel({
+                                checklist: result.checklist,
+                                labels: me.labels,
+                                messages: me.messages,
+                                docReviewEntityId: me.docReviewEntityId,
+                                defaultPage: me.defaultPage
+                            }));
+                        }
+                    });
+                }
+            }
+        }).show();
+    }
+});
+
+Shr.panel.MyChecklists.ChecklistWnd = Ext.extend(Ext.Window, {
+    bodyStyle: 'padding:15px;',
+    modal: true,
+    resizable: false,
+    width: 450,
+    buttonAlign: 'left',
+    checklistTitle: null,
+    isNew: true,
+    fixed: true,
+    float:true,
+
+    initComponent: function() {
+        this.items = [{
+            xtype: 'label',
+            text: this.labels.title
+        }, {
+            id: 'checklistTitle',
+            xtype: 'textfield',
+            style: 'float: right;',
+            width: 350,
+            value: this.checklistTitle
+        }];
+
+        this.buttons = [{
+            text: this.labels.remove,
+            handler: function() {
+                this.fireEvent('delete', this);
+                this.close();
+                this.destroy();
+            },
+            scope: this,
+            hidden: this.isNew
+        }, '->', {
+            text: Ext.MessageBox.buttonText.ok,
+            handler: function() {
+                if(Ext.isEmpty(this.getChecklistTitle())) {
+                    Ext.getCmp('checklistTitle').focus();
+                    return;
+                }
+                this.fireEvent('save', this);
+                this.close();
+                this.destroy();
+            },
+            scope: this
+        }, {
+            text: Ext.MessageBox.buttonText.cancel,
+            handler: function() { this.close(); this.destroy(); },
+            scope: this
+        }];
+
+        Shr.panel.MyChecklists.ChecklistWnd.superclass.initComponent.apply(this, arguments);
+    },
+
+    getChecklistTitle: function() {
+        return Ext.getCmp('checklistTitle').getValue();
+    }
+});
+
+Shr.panel.MyChecklists.ChecklistStepWnd = Ext.extend(Ext.Window, {
+    bodyStyle: 'padding:15px;',
+    modal: true,
+    resizable: false,
+    step: null,
+    width: 400,
+    buttonAlign: 'left',
+    fixed: true,
+    float: true,
+
+    initComponent: function() {
+        this.items = [
+        {
+            id: 'checklistStepTitle',
+            xtype: 'textfield',
+            width: 350,
+            fieldLabel: this.labels.title,
+            labelAlign: 'top',
+            value: this.step != null ? this.step.name : null
+        },
+        {
+            id: 'checklistStepDueDate',
+            xtype: 'datefield',
+            fieldLabel: this.labels.dueDate, 
+            labelAlign: 'top',
+            selectOnFocus: true,
+            value: this.step != null ? this.step.dueDate : null
+        },
+        {
+            xtype: 'label',
+            text: this.labels.assignedTo + ': ',
+            hidden: this.step === null || this.step.canReassign !== true
+        }, new Shr.WebControls.ComboBoxField({
+            id: 'checklistStepAssignedTo',
+            dataType: 'Person',
+            codeFiltering: true,
+            preFilter: 'Checklist_Person_ActiveEmployees_SysUser',
+            hidden: this.step === null || this.step.canReassign !== true,
+            initialValue: this.step !== null ? this.step.assignedPersonId : null,
+            initialDisplay: this.step !== null ? this.step.assignedPersonName : null
+        })];
+
+        this.buttons = [{
+            text: this.labels.remove,
+            handler: function() {
+                this.fireEvent('delete', this);
+                this.close();
+                this.destroy();
+            },
+            scope: this,
+            hidden: this.step === null
+        }, '->', {
+            text: Ext.MessageBox.buttonText.ok,
+            handler: function() {
+                if(Ext.isEmpty(this.getName())) {
+                    Ext.getCmp('checklistStepTitle').focus();
+                    return;
+                }
+                this.fireEvent('save', this);
+                this.close();
+                this.destroy();
+            },
+            scope: this
+        }, {
+            text: Ext.MessageBox.buttonText.cancel,
+            handler: function() { this.close(); this.destroy(); },
+            scope: this
+        }];
+
+        Shr.panel.MyChecklists.ChecklistStepWnd.superclass.initComponent.apply(this, arguments);
+    },
+
+    getName: function() {
+        return Ext.getCmp('checklistStepTitle').getValue();
+    },
+
+    getDueDate: function() {
+        return Ext.getCmp('checklistStepDueDate').getValue();
+    },
+
+    getAssignedToId: function() {
+        if(this.step.canReassign !== true) return null;
+        return Ext.getCmp('checklistStepAssignedTo').getValue().Value;
+    }
+});
+
+Shr.panel.MyChecklists.ChecklistPanel = Ext.extend(Ext.Panel, {
+    style: 'padding-top:5px;',
+    frame: true,
+    checklist: null,
+    docReviewEntityId: null,
+    defaultPage: null,
+    layout: 'fit',
+    cls: 'shr-todo-noBorder',
+
+    initComponent: function () {
+        this.tools = [{
+            type: 'gear',
+            qtip: this.labels.edit,
+            handler: function(event, toolEl, panel, tc) { this.editChecklist(); },
+            scope: this,
+            hidden: this.checklist.canEdit !== true
+        }, {
+            type: 'plus',
+            qtip: this.labels.addNewStep,
+            handler: function(event, toolEl, panel, tc) { this.addStep(); },
+            scope: this,
+            hidden: this.checklist.canEdit !== true
+        }];
+
+        this.title = this.checklist.description;
+        Shr.panel.MyChecklists.ChecklistPanel.superclass.initComponent.apply(this, arguments);   
+    },
+
+    onRender: function () {
+        this.callParent(arguments);
+        this.loadChecklist();
+    },
+
+    loadChecklist: function() {
+        var me = this;
+
+        me.setTitle(me.checklist.description);
+        me.body.select('.shr-todo-step').each(function(stepEl) {
+            stepEl.remove();
+        });
+
+        Ext.each(this.checklist.steps, function(step) {
+            var stepHtml = "<div class='shr-todo-step"
+                + ((step.status !== 1) ? " shr-todo-step-completed" : "")
+                + ((step.status === 1 && step.dueDate !== null && step.dueDate < new Date()) ? " shr-todo-step-overdue" : "")
+                + "'><div class='shr-todo-step-check'><input type='checkbox' guid='" + step.id + "'"
+                + (step.status !== 1 ? "checked" : "") + " /></div>";
+
+            if(step.hasIcon === true) {
+                stepHtml += "<img class='shr-todo-step-icon' src='API/FileDisplay.aspx?b=SysChecklistInstanceStep&p=IconImage&k=" + step.id + "&source=DatabaseFileDisplay' />";
+            } else {
+                stepHtml += "<div class='shr-todo-step-icon'>&nbsp;</div>";
+            }
+
+            if(step.status === 1 && !Ext.isEmpty(step.openEnrollmentCode)) {
+                stepHtml += "<a class='shr-todo-step-name' href='" + getLocationRoot() + "/" + me.defaultPage + "?Entity=" + step.entityId + "&contextid=" + me.checklist.subjectId + "&groupCode=" + step.openEnrollmentCode + "'>" + step.name + "&nbsp;</a>";
+            } else if(step.status === 1 && !Ext.isEmpty(step.entityId)) {
+                stepHtml += "<a class='shr-todo-step-name' href='" + getLocationRoot() + "/" + me.defaultPage + "?Entity=" + step.entityId + ((step.useSubjectIdAsContextId) ? "&contextid=" + me.checklist.subjectId : "") + "'>" + step.name + "&nbsp;</a>";
+            } else if(step.status === 1 && !Ext.isEmpty(step.documentId)) {
+                stepHtml += "<a class='shr-todo-step-name' href='" + getLocationRoot() + "/" + me.defaultPage + "?Entity=" + me.docReviewEntityId + "&document=" + step.documentId + "'>" + step.name + "&nbsp;</a>";
+            } else {
+                stepHtml += "<div class='shr-todo-step-name-text'>" + step.name + "&nbsp;</div>"
+            }
+
+            stepHtml += "<div class='shr-todo-step-date'>" + Ext.util.Format.date(step.dueDate) + "</div>";
+            if(step.status ===1 && step.dueDate !== null) {
+                stepHtml += "<div class='shr-todo-step-mailappt' guid='" + step.id + "' title='" + me.labels.sendCalendarEmail + "'><i class='x-fa fa-envelope-o'></i></div>";
+            }
+            if(step.status === 1 && me.checklist.canEdit === true) {
+                stepHtml += "<div class='shr-todo-step-edit' guid='" + step.id + "' title='" + me.labels.edit + "'><i class='fa fa-cogs shr-pointer-cursor'></i></div>";
+            }
+
+            stepHtml += "<br></div>";
+            me.body.insertHtml('beforeEnd', stepHtml);
+        });
+
+        me.body.select('INPUT', true).each(function(checkboxEl) {
+            checkboxEl.on('click', me.doCheckboxClick, me);
+        });
+
+        me.body.select('.shr-todo-step-mailappt', true).each(function(mailApptEl) {
+            mailApptEl.on('click', me.doMailAppt, me);
+        });
+
+        if(this.checklist.canEdit === true) {
+            me.body.select('.shr-todo-step-edit', true).each(function (toolEl) {
+                toolEl.on('onMouseOver', me.editStep, me);
+                toolEl.on('click', me.editStep, me);
+            });
+        }
+    },
+
+    doMailAppt: function(evt, el, o) {
+        var me = this;
+        var stepId = el.getAttribute('guid');
+        if (el.nodeName.toLowerCase() == "i") stepId = el.parentElement.getAttribute('guid');
+
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                action: 'sendappt',
+                svcprovider: 'JsDoMyChecklistsAction',
+                checklistInfo: Ext.util.JSON.encode({ id: me.checklist.id }),
+                checklistStepInfo: Ext.util.JSON.encode({ id: stepId })
+            },
+            success: function(resp) {
+                var result = resp != null && !Ext.isEmpty(resp.responseText) ? Ext.decode(resp.responseText) : null;
+                if(result == null) return;
+
+                if(result.success === true) {
+                    Ext.Msg.show({
+                        title: '',
+                        msg: me.messages.calendarEmailSent,
+                        buttons: Ext.Msg.OK,
+                        icon: Ext.MessageBox.INFO
+                    });
+                } else {
+                    Ext.Msg.show({
+                        title: '',
+                        msg: me.messages.calendarEmailError,
+                        buttons: Ext.Msg.OK,
+                        icon: Ext.MessageBox.ERROR
+                    });
+                }
+            }
+        });
+        
+    },
+
+    editChecklist: function() {
+        var me = this;
+        new Shr.panel.MyChecklists.ChecklistWnd({
+            title: this.labels.edit,
+            checklistTitle: this.checklist.description,
+            labels: this.labels,
+            isNew: false,
+            listeners: {
+                'save': function(wnd) {
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            action: 'editchecklist',
+	                        svcprovider: 'JsDoMyChecklistsAction',
+	                        checklistInfo: Ext.util.JSON.encode({ id: me.checklist.id, description: wnd.getChecklistTitle() })
+                        },
+                        success: function(resp) {
+	                        var result = resp != null && !Ext.isEmpty(resp.responseText) ? Ext.decode(resp.responseText) : null;
+	                        if(result == null || result.checklist == null) return;
+
+                            me.checklist = result.checklist;
+                            me.loadChecklist();
+                        }
+                    });
+                },
+                'delete': function(wnd) {
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            action: 'editchecklist',
+	                        svcprovider: 'JsDoMyChecklistsAction',
+	                        checklistInfo: Ext.util.JSON.encode({ id: me.checklist.id, deleteFlag: true })
+                        },
+                        success: function(resp) {
+	                        var result = resp != null && !Ext.isEmpty(resp.responseText) ? Ext.decode(resp.responseText) : null;
+	                        if(result == null || result.success !== true) return;
+
+                            me.destroy();
+                        }
+                    });
+                }
+            }
+        }).show();
+    },
+
+    addStep: function() {
+        var me = this;
+        new Shr.panel.MyChecklists.ChecklistStepWnd({
+            title: me.labels.addNewStep,
+            labels: me.labels,
+            listeners: {
+                'save': function(wnd) {
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            action: 'addstep',
+	                        svcprovider: 'JsDoMyChecklistsAction',
+	                        checklistInfo: Ext.util.JSON.encode({ id: me.checklist.id }),
+	                        checklistStepInfo: Ext.util.JSON.encode({ name: wnd.getName(), dueDate: wnd.getDueDate(), newUserGuid: null })
+                        },
+                        success: function(resp) {
+	                        var result = resp != null && !Ext.isEmpty(resp.responseText) ? Ext.decode(resp.responseText) : null;
+	                        if(result == null || result.checklist == null) return;
+
+	                        me.checklist = result.checklist;
+	                        me.loadChecklist();
+	                        me.updateLayout();
+                        }
+                    });
+                }
+            }
+        }).show();
+    },
+
+    editStep: function(evt, el, o) {
+        var id = el.getAttribute('guid');
+        if (!id && el.nodeName.toLowerCase() == "i")
+            id = el.parentElement.getAttribute('guid');
+
+        var step = null;
+        for(var i = 0; i < this.checklist.steps.length && step == null; i ++) {
+            if(this.checklist.steps[i].id === id) {
+                step = this.checklist.steps[i];
+            }
+        }
+
+        if(step == null) return;
+
+        var me = this;
+        new Shr.panel.MyChecklists.ChecklistStepWnd({
+            title: this.labels.edit,
+            labels: me.labels,
+            step: step,
+            listeners: {
+                'save': function(wnd) {
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            action: 'editstep',
+	                        svcprovider: 'JsDoMyChecklistsAction',
+	                        checklistInfo: Ext.util.JSON.encode({ id: me.checklist.id }),
+	                        checklistStepInfo: Ext.util.JSON.encode({ id: step.id, name: wnd.getName(), dueDate: wnd.getDueDate(), assignedToId: wnd.getAssignedToId() })
+                        },
+                        success: function(resp) {
+	                        var result = resp != null && !Ext.isEmpty(resp.responseText) ? Ext.decode(resp.responseText) : null;
+	                        if(result == null || result.checklist == null) return;
+
+	                        me.checklist = result.checklist;
+	                        me.loadChecklist();
+                        }
+                    });
+                },
+                'delete': function(wnd) {
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            action: 'editstep',
+	                        svcprovider: 'JsDoMyChecklistsAction',
+	                        checklistInfo: Ext.util.JSON.encode({ id: me.checklist.id }),
+	                        checklistStepInfo: Ext.util.JSON.encode({ id: step.id, deleteFlag: true })
+                        },
+                        success: function(resp) {
+	                        var result = resp != null && !Ext.isEmpty(resp.responseText) ? Ext.decode(resp.responseText) : null;
+	                        if(result == null || result.checklist == null) return;
+
+	                        me.checklist = result.checklist;
+	                        me.loadChecklist();
+	                        me.updateLayout();
+                        }
+                    });
+                }
+            }
+        }).show();
+    },
+
+    doCheckboxClick: function(evt, el, o) {
+        var id = el.getAttribute('guid');
+        var me = this;
+
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                action: el.checked ? 'complete' : 'uncomplete',
+	            svcprovider: 'JsDoMyChecklistsAction',
+	            stepId: id
+            },
+            success: function(resp) {
+            
+	            var result = resp != null && !Ext.isEmpty(resp.responseText) ? Ext.decode(resp.responseText) : null;
+	            if(result == null || result.checklist == null) return;
+
+	            me.checklist = result.checklist;
+	            me.loadChecklist();
+            }
+        });
+    }
+});

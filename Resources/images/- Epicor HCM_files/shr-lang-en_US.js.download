@@ -1,0 +1,26 @@
+﻿Shr.NUMBER_FORMAT_DECIMALTWO = '0,000.00';
+Shr.NUMBER_FORMAT_DECIMALFOUR = '0,000.0000';
+Shr.LABEL_Messages = "Message(s)";
+Shr.LABEL_Message = "Message";
+Shr.LABEL_Now = 'Now';
+Shr.LABEL_Time = 'Time';
+Shr.LABEL_Language = 'Language';
+Shr.LABEL_Value = 'Value';
+Shr.LABEL_SendEmail = "Send Email";
+Shr.LABEL_SpellCheck = "Spell Check";
+Shr.LABEL_Loading = "Loading...";
+Shr.LABEL_Of = "of";
+Shr.LABEL_ResetToDefaultSettings = "Reset to Default Settings";
+
+if (Ext.form.ComboBox) {
+    Ext.apply(Ext.form.ComboBox.prototype, {
+        loadingText: "Loading...",
+        valueNotFoundText: undefined
+    });
+}
+
+if (Ext.form.NumberField) {
+    Ext.apply(Ext.form.NumberField.prototype, {
+        decimalSeparator: "."
+    });
+}

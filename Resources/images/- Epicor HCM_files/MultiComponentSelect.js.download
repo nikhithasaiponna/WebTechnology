@@ -1,0 +1,221 @@
+﻿Ext.define('Shr.MultiComponentSelect', {
+    extend: 'Ext.grid.Panel',
+    forceFit: true,
+    height: 475,
+    regionStore: null,
+    resources: null,
+    onBackClick: null,
+    auxProxy: null,
+    newSearchValue: null,
+    selectionBuffer: [],
+    plugins: [
+        {
+            pluginId: 'RegionCellEditing',
+            ptype: 'cellediting',
+            clicksToEdit: 1
+        }
+    ],
+
+    selModel: {
+        mode: 'MULTI',
+        selType: 'checkboxmodel',
+        checkOnly: true,
+        headerWidth: 32,
+    },
+
+    bbar: {
+        xtype: 'pagingtoolbar',
+        displayInfo: true
+    },
+
+    setColumns: function () {
+        var me = this;
+        me.emptyText = me.resources.emptyText;
+        me.columns = [
+            {
+                text: me.resources.component,
+                dataIndex: 'Component',
+                sortable: true,
+                hidden: false
+            },
+            {
+                text: me.resources.region,
+                dataIndex: 'Region',
+                sortable: false,
+                hidden: false,
+                renderer: me.renderRegion,
+                editor: {
+                    xtype: 'combobox',
+                    id: 'something',
+                    displayField: 'Text',
+                    valueField: 'Value',
+                    triggerAction: 'all',
+                    editable: false,
+                    store: me.regionStore,
+                    listeners: {
+                        focus: me.onComboboxFocus,
+                        change: function (column, newValue, oldValue, eOpts) { me.onComboboxChange(this, me, newValue); }
+                    }                    
+                }
+            }
+        ]
+    },
+
+    renderRegion: function (val) {
+        var me = this,
+            regionStore;
+
+        //rendering first time me is the grid, when changing values on the 
+        //combobox editor cell me is not the grid anymore but the column.
+        if (me instanceof Ext.grid.column.Column)
+            regionStore = me.getEditor().getStore();
+        else
+            regionStore = me.getColumns()[2].getEditor().getStore();
+
+        if (regionStore)
+            var r = regionStore.findRecord('Value', val);
+
+        return r != null ? r.get('Text') : val;
+    },
+
+    onComboboxBlur: function (me, event, eOpts)  {
+        var a = 1;
+    },
+
+    CheckboxRenderer: function (value, metaData, record) {
+        return Ext.selection.CheckboxModel.prototype.renderer.apply(this, arguments);
+    },
+
+    setTopBar: function () {
+        var me = this;
+        me.tbar = [
+            {
+                xtype: 'textfield',
+                fieldLabel: me.resources.search,
+                labelWidth: 70,
+                width: 330,
+                listeners: {
+                    change: function (textfield, newValue, oldValue, eOpts) {
+                        var timer = textfield.timer
+                        clearTimeout(timer);
+                        textfield.timer = setTimeout(function () {
+                            var store = me.getStore();
+                            if (newValue)
+                                store.filter([{ property: 'Component', anyMatch: true, value: newValue }]);
+                            else
+                                store.removeFilter('Component');
+                        }, 200);
+                    }
+                }
+            }
+        ];
+    },
+
+    onComboboxFocus: function (me, event, eOpts) {
+        me.expand();
+    },
+
+    onComboboxChange: function (combo, grid, newValue) {
+
+        var editor = grid.getPlugin('RegionCellEditing'),
+            activeRecord = editor.getActiveRecord(),
+            index, ComponentGuid;
+
+        ComponentGuid = activeRecord.data.ComponentGuid;
+        //index = grid.selectionBuffer.findIndex(item => item.ComponentGuid === ComponentGuid); //IE doesn support this one.
+        index = grid.findIndexByGuid(grid.selectionBuffer, ComponentGuid);
+
+        if (index > -1)
+            grid.selectionBuffer[index].Region = newValue;
+    },
+
+    changeRegion: function (grid, componentGuid, newRegion) {
+        var me = this,
+            //index = grid.selectionBuffer.findIndex(item => item.ComponentGuid === componentGuid); //IE doesn support this one.
+            index = grid.findIndexByGuid(grid.selectionBuffer, ComponentGuid); 
+
+        if (index > -1)
+            grid.selectionBuffer[index].Region = newRegion;
+    },
+
+    findIndexByGuid: function (array, ComponentGuid) {
+        var idx = -1;
+
+        array.forEach(function (item, index, arr) {
+            if (item.ComponentGuid === ComponentGuid)
+                idx = index;        
+        });
+
+        return idx;
+    },
+
+    getNewComponents: function (closeWindowId, container) {
+        var me = this,
+            selection = me.selectionBuffer,
+            componentString = "";
+
+        for (var i = 0; i < selection.length; i++)
+            componentString = me.concatComponents(selection[i], componentString);
+
+        if (!Ext.isEmpty(closeWindowId))
+            Ext.getCmp(closeWindowId).close();
+
+        if (selection.length > 0)
+            __doPostBack(container, 'ITEM_ADDED, ' + componentString);  
+
+        selection.splice(0, selection.length);
+    },
+
+    concatComponents: function (data, auxStr) {
+        return auxStr + data.ComponentGuid + "$" + data.Region + ",";
+    },
+
+    setStoreListener: function () {
+        var grid = this,
+            store = grid.getStore();
+        store.on('load', function () { grid.restoreSelection(grid); } );
+    },
+
+    restoreSelection: function (grid)
+    {
+        var store = grid.getStore(),
+            selModel = grid.getSelectionModel(),
+            buffer = grid.selectionBuffer;
+
+        if (buffer && buffer.length > 0) {
+            for (var i = 0; i < buffer.length; i++) {
+                var index = store.findExact('ComponentGuid', buffer[i].ComponentGuid);
+                if (index > -1) {
+                    var record = store.data.items[index];
+                    record.data.Region = buffer[i].Region;
+                    selModel.select(index, true, true);
+                }
+            }
+        }
+        grid.getView().refresh();
+    },
+
+    listeners: {
+        select: function (smodel, record, index, eOpts) {
+            this.selectionBuffer.push({ Region: record.data.Region, ComponentGuid : record.data.ComponentGuid });
+        },
+
+        deSelect: function (smodel, record, index, eOpts) {
+            var me = this,
+                //index = me.selectionBuffer.findIndex(item => item.ComponentGuid === record.data.ComponentGuid); //IE doesn support this one.
+                index = grid.findIndexByGuid(grid.selectionBuffer, ComponentGuid);
+
+            if (index > -1)
+                me.selectionBuffer.splice(index, 1);
+        }
+    },
+
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+        me.setColumns();
+        me.setTopBar();
+        me.setStoreListener();
+        me.callParent();
+    }
+});

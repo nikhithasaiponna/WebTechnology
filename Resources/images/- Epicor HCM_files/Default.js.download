@@ -1,0 +1,3213 @@
+﻿//GLOBAL CONSTANTS
+var MICRO_WIDTH = 64;
+var MACRO_WIDTH = 280;
+var TOOLBAR_HEIGHT = 64;
+var HOME_PAGE_MENU_PANEL_WIDTH_EXPAND = 320;
+var HOME_PAGE_MENU_PANEL_WIDTH_COLLAPSED = 80;
+
+Ext.define('Shr.Event', {
+    extend: 'Ext.Component',
+
+    target: null,
+    arguments: null,
+
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+        me.callParent();
+    },
+    fire: function () {
+        var me = this;
+        __doPostBack(me.target, me.arguments);
+    }
+});
+
+//Viewport and views
+Ext.define('Shr.main.Viewport', {
+    extend: 'Ext.container.Viewport',
+    cls: "sencha-dash-viewport",
+    listeners: {
+        resize: function () {
+            MainLayout.updateLayout();
+        }
+    }
+});
+Ext.define("Shr.main.Container", {
+    extend: 'Ext.container.Container',
+    xtype: 'maincontainer',
+    scrollable: "y",
+    layout: {
+        type: "hbox",
+        align: "stretchmax",
+        animate: true,
+        animatePolicy: {
+            x: true,
+            width: true
+        }
+    },
+    beforeLayout: function () {
+        var d = this,
+            e = Ext.Element.getViewportHeight() - 64 - 27,
+            f = d.getComponent("MenuList");
+        d.minHeight = e;
+        if (f) {
+            f.setStyle({
+            "min-height": e + "px"
+        });
+        }
+        Ext.container.Container.prototype.beforeLayout.apply(this, arguments)
+    }
+});
+Ext.define('Shr.main.Toolbar', {
+    extend: 'Ext.toolbar.Toolbar',
+    cls: "sencha-dash-dash-headerbar shadow",
+    maxHeight: TOOLBAR_HEIGHT,
+    height: TOOLBAR_HEIGHT,
+    itemId: "headerBar",
+    logo:
+    {
+        xtype: "shr.main.logo",
+        id: 'main-logo'
+    },
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me.logo, config.logo);
+
+        config.items = [
+                me.logo,
+            {
+                id: 'main-navigation-btn',
+                xtype: 'shr.button.navigation',
+                ui: 'header-orange'
+            },
+                "->",
+            {
+                xtype: 'shr.main.toolbar.search',
+                ui: 'header'
+            },
+            {
+                iconCls: "fa fa-sign-out",
+                ui: "header",
+                //href: "SignOut.aspx",
+                hrefTarget: "_self",
+                tooltip: MainLayout.LogOffText,
+                hidden: !config.logout,
+                listeners:
+                {
+                    click: function ()
+                    {
+                        Ext.MessageBox.confirm(MainLayout.LogOffText, MainLayout.AreYouSureYouWantToLogOffText, function (result) {
+                            if (result == 'yes') {
+                                window.location.href = 'SignOut.aspx';
+                            }
+                        });
+                    }
+                }
+            },
+            {
+                iconCls: "fa fa-question-circle",
+                ui: "header",
+                href: config.help,
+                hrefTarget: "_self",
+                tooltip: MainLayout.HelpFAQ,
+                handler: function () {
+                    if (config.helpcommand) {
+                        eval(config.helpcommand)
+                    }
+                }
+            },
+            {
+                xtype: "tbtext",
+                text: config.person.fullname,
+                cls: "top-user-name"
+            },
+            {
+                xtype: "shr.main.modifyuserprofile",
+                picture: config.person.picture,
+                src: config.person.pictureSrc,
+                personName: config.person.fullname,
+                description: config.person.description,
+                employeeflag: config.person.isEmployee, 
+                buttonsContainer: config.person.employeeButtons,
+                fu: config.person.fu,
+                changePicture: config.person.changePicture
+
+            }, {
+                xtype: 'shr.main.languagemenu',
+                menudisabled: config.language.menu,
+                preferred: config.language.preferred,
+                list: config.language.list
+            },
+            {
+                xtype: 'shr.main.clockinout',
+                id: config.clockinout.id,
+                preferred: config.clockinout.preferred,
+                list: config.clockinout.list,
+                hidden: !config.clockinout.showClockInOut,
+                tooltip: config.clockinout.shortMessage
+            },
+            {
+                id: 'clockinoutinfo',
+                ui: 'header',
+                iconCls: 'fa fa-info-circle',
+                cls: 'x-cico',
+                tooltip: config.clockinout.longMessage,
+                disabled: true,
+                hidden: !config.clockinout.showInfo,
+            },
+                " "];
+        Ext.apply(me, config);
+        this.callParent(config);
+    }
+});
+
+Ext.define('Shr.main.LanguageMenu', {
+    extend: 'Ext.button.Button',
+    xtype: 'shr.main.languagemenu',
+    list: null,
+    menudisabled: false,
+    preferred: {
+        text: null,
+        icon: null
+    },
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        me.text = me.preferred.text;
+        me.icon = me.preferred.icon;
+
+        if (me.list.length > 0) {
+            me.menu = {
+                disabled: me.menudisabled,
+                items: me.list
+            };
+        } else {
+            me.hidden = true;
+        }
+        me.callParent();
+    }
+
+});
+
+Ext.define('Shr.main.ClockInOut', {
+    extend: 'Ext.button.Button',
+    xtype: 'shr.main.clockinout',
+    iconCls: 'fa fa-clock-o',
+    list: null,
+    menudisabled: false,
+    preferred: {
+        text: null,
+        tooltip: null
+    },
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+        Ext.QuickTips.init();
+
+        me.text = me.preferred.text;
+
+        if (me.list.length > 0) {
+            me.menu = {
+                disabled: me.menudisabled,
+                items: me.list
+            };
+        } else {
+            me.hidden = true;
+        }
+
+        me.callParent();
+    },
+
+    updateControl: function (config) {
+        var me = this;
+
+        me.setText(config.preferred.text);
+        if (config.shortMessage)
+            me.setTooltip(config.shortMessage);
+
+        if (config.list.length > 0) {
+            me.menu.removeAll();
+            me.setMenu(config.list);
+        }
+
+        var info = Ext.getCmp('clockinoutinfo');
+        if (info)
+            if (config.longMessage)
+                info.setTooltip(config.longMessage);
+    }
+
+});
+
+
+Ext.define('Shr.main.Logo', {
+    extend: "Ext.container.Container",
+    xtype: 'shr.main.logo',
+    maxHeight: TOOLBAR_HEIGHT,
+    height: TOOLBAR_HEIGHT,
+    maxWidth: MACRO_WIDTH,
+    micro: false,
+    logo: null,
+    src: null,
+    microLogo: null,
+    microSrc: null,
+    cls: 'toolbar-logo',
+    layout: {
+        type: 'hbox',
+        pack: 'center',
+        align: 'middle'
+    },
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+        me.autoEl = {
+            tag: 'a',
+            href: me.href
+        };
+        me.logo = Ext.create('Ext.Img', {
+            src: me.src,
+            hidden: me.micro,
+            cls: 'x-hidden',
+            alt: me.href,
+            listeners: {
+                load: {
+                    element: 'el',
+                    fn: function () {
+                        me.updateLayout();
+                        me.logo.removeCls('x-hidden');
+                    }
+                }
+            }
+        });
+
+        me.microLogo = Ext.create('Ext.Img', {
+            src: me.microSrc,
+            hidden: !me.micro,
+            cls: 'x-hidden',
+            alt: me.href,
+            listeners: {
+                load: {
+                    element: 'el',
+                    fn: function () {
+                        me.updateLayout();
+                        me.microLogo.removeCls('x-hidden');
+                    }
+                }
+            }
+        });
+        me.setWidth();
+        me.items = [me.microLogo, me.logo];
+        me.callParent();
+    },
+    setMicro: function (value) {
+        var me = this;
+        me.setWidth();
+        me.micro = value;
+        if (me.micro) {
+            me.microLogo.show();
+            me.logo.hide();
+        } else {
+            me.logo.show();
+            me.microLogo.hide();
+        }
+    },
+    getMicro: function () {
+        return micro;
+    },
+    setWidth: function () {
+        var me = this;
+        me.width = me.micro ? MICRO_WIDTH : MACRO_WIDTH;
+    }
+});
+/**
+ * This is the base class for all Authentication related Form dialogs. It optionally
+ * enables autoComplete support to any child textfield so that browsers or their plugins
+ * may restore/persist username, password and other attributes to/from such forms.
+ */
+Ext.define('Shr.main.Dialog', {
+    extend: 'Ext.form.Panel',
+    xtype: 'shr.main.dialog',
+
+    /*
+     * Seek out the first enabled, focusable, empty textfield when the form is focused
+     */
+    defaultFocus: 'textfield:focusable:not([hidden]):not([disabled]):not([value])',
+
+    /**
+     * @cfg {Boolean} [autoComplete=false]
+     * Enables browser (or Password Managers) support for autoCompletion of User Id and
+     * password.
+     */
+    autoComplete: true,
+    bodyPadding: '20 20',
+    cls: 'auth-dialog-login',
+    header: false,
+    width: 415,
+    layout: {
+        type: 'vbox',
+        align: 'stretch'
+    },
+
+    defaults: {
+        margin: '5 0'
+    },
+
+    initComponent: function () {
+        var me = this, listen;
+
+        if (me.autocomplete) {
+            // use standard form tag for detection by browser or password tools
+            me.autoel = ext.applyif(
+                me.autoel || {},
+                {
+                    tag: 'div',
+                    name: 'authdialog',
+                    method: 'post'
+                });
+        }
+
+        me.addCls('auth-dialog');
+        me.callParent();
+
+        if (me.autoComplete) {
+            listen = {
+                afterrender: 'doAutoComplete',
+                scope: me,
+                single: true
+            };
+
+            Ext.each(me.query('textfield'), function (field) {
+                field.on(listen);
+            });
+        }
+    },
+
+    doAutoComplete: function (target) {
+        if (target.inputEl && target.autoComplete !== false) {
+            target.inputEl.set({ autocomplete: 'on' });
+        }
+    }
+});
+Ext.define('Shr.main.LoginDialog', {
+    extend: 'Shr.main.Dialog',
+    xtype: 'shr.main.logindialog',
+    defaultButton: 'loginButton',
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        me.items = [
+            {
+                xtype: 'container',
+                layout: {
+                    type: 'hbox',
+                    align: 'middle'
+                },
+                items: [
+                    {
+                        xtype: 'label',
+                        text: me.resources.logintxt,
+                        flex: 1
+                    },
+                    {
+                        xtype: 'shr.main.languagemenu',
+                        menudisabled: false,
+                        preferred: me.owner.languagelist.preferred,
+                        list: me.owner.languagelist.list
+                    },
+                    {
+                        xtype: 'component',
+                        id: 'info',
+                        html: '<i class="fa fa-info-circle" style="font-size:25px;"aria-hidden="true"></i>',
+                        width: 25,
+                        height: 25,
+                        style: {
+                            cursor: 'pointer',
+                            color: '#86898d'
+                        },
+                        listeners: {
+                            element: 'el',
+                            click: function () {
+                                Ext.create('Shr.WebControls.Dialog', {
+                                    title: me.resources.disclaimer,
+                                    height: 550,
+                                    width: 600,
+                                    sourceControl: 'USGovtRights'
+                                }).show();
+                            }
+                        }
+                    }
+                ]
+            },
+
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'username',
+                name: 'username',
+                value: me.username,
+                emptyText: me.resources.username,
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-email-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'password',
+                name: 'password',
+                emptyText: me.resources.password,
+                inputType: 'password',
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'newpassword',
+                name: 'newpassword',
+                emptyText: me.resources.newpassword,
+                inputType: 'password',
+                disabled: !me.passwordexpired,
+                hidden: !me.passwordexpired,
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'confirmpassword',
+                name: 'confirmpassword',
+                emptyText: me.resources.confirmpassword,
+                inputType: 'password',
+                disabled: !me.passwordexpired,
+                hidden: !me.passwordexpired,
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'container',
+                layout: {
+                    type: 'hbox',
+                    align: 'middle'
+                },
+                items: [{
+                    xtype: 'label',
+                    text: me.errormsg,
+                    flex: 1
+                }, {
+                    xtype: 'box',
+                    width: 180,
+                    html: '<a class="link-forgot-password">' + me.resources.resetpassword + '</a>',
+                    listeners: {
+                        click: {
+                            element: 'el',
+                            fn: function () {
+                                me.owner.onForgotPassword();
+                            }
+                        }
+                    }
+                }]
+            },
+            {
+                xtype: 'button',
+                reference: 'loginButton',
+                scale: 'large',
+                ui: 'blue',
+                iconAlign: 'right',
+                iconCls: 'x-fa fa-angle-right',
+                text: me.resources.loginbtn,
+                formBind: true,
+                listeners: {
+                    click: function () {
+                        me.owner.onLoginAttempt();
+                    }
+                }
+            },
+            {
+                xtype: 'box',
+                html: '<div class="outer-div"><div class="seperator">' + me.resources.or + '</div></div>',
+                margin: '10 0'
+            },
+            {
+                xtype: 'button',
+                scale: 'large',
+                ui: 'orange',
+                iconAlign: 'right',
+                iconCls: 'x-fa fa-user-plus',
+                hidden: me.iscandidate || !me.allowEmployeeSelfRegistrationFlag,
+                text: me.resources.selfregistrationbtn,
+                listeners: {
+                    click: function () {
+                        me.owner.onRegisterShow();
+                    }
+                }
+            },
+            {
+                xtype: 'button',
+                scale: 'large',
+                ui: 'orange',
+                iconAlign: 'right',
+                iconCls: 'x-fa fa-angle-left',
+                hidden: !me.iscandidate,
+                text: me.resources.jobopenings,
+                listeners: {
+                    click: function () {
+                        me.owner.showJobOpenings();
+                    }
+                }
+            }
+        ];
+        me.callParent();
+    }
+});
+Ext.define('Shr.main.SelfRegistrationDialog', {
+    extend: 'Shr.main.Dialog',
+    xtype: 'shr.main.selfregdialog',
+
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        me.items = [
+            {
+                xtype: 'label',
+                text: me.resources.createaccount
+            },
+            {
+                xtype: 'component',
+                html: me.resources.ntlogoninfo,
+                disabled: !me.ntlogoninfo,
+                hidden: !me.ntlogoninfo
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'adusername',
+                name: 'adusername',
+                value: me.values.adusername,
+                emptyText: me.resources.adusername,
+                blankText: me.resources.validations.adusernamereq,
+                disabled: !me.adfields,
+                hidden: !me.adfields,
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-email-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'adpassword',
+                name: 'adpassword',
+                inputType: 'password',
+                emptyText: me.resources.adpassword,
+                blankText: me.resources.validations.adpasswordreq,
+                disabled: !me.adfields,
+                hidden: !me.adfields,
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'lastname',
+                name: 'lastname',
+                value: me.values.lastname,
+                emptyText: me.resources.lastname,
+                blankText: me.resources.validations.lastnamenamereq,
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-email-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'idfield',
+                name: 'idfield',
+                value: me.values.idfield,
+                emptyText: me.resources.idfield,
+                blankText: me.resources.validations.idfieldreq,
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-email-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'desiredusername',
+                name: 'desiredusername',
+                disabled: me.adfields || me.ntlogoninfo,
+                hidden: me.adfields || me.ntlogoninfo,
+                value: me.values.desiredusername,
+                emptyText: me.resources.desiredusername,
+                blankText: me.resources.validations.usernamereq,
+                regex: new RegExp('^[a-zA-Z0-9_]+$'),
+                regexText: me.resources.validations.usernamemask,
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'button',
+                reference: 'registerme',
+                scale: 'large',
+                ui: 'blue',
+                iconAlign: 'right',
+                iconCls: 'x-fa fa-angle-right',
+                text: me.resources.registerme,
+                formBind: true,
+                listeners: {
+                    click: function () {
+                        me.owner.onRegisterAttempt();
+                    }
+                }
+            },
+            {
+                xtype: 'button',
+                scale: 'large',
+                iconAlign: 'right',
+                iconCls: 'fa fa-times',
+                ui: 'darkgray',
+                hidden: !me.showcancel,
+                text: me.resources.cancel,
+                listeners: {
+                    click: function () {
+                        me.owner.onRegisterCancel();
+                    }
+                }
+            }];
+        me.callParent();
+    }
+});
+Ext.define('Shr.main.passwordDialog', {
+    extend: 'Shr.main.Dialog',
+    xtype: 'shr.main.passwordDialog',
+
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        me.items = [
+            {
+                xtype: 'label',
+                text: me.resources.forgotpassword
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'forgotemail',
+                name: 'forgotemail',
+                emptyText: me.resources.email,
+                blankText: me.resources.blankemail,
+                vtype:'email',
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-email-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'button',
+                reference: 'sendemail',
+                scale: 'large',
+                ui: 'green',
+                iconAlign: 'right',
+                iconCls: 'x-fa fa-angle-right',
+                text: me.resources.send,
+                formBind: true,
+                listeners: {
+                    click: function () {
+                        me.owner.onSendEmail();
+                    }
+                }
+            },
+            {
+                xtype: 'button',
+                scale: 'large',
+                iconAlign: 'right',
+                iconCls: 'fa fa-times',
+                ui: 'darkgray',
+                text: me.resources.cancel,
+                listeners: {
+                    click: function () {
+                        me.owner.onRegisterCancel();
+                    }
+                }
+            }
+        ];
+
+        me.callParent();
+    }
+})
+Ext.define('Shr.main.CandidateLoginDialog', {
+    extend: 'Shr.main.Dialog',
+    xtype: 'shr.main.candidatelogindialog',
+    defaultButton: 'loginButton',
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        me.items = [
+            {
+                xtype: 'container',
+                layout: {
+                    type: 'hbox',
+                    align: 'middle'
+                },
+                items: [
+                    {
+                        xtype: 'label',
+                        text: me.resources.logintxt,
+                        flex: 1
+                    },
+                    {
+                        xtype: 'component',
+                        id: 'info',
+                        html: '<i class="fa fa-info-circle" style="font-size:25px;"aria-hidden="true"></i>',
+                        width: 25,
+                        height: 25,
+                        style: {
+                            cursor: 'pointer',
+                            color: '#86898d'
+                        },
+                        listeners: {
+                            element: 'el',
+                            click: function () {
+                                Ext.create('Shr.WebControls.Dialog', {
+                                    title: me.resources.disclaimer,
+                                    height: 550,
+                                    width: 600,
+                                    sourceControl: 'USGovtRights'
+                                }).show();
+                            }
+                        }
+                    }
+                ]
+            },
+
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'username',
+                name: 'username',
+                value: me.username,
+                emptyText: me.resources.username,
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-email-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'password',
+                name: 'password',
+                emptyText: me.resources.password,
+                inputType: 'password',
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'newpassword',
+                name: 'newpassword',
+                emptyText: me.resources.newpassword,
+                inputType: 'password',
+                disabled: !me.passwordexpired,
+                hidden: !me.passwordexpired,
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'confirmpassword',
+                name: 'confirmpassword',
+                emptyText: me.resources.confirmpassword,
+                inputType: 'password',
+                disabled: !me.passwordexpired,
+                hidden: !me.passwordexpired,
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'container',
+                layout: {
+                    type: 'hbox',
+                    align: 'middle'
+                },
+                items: [{
+                    xtype: 'label',
+                    text: me.errormsg,
+                    flex: 1
+                }, {
+                    xtype: 'box',
+                    width: 130,
+                    html: '<a class="link-forgot-password">' + me.resources.forgotpassword + '</a>',
+                    listeners: {
+                        click: {
+                            element: 'el',
+                            fn: function () {
+                                me.owner.onForgotPassword();
+                            }
+                        }
+                    }
+                }]
+            },
+            {
+                xtype: 'button',
+                reference: 'loginButton',
+                scale: 'large',
+                ui: 'blue',
+                iconAlign: 'right',
+                iconCls: 'x-fa fa-angle-right',
+                text: me.resources.loginbtn,
+                formBind: true,
+                listeners: {
+                    click: function () {
+                        me.owner.onCandidateLoginAttempt();
+                    }
+                }
+            },
+            {
+                xtype: 'box',
+                html: '<div class="outer-div"><div class="seperator">' + me.resources.or + '</div></div>',
+                margin: '10 0'
+            },
+            {
+                xtype: 'button',
+                scale: 'large',
+                ui: 'orange',
+                iconAlign: 'right',
+                iconCls: 'x-fa fa-user-plus',
+                text: me.resources.applyfirsttime,
+                listeners: {
+                    click: function () {
+                        me.owner.onCandidateApplyFirstTime();
+                    }
+                }
+            },
+            // {
+            //     xtype: 'box',
+            //     html: '<div class="outer-div"><div class="seperator">OR</div></div>',
+            //     margin: '10 0'
+            // },
+            {
+                xtype: 'button',
+                scale: 'large',
+                ui: 'darkgray',
+                iconAlign: 'right',
+                iconCls: 'x-fa fa-times',
+                text: me.resources.cancel,
+                listeners: {
+                    click: function () {
+                        me.owner.onCancelApply();
+                    }
+                }
+            }
+        ];
+        me.callParent();
+    }
+
+});
+Ext.define('Shr.main.ResetPasswordDialog', {
+    extend: 'Shr.main.Dialog',
+    xtype: 'shr.main.resetpasswordDialog',
+    defaultButton: 'loginButton',
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        me.items = [
+            {
+                xtype: 'container',
+                layout: {
+                    type: 'hbox',
+                    align: 'middle'
+                },
+                items: [
+                    {
+                        xtype: 'label',
+                        text: me.owner.resettxt,
+                        flex: 1
+                    },
+                    {
+                        xtype: 'component',
+                        id: 'info',
+                        html: '<i class="fa fa-info-circle" style="font-size:25px;"aria-hidden="true"></i>',
+                        width: 25,
+                        height: 25,
+                        style: {
+                            cursor: 'pointer',
+                            color: '#86898d'
+                        },
+                        listeners: {
+                            element: 'el',
+                            click: function () {
+                                Ext.create('Shr.WebControls.Dialog', {
+                                    title: me.owner.disclaimer,
+                                    height: 550,
+                                    width: 600,
+                                    sourceControl: 'USGovtRights'
+                                }).show();
+                            }
+                        }
+                    }
+                ]
+            },
+                        {
+                            xtype: 'shr.main.login.text',
+                            reference: 'resetemail',
+                            name: 'resetemail',
+                            emptyText: me.resources.email,
+                            blankText: me.resources.blankemail,
+                            vtype: 'email',
+                            triggers: {
+                                glyphed: {
+                                    cls: 'trigger-glyph-noop auth-email-trigger'
+                                }
+                            }
+                        },
+
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'newpassword',
+                name: 'newpassword',
+                emptyText: me.owner.newpassword,
+                inputType: 'password',
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'confirmpassword',
+                name: 'confirmpassword',
+                emptyText: me.owner.confirmpassword,
+                inputType: 'password',
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+            
+            {
+                xtype: 'button',
+                reference: 'loginButton',
+                scale: 'large',
+                ui: 'blue',
+                iconAlign: 'right',
+                iconCls: 'x-fa fa-angle-right',
+                text: me.owner.createpassword,
+                formBind: true,
+                listeners: {
+                    click: function () {
+                        var me = this;
+                        Ext.getCmp('ResetPassword').fire();
+                    }
+                }
+            }
+        ];
+        me.callParent();
+    }
+
+});
+Ext.define('Shr.main.SelfRegistrationPasswordDialog', {
+    extend: 'Shr.main.Dialog',
+    xtype: 'shr.main.selfregistrationpasswordDialog',
+    defaultButton: 'loginButton',
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        me.items = [
+            {
+                xtype: 'container',
+                layout: {
+                    type: 'hbox',
+                    align: 'middle'
+                },
+                items: [
+                    {
+                        xtype: 'label',
+                        text: me.owner.selfregistrationpasswordtxt,
+                        flex: 1
+                    },
+                    {
+                        xtype: 'component',
+                        id: 'info',
+                        html: '<i class="fa fa-info-circle" style="font-size:25px;"aria-hidden="true"></i>',
+                        width: 25,
+                        height: 25,
+                        style: {
+                            cursor: 'pointer',
+                            color: '#86898d'
+                        },
+                        listeners: {
+                            element: 'el',
+                            click: function () {
+                                Ext.create('Shr.WebControls.Dialog', {
+                                    title: me.owner.disclaimer,
+                                    height: 550,
+                                    width: 600,
+                                    sourceControl: 'USGovtRights'
+                                }).show();
+                            }
+                        }
+                    }
+                ]
+            },
+                        {
+                            xtype: 'shr.main.login.text',
+                            reference: 'selfregistrationpasswordusername',
+                            name: 'selfregistrationpasswordusername',
+                            emptyText: me.owner.selfregistrationpasswordusername,
+                            triggers: {
+                                glyphed: {
+                                    cls: 'trigger-glyph-noop auth-email-trigger'
+                                }
+                            }
+                        },
+
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'selfregistrationpasswordnewpassword',
+                name: 'selfregistrationpasswordnewpassword',
+                emptyText: me.owner.newpassword,
+                hidden: me.owner.selfregistrationpasswordiscss,
+                allowBlank: me.owner.selfregistrationpasswordiscss,
+                inputType: 'password',
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+            {
+                xtype: 'shr.main.login.text',
+                reference: 'selfregistrationpasswordconfirmpassword',
+                name: 'selfregistrationpasswordconfirmpassword',
+                emptyText: me.owner.confirmpassword,
+                hidden: me.owner.selfregistrationpasswordiscss,
+                allowBlank: me.owner.selfregistrationpasswordiscss,
+                inputType: 'password',
+                triggers: {
+                    glyphed: {
+                        cls: 'trigger-glyph-noop auth-password-trigger'
+                    }
+                }
+            },
+
+            {
+                xtype: 'button',
+                reference: 'loginButton',
+                scale: 'large',
+                ui: 'blue',
+                iconAlign: 'right',
+                iconCls: 'x-fa fa-angle-right',
+                text: me.owner.selfregistrationpasswordbutton,
+                formBind: true,
+                listeners: {
+                    click: function () {
+                        var me = this;
+                        Ext.getCmp('SelfRegistrationPasswordSet').fire();
+                    }
+                }
+            }
+        ];
+        me.callParent();
+    }
+
+});
+Ext.define('Shr.main.LockingPanel', {
+    extend: 'Ext.panel.Panel',
+    xtype: 'lockingpanel',
+    cls: 'auth-locked-window',
+    titleAlign: 'center',
+    header: false,
+    layout: 'fit',
+    height: '100%',
+    width: '100%'
+});
+
+Ext.define('Shr.main.login.Logo', {
+    extend: 'Ext.container.Container',
+    xtype: 'shr.main.login.logo',
+
+    src: null,
+
+    layout: {
+        type: 'fit'
+    },
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        me.items = [{
+            xtype: 'image',
+            alt: 'Company Logo', //TODO: Language Translations.
+            style: 'object-fit: contain;',
+            src: me.src,
+            width: 600,
+            height: 600
+            //            listeners:{
+            //                load:{
+            //                    element: 'el',
+            //                    fn: function(){
+            //                        me.updateLayout();
+            //                        Ext.get('aspnetForm').removeCls('x-hidden');
+            //                    }
+            //                }
+            //            }
+        }];
+        me.callParent();
+    }
+});
+Ext.define('Shr.main.login.Container', {
+    extend: 'Ext.container.Container',
+    xtype: 'shr.main.login.container',
+    layout: {
+        type: 'hbox',
+        pack: 'center'
+    },
+    defaults: {
+        margin: '0'
+    },
+    width: '100%'
+});
+Ext.define('Shr.main.Screen', {
+    extend: 'Shr.main.LockingPanel',
+    xtype: 'shr.main.screen',
+    defaultFocus: 'shr.main.dialog',
+    id: 'Login',
+    referenceHolder: true,
+
+    companyimage: null,
+    backgroundimage: null,
+    showlogin: true,
+
+    login: {
+        forgotpassword: null,
+        passwordexpired: null,
+        errormsg: null,
+        resources: {
+            username: null,
+            password: null,
+            newpassword: null,
+            confirmpassword: null,
+            logintxt: null,
+            loginbtn: null,
+            selfregistrationbtn: null,
+            forgotpassword: null
+        }
+    },
+    selfregistration: {
+        resources: {
+            createaccount: null,
+            ntlogoninfo: null,
+            adusername: null,
+            adpassword: null,
+            lastname: null,
+            idfield: null,
+            desiredusername: null,
+            registerme: null,
+            cancel: null
+        }
+    },
+    initComponent: function () {
+        this.addCls('user-login-register-container');
+        this.callParent(arguments);
+    },
+    beforeLayout: function () {
+        var me = this;
+        me.setBodyStyle({ "background-image": "url(" + me.backgroundimage + ")" });
+        me.setBodyStyle({ "background-size": "cover" });
+    },
+    constructor: function (config) {
+        var me = this,
+            items = [];
+        Ext.apply(me, config);
+        
+        me.loginDialog = me.getLoginDialog();
+
+        me.registrationDialog = Ext.create(
+            Ext.apply(me.selfregistration, {
+                xtype: 'shr.main.selfregdialog',
+                reference: 'selfregisterdialog',
+                owner: me
+            })
+        );
+
+        me.passwordDialog = Ext.create(
+            Ext.apply(me.forgotpassword, {
+                xtype: 'shr.main.passwordDialog',
+                reference: 'passwordDialog',
+                owner: me
+            })
+        );
+
+        me.resetpasswordDialog = Ext.create(
+            Ext.apply(me.forgotpassword, {
+                xtype: 'shr.main.resetpasswordDialog',
+                reference: 'resetpasswordDialog',
+                owner: me
+            })
+        );
+        me.selfregistrationpasswordDialog = Ext.create(
+            Ext.apply(me.forgotpassword, {
+                xtype: 'shr.main.selfregistrationpasswordDialog',
+                reference: 'selfregistrationpasswordDialog',
+                owner: me
+            })
+        );
+
+        if (me.forgotpassword.status) {
+            Ext.Msg.show({
+                title: 'Infomation',
+                message: me.forgotpassword.status.message,
+                icon: Ext.Msg.INFO
+            });
+        }
+
+        //Show warning message as Ext.msg.alert
+        if(me.login.iscandidate && me.login.errormsg && me.login.errormsg.length > 0 )
+        {
+            Ext.Msg.alert({
+                title: 'Infomation',
+                message: me.login.errormsg,
+                icon: Ext.Msg.INFO,
+                buttons: Ext.Msg.OK
+            });            
+        }
+
+        me.items = me.buildLayout();
+
+        me.copyright = Ext.create('Ext.container.Container', {
+            renderTo: Ext.getBody(),
+            height: 20,
+            width: '100%',
+            layout:'auto',
+            style: {
+                position: 'absolute',
+                bottom: '0px',
+                left:'0px',
+                background: '#f1750b'
+            },
+            items: [{
+                xtype: 'label',
+                text: me.copyrightlbl,
+                style: {
+                    padding:'0 0 0 5px',
+                    color: 'white'
+                }                
+            }]
+        });
+        me.callParent();
+    },
+    buildLayout: function () {
+        var me = this;
+        var activeItem = me.getActiveItem();
+        if (me.displaymode == 'resetpassword')
+        {
+            activeItem = 0;
+        }
+        else if (me.displaymode == 'isSelfRegistrationPasswordSetRequest')
+        {
+            activeItem = 1;
+        }
+        var resetPasswordItems = {
+
+            xtype: 'container',
+            layout: {
+                type: 'hbox',
+                align: 'center'
+            },
+            items: [
+                {
+                    xtype: 'component',
+                    flex: 1
+                },
+            {
+                xtype: 'container',
+                flex: 1,
+                layout: {
+                    type: 'vbox',
+                    align: 'center'
+                },
+                items: [{
+                    xtype: 'image',
+                    src: 'Images/welcome-screen-logo.png',
+                    alt: 'Epicor - Human Capital Management',
+                    width: 535,
+                    height: 224
+                }, {
+                    xtype: 'container',
+                    layout: 'card',
+                    reference: 'flip',
+                    activeItem: activeItem,
+                    items: [me.resetpasswordDialog,
+                        me.selfregistrationpasswordDialog
+                    ]
+                }, {
+                    xtype: 'component',
+                    width: 535,
+                    height: 224
+                }]
+            }]
+        };
+
+        var loginItems = {
+            xtype: 'container',
+            layout: {
+                type: 'hbox',
+                align:'center'
+            },
+            items: [
+                //{
+                //xtype: 'shr.main.login.logo',
+                //src: me.companyimage
+                //},
+                {
+                    xtype: 'component',
+                    flex:1
+                },
+            {
+                xtype: 'container',
+                flex: 1,
+                layout: {
+                    type: 'vbox',
+                    align: 'center'
+                },
+                items: [{
+                    xtype: 'image',
+                    src: 'Images/welcome-screen-logo.png',
+                    alt:'Epicor - Human Capital Management',
+                    width: 535,
+                    height: 224
+                }, {
+                    xtype: 'container',
+                    layout: 'card',
+                    reference: 'flip',
+                    activeItem: activeItem,
+                    items: [me.loginDialog, me.registrationDialog, me.passwordDialog]
+                }, {
+                    xtype: 'component',
+                    width: 535,
+                    height: 224
+                }]
+            }]
+        };
+
+        if (me.displaymode == 'login' || me.displaymode == 'requisition') {
+            return loginItems;
+        } else if (me.displaymode == 'resetpassword'  || me.displaymode == 'isSelfRegistrationPasswordSetRequest') {
+            return resetPasswordItems;
+        }
+        else if (me.displaymode == 'candidate') {
+            var candidateItems = {
+                xtype: 'container',
+                id: 'main-view-detail-wrap',
+                layout: {
+                    type: 'vbox',
+                    align: 'middle',
+                    pack: 'center'
+                },
+                height: '100%',
+                items: [{
+                    xtype: 'container',
+                    layout: {
+                        type: 'hbox',
+                        align: 'middle',
+                        pack: 'end'
+                    },
+                    maxHeight: 100,
+                    width: '80%',
+                    maxWidth: 1500,
+                    minWidth: 900,
+                    items: [{
+                        xtype: 'container',
+                        flex: 1,
+                        layout: {
+                            type: 'vbox',
+                            align: 'begin',
+                            pack: 'end'
+                        },
+                        items: [{
+                            xtype: 'image',
+                            src: me.companyimage,
+                            alt: 'Company Logo',
+                            maxHeight: 100,
+                            listeners: {
+                                load: {
+                                    element: 'el',
+                                    fn: function () {
+                                        me.updateLayout();
+                                    }
+                                }
+                            }
+                        }]
+                    }, {
+                        xtype: 'container',
+                        layout: {
+                            type: 'hbox',
+                            align: 'right'
+                        },
+                        items:
+                        [
+                            {
+                                xtype: 'button',
+                                ui: 'orange',
+                                text: me.login.resources.logintxt,
+                                handler: function () {
+                                    me.showLoginScreen();
+                                }
+                            },
+                            {
+                                xtype: 'shr.main.languagemenu',
+                                menudisabled: false,
+                                preferred: me.languagelist.preferred,
+                                list: me.languagelist.list
+                            }
+                        ]
+                    }]
+                },
+                {
+                    xtype: 'container',
+                    contentEl: 'ContentPanel',
+                    width: '80%',
+                    height: '80%',
+                    scrollable: 'y',
+                    maxWidth: 1500,
+                    minWidth: 900,
+                    minHeight: 500,
+                    maxHeight: 1000
+                },
+                {
+                    xtype: 'container',
+                    height: 100
+                }]
+            };
+
+            me.maincontainer = Ext.create('Ext.container.Container', {
+                id: 'card-container',
+                reference: 'maincontainer',
+                layout: 'card',
+                activeItem: 0,
+                items: [candidateItems, loginItems]
+            });
+
+            return [me.maincontainer];
+        }
+    },
+    getLoginDialog: function () {
+        var me = this;
+        if (me.candidatelogin) {
+            return Ext.create(Ext.apply(me.candidatelogin, {
+                xtype: 'shr.main.candidatelogindialog',
+                reference: 'canddiatedialog',
+                defaultButton: 'loginButton',
+                owner: me
+            }));
+        } else {
+            return Ext.create(
+                Ext.apply(me.login, {
+                    xtype: 'shr.main.logindialog',
+                    reference: 'logindialog',
+                    defaultButton: 'loginButton',
+                    owner: me
+                })
+            );
+        }
+    },
+    getActiveItem: function() {
+        var me = this,
+            LOGIN_DLG = 0,
+            REGISTRATION_DLG = 1,
+            PASSWORD_DLG = 2,
+            CANDIDATE_DLG = 0;
+        if (me.selfregistration.ispost) {
+            return REGISTRATION_DLG;
+        }else if(me.candidatelogin){
+            return CANDIDATE_DLG;
+        }else{
+            return LOGIN_DLG;
+        }
+    },
+    showLoginScreen: function () {
+        var me = this;
+        me.maincontainer.setActiveItem(1);
+    },
+    showJobOpenings: function () {
+        var me = this;
+        me.maincontainer.setActiveItem(0);
+    },
+    onLoginAttempt: function () {
+        var me = this;
+        if (me.login.passwordexpired) {
+            Ext.getCmp('ChangePassword').fire();
+        } else {
+            Ext.getCmp('LoginAttempt').fire();
+        }
+        me.loginDialog.mask(Shr.LABEL_Loading);
+    },
+    onRegisterShow: function () {
+        var me = this;
+        var flip = me.getReferences().flip;
+        var selfregisterdialog = me.getReferences().selfregisterdialog;
+
+        Ext.create('Ext.fx.animation.Flip', {
+            target: selfregisterdialog,
+            duration: 1000
+        });
+        flip.setActiveItem(selfregisterdialog, 'animation.flip');
+
+    },
+    onRegisterAttempt: function () {
+        Ext.getCmp('RegisterAttempt').fire();
+    },
+    onRegisterCancel: function () {
+        var me = this;
+        var flip = me.getReferences().flip;
+        var logindialog = me.getReferences().logindialog;
+        flip.setActiveItem(logindialog);
+    },
+    onForgotPassword: function () {
+        var me = this;
+        var flip = me.getReferences().flip;
+        
+        Ext.create('Ext.fx.animation.Flip', {
+            target: me.passwordDialog,
+            duration: 1000
+        });
+        flip.setActiveItem(me.passwordDialog, 'animation.flip');
+    },
+    onSendEmail: function () {
+        Ext.getCmp('OnSendEmail').fire();
+    },
+    onCandidateLoginAttempt: function(){
+        var me = this;
+        me.loginDialog.mask(Shr.LABEL_Loading);
+
+        if (me.candidatelogin.passwordexpired) {
+            Ext.getCmp('CandidateChangePassword').fire();
+        } else {
+            Ext.getCmp('CandidateLoginAttempt').fire();
+        }
+    },
+    onCandidateApplyFirstTime: function(){
+        Ext.getCmp('Apply').fire();
+    },
+    onCancelApply: function(){
+        Ext.getCmp('Cancel').fire();
+    }
+});
+
+Ext.define('Shr.main.login.Text', {
+    extend: 'Ext.form.field.Text',
+    xtype: 'shr.main.login.text',
+    cls: 'auth-textbox',
+    height: 55,
+    hideLabel: true,
+    allowBlank: false,
+    errorText: null,
+    listeners: {
+        render: function () {
+            var me = this;
+            if (me.errorText) {
+                me.markInvalid(me.errorText);
+            }
+        }
+    }
+});
+
+//Menu and store
+Ext.define('Shr.main.Menu', {
+    extend: 'Ext.list.Tree',
+    id: 'navigation-tree-list',
+    itemId: "MenuList",
+    ui: "navigation",
+    store: "mainmenu",
+    width: MACRO_WIDTH,
+    micro: true,
+    redirect: true,
+    expanderFirst: false,
+    expanderOnly: false,
+    defaults: {
+        //indent: 20
+        xtype: 'scrollableTreeListItem'
+    },
+    constructor: function (config) {
+        var me = this;
+        config.width = config.micro ? MICRO_WIDTH : MACRO_WIDTH;
+        Ext.apply(me.config, config);
+
+        Ext.create('Shr.store.Menu');
+        this.callParent();
+    },
+    listeners: {
+        itemclick: "onMenuSelectionChange",
+    },
+    onMenuSelectionChange: function (me, record, eOpts) {
+        if (record.node.data.leaf) {
+            location.href = record.node.data.href;
+        }
+    }
+});
+// When Menu is collapsed allow scrolling in submenus.
+Ext.define('ScrollableTreeListItem', {
+    extend: 'Ext.list.TreeItem',
+    xtype: 'scrollableTreeListItem',
+    privates: {
+        createFloater: function () {
+            var me = this,
+                owner = me.getOwner(),
+                ui = owner.getUi(),
+                cls = Ext.baseCSSPrefix + 'treelist',
+                floater;
+
+            if (ui) {
+                cls += ' ' + cls + '-' + ui;
+            }
+
+            me.floater = floater = new Ext.container.Container(Ext.applyIf({
+                cls: cls + ' ' + Ext.baseCSSPrefix + 'treelist-floater',
+                floating: true,
+                width: 280,
+                maxHeight: 800,
+                scrollable: 'y',
+                shadow: false,
+                renderTo: Ext.getBody(),
+                listeners: {
+                    element: 'el',
+                    click: function (e) {
+                        return owner.onClick(e);
+                    }
+                }
+            }));
+
+            floater.add(me);
+            floater.el.alignTo(me.getToolElement(), 'tr?');
+
+            return floater;
+        }
+    }
+});
+Ext.define("Shr.store.Menu", {
+    extend: 'Ext.data.TreeStore',
+    storeId: 'mainmenu',
+    autoLoad: true,
+    fields: [
+        { name: 'text' },
+        { name: 'iconCls' },
+        { name: 'rowCls' },
+        { name: 'viewType' },
+        { name: 'routeId' },
+        { name: 'leaf', type: 'boolean' },
+        { name: 'expanded', type: 'boolean' }
+    ],
+    proxy: {
+        type: 'ajax',
+        url: 'API/JsonFetcher.svc/Invoke',
+        actionMethods: {
+            read: 'POST'
+        },
+        reader: {
+            type: 'json',
+            rootProperty: 'children'
+        },
+        extraParams: {
+            svcprovider: 'JsMainMenuData'
+        }
+
+    },
+    listeners: {
+        load: function (me, records, success, operation, node, eOpts) {
+            var queryString = Ext.Object.fromQueryString(location.search);
+            var tabGuid = queryString.Tab || queryString.tab;
+            var navGuid = queryString.Menu || queryString.menu;
+            var menu = Ext.getCmp('navigation-tree-list');
+            if (!tabGuid) {
+                menu.redirect = false;
+                menu.setSelection(records[0]);
+            } else {
+                for (i = 0; i < records.length; i++) {
+                    var record = records[i];
+                    if (record.data.guid == tabGuid) {
+                        menu.redirect = false;
+                        menu.setSelection(record);
+                        break;
+                    } else if (record.childNodes) {
+                        for (j = 0; j < record.childNodes.length; j++) {
+                            var child = record.childNodes[j];
+                            if (child.data.guid == tabGuid || child.data.guid == navGuid) {
+                                record.expand();
+                                menu.redirect = false;
+                                menu.setSelection(child);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+});
+
+
+/*******Toolbar items*******/
+//Profile Display items
+Ext.define('Shr.main.toolbar.button.Navigation', {
+    extend: 'Ext.button.Button',
+    xtype: 'shr.button.navigation',
+    margin: "0 0 0 8",
+    ui: "header",
+    iconCls: "x-fa fa-navicon",
+    id: "main-navigation-btn",
+    handler: "onToggleNavigationSize",
+    onToggleNavigationSize: function () {
+        var j = this,
+            i = Ext.getCmp('navigation-tree-list'),
+            l = Ext.getCmp('main-view-detail-wrap'),
+            logo = Ext.getCmp('main-logo'),
+            h = !i.getMicro(),
+            g = h ? MICRO_WIDTH : MACRO_WIDTH;
+
+        Ext.util.Cookies.set('menuCollapsed', h);
+
+        if (Ext.isIE9m || !Ext.os.is.Desktop) {
+            Ext.suspendLayouts();
+            logo.setWidth(g);
+            logo.setMicro(h);
+
+            i.setWidth(g);
+            i.setMicro(h);
+            Ext.resumeLayouts();
+            l.layout.animatePolicy = l.layout.animate = null;
+            l.updateLayout()
+        } else {
+            if (!h) {
+                i.setMicro(false)
+            }
+            logo.animate({
+                dynamic: true,
+                to: {
+                    width: g
+                }
+            });
+            logo.setMicro(h);
+            i.width = g;
+            l.updateLayout({
+                isRoot: true
+            });
+            i.el.addCls("nav-tree-animating");
+            if (h) {
+                i.on({
+                    afterlayoutanimation: function () {
+                        i.setMicro(true);
+                        i.el.removeCls("nav-tree-animating")
+                    },
+                    single: true
+                })
+            }
+        }
+    }
+});
+
+Ext.define('Shr.main.toolbar.Search', {
+    extend: 'Ext.form.field.Text',
+    xtype: 'shr.main.toolbar.search',
+    //Look for resource
+    emptyText: 'Search',
+    isAutoSearch: false,
+    triggers: {
+        search: {
+            cls: 'x-fa fa-search',
+            handler: function () {
+                var me = this;
+                me.showResults();
+            }
+        }
+    },
+    listeners: {
+        specialkey: function (f, e) {
+            if (e.getKey() == e.ENTER) {
+                f.showResults();
+            }
+        },
+        change: function (f, e) {
+            if (f.isAutoSearch) {
+                f.task.delay(500);
+            }
+        }
+    },
+    initComponent: function () {
+        var me = this;
+
+        if (me.isAutoSearch) {
+            me.task = new Ext.util.DelayedTask(me.showResults, me);
+        }
+
+        Shr.main.toolbar.Search.superclass.initComponent.apply(this, arguments);
+    },
+    showResults: function () {
+        var me = this;
+        Shr.showSearchResults(me);
+    }
+});
+
+Ext.define('Shr.main.toolbar.ProfileDisplay', {
+    extend: 'Ext.container.Container',
+    xtype: 'shr.main.profiledisplay',
+    picture: false,
+    src: null,
+    size: 40,
+    alt: "Current user",
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        if (me.picture && me.src != null) {
+            me.items = [{
+                xtype: 'shr.main.profile',
+                src: me.src,
+                width: me.size,
+                height: me.size,
+                alt: me.alt
+            }];
+        } else {
+            me.items = [{
+                xtype: 'shr.main.nouserimage',
+                width: me.size,
+                height: me.size
+            }];
+        }
+        me.callParent();
+    },
+    listeners: {
+        click: {
+            element: 'el',
+            fn: function () {
+                if (typeof this.component.summaryConfig != "undefined") new Shr.WebControls.Dialog(this.component.summaryConfig).show();
+            }
+        }
+    }
+});
+Ext.define('Shr.main.toolbar.NoProfilePicture', {
+    extend: 'Ext.Component',
+    xtype: 'shr.main.nouserimage',
+    html: '<icon class="fa fa-user"></icon>',
+    cls: "header-right-profile-image",
+    style: 'object-fit: cover; text-align: center; width: 100%; background: #c4c6c7; color: white; line-height: 38px; border-radius: 50%; border: 3px solid #ddd;',
+    height: 40,
+    width: 40,
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        var scale = (config.height != 40 && !isNaN(config.height)) ? (config.height / 40) : 1;
+        var fontSize = (25 * scale);
+        var lineHeight = (38 * scale);
+        me.style += "font-size: " + fontSize + "px; line-height: " + lineHeight + "px";
+
+        me.callParent();
+    }
+});
+Ext.define('Shr.main.toolbar.ProfilePicture', {
+    extend: 'Ext.Img',
+    xtype: 'shr.main.profile',
+    cls: "header-right-profile-image",
+    style: 'object-fit: cover; border-radius: 50%; border: 3px solid #ddd;',
+    alt: 'User Profile',
+    height: 40,
+    width: 40,
+    src: null
+});
+
+Ext.define('Shr.main.toolbar.ModifyUserProfile', {
+    extend: 'Ext.container.Container',
+    xtype: 'shr.main.modifyuserprofile',
+    id: 'employeeProfilePopUp',
+    cls: "CardImage",
+    picture: false,
+    src: null,
+    size: 50,
+    alt: "Current user",
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        if (me.picture && me.src != null) {
+            me.items = [{
+                xtype: 'shr.main.profile',
+                src: me.src,
+                width: me.size,
+                height: me.size,
+                alt: me.alt
+            }];
+        } else {
+            me.items = [{
+                xtype: 'shr.main.nouserimage',
+                width: me.size,
+                height: me.size
+            }];
+        }
+        me.callParent();
+    },
+    listeners: {
+        click: {
+            element: 'el',
+            fn: function () {
+
+                //only show popUp menu when user is an actual employee.
+                if (this.component.employeeflag) {
+                    var pmenu = Ext.create('Shr.main.Toolbar.UserMenuPopUp', {
+                        picture: this.component.picture,
+                        src: this.component.src,
+                        height: this.component.height,
+                        alt: this.component.alt,
+                        alignTarget: this,                        
+                        personFullname: this.component.personName,
+                        description: this.component.description,
+                        employeeButtons: this.component.buttonsContainer,
+                        fu: this.component.fu,
+                        changePicture: this.component.changePicture
+
+                    });
+                    pmenu.show()
+
+                }
+
+            }
+                
+            }
+        }
+    
+});
+
+Ext.define('Shr.main.Toolbar.UserMenuPopUp', {
+    extend: 'Ext.menu.Menu',
+    floating: true,    
+    picture: false,
+    src: null, 
+    size: 90,
+    plain: true,
+    defaultAlign: "tr-br?",
+
+    constructor: function (config) {
+        var me = this;
+        Ext.apply(me, config);
+
+        var items = [];
+        //creating components separatedly 
+        //in order to decide which we will be using
+        var employeeContainer = {
+            xtype: 'container',
+            cls: "Card",
+            layout: {
+                type: 'table',               
+                columns: 2
+            }
+        }
+
+        //add picture field and Name and Job Description fields to 
+        // employee container
+        employeeContainer.items = EmployeePopUpConfig.pictureAndNAmeFields(me);
+        items.push(employeeContainer);
+
+        //then add buttons for Information and Company tabs as well as
+        // open enrollment groups button
+        items.push(EmployeePopUpConfig.buttonsContainer(me));        
+        me.items = items;
+
+        me.callParent();
+    }
+});
+
+
+
+
+
+
+
+//Overrides
+Ext.define('Overrides.list.RootTreeItem', {
+    override: 'Ext.list.RootTreeItem',
+    config: {
+        floated: null
+    },
+    // Implement a setter.
+    // There *is* no "floated" config in Classic.
+    // We're still an inner item, we just get put inside a Container.
+    setFloated: function (floated) {
+        var me = this,
+            el = me.element,
+            placeholder = me.placeholder,
+            node, wasExpanded;
+        if (me.treeItemFloated !== floated) {
+            if (floated) {
+                placeholder = el.clone(false, true);
+                // shallow, asDom
+                placeholder.id += '-placeholder';
+                // avoid duplicate id
+                me.placeholder = Ext.get(placeholder);
+                me.wasExpanded = me.getExpanded();
+                me.setExpanded(true);
+                el.addCls(me.floatedCls);
+                el.dom.parentNode.insertBefore(placeholder, el.dom);
+                me.floater = me.createFloater();
+            }
+                // toolkit-specific
+            else if (placeholder) {
+                wasExpanded = me.wasExpanded;
+                node = me.getNode();
+                me.setExpanded(wasExpanded);
+                if (!wasExpanded && node.isExpanded()) {
+                    // If we have been floating and expanded a child, we may have been
+                    // expanded as part of the ancestors. Attempt to restore state.
+                    me.preventAnimation = true;
+                    node.collapse();
+                    me.preventAnimation = false;
+                }
+                me.floater.remove(me, false);
+                // don't destroy
+                el.removeCls(me.floatedCls);
+                placeholder.dom.parentNode.insertBefore(el.dom, placeholder.dom);
+                placeholder.destroy();
+                me.floater.destroy();
+                me.placeholder = me.floater = null;
+            }
+            // Use an internal property name. We are NOT really floated
+            me.treeItemFloated = floated;
+        }
+    },
+    getFloated: function () {
+        return this.treeItemFloated;
+    },
+    runAnimation: function (animation) {
+        return this.itemContainer.addAnimation(animation);
+    },
+    stopAnimation: function (animation) {
+        animation.jumpToEnd();
+    },
+    privates: {
+        createFloater: function () {
+            var me = this,
+                owner = me.getOwner(),
+                ownerTree = me.up('treelist'),
+                floater,
+                toolElement = me.getToolElement();
+            me.floater = floater = new Ext.container.Container({
+                cls: ownerTree.self.prototype.element.cls + ' ' + ownerTree.uiPrefix + ownerTree.getUi() + ' ' + Ext.baseCSSPrefix + 'treelist-floater',
+                floating: true,
+                // We do not get element resize events on IE8
+                // so fall back to 6.0.1 sizing to 200 wide.
+                width: Ext.isIE8 ? 200 : (ownerTree.expandedWidth - toolElement.getWidth()),
+                shadow: false,
+                renderTo: Ext.getBody(),
+                listeners: {
+                    element: 'el',
+                    click: function (e) {
+                        return owner.onClick(e);
+                    }
+                }
+            });
+            floater.add(me);
+            floater.show();
+            floater.el.alignTo(toolElement, 'tr?');
+            return floater;
+        }
+    }
+});
+Ext.define('Overrides.list.Tree', {
+    override: 'Ext.list.Tree',
+    constructor: function (config) {
+        var me = this;
+        me.callSuper([config]);
+        // Important to publish the value here, so the vm can
+        // will know our intial state.
+        me.publishState('selection', me.getSelection());
+
+
+        // Track size so that we can track the expanded size
+        // for use by the floated state of items when in micro mode.
+        // Browsers where this event is not supported, fall back to a width
+        // of 200px for floated tree items.
+        if (!Ext.isIE8) {
+            me.el.on({
+                resize: 'onElResize',
+                buffer: 300,
+                scope: me
+            });
+        }
+    },
+    destroy: function () {
+        var me = this;
+
+
+        me.unfloatAll();
+        me.activeFloater = null;
+        me.setSelection(null);
+        /*
+        We need to catch this because when this code is called via DBToolsPanel.ascx (when the ExtendedListBox it uses gets destroyed) 
+        it is not bound to a section list and therefore does not have a store. But the store is not null and we should not 
+        look for a count of 0 so we will try the setter and go from there. The following message is returned: NotFoundError
+        */
+        try 
+        { 
+            me.setStore(null); 
+        } 
+        catch(e)
+        { 
+            //do nothing
+        }
+        me.callSuper();
+    },
+    onElResize: function (el, details) {
+        this.expandedWidth = MACRO_WIDTH;
+    },
+    updateUi: function (ui, oldValue) {
+        var me = this,
+            el = me.element,
+            uiPrefix = me.uiPrefix;
+        if (oldValue) {
+            el.removeCls(uiPrefix + oldValue);
+        }
+        if (ui) {
+            el.addCls(uiPrefix + ui);
+        }
+        // Ensure that the cached iconSize is read from the style.
+        delete me.iconSize;
+        me.syncIconSize();
+    }
+});
+
+/// <reference path="vswd-ext_2.2.js" />
+
+if (top != self) { top.location.href = self.document.location; }
+if (parent != self) { top.location.href = location.href; }
+if (top.frames.length != 0) { top.location = self.document.location; }
+if (window != window.top) { top.location.href = location.href; }
+
+// Defining model for My People Panel's tree, cannot be defined
+// inline which is why it is broken out separately.  This is because
+// the model propert of the tree's store only accepts a string, which
+// is the name of what we're defining here.
+Ext.define('MyPeopleModel', {
+    extend: 'Ext.data.Model',
+    fields: [
+        { name: 'id', type: 'string' },
+        { name: 'text', type: 'string' },
+        { name: 'iconCls', type: 'string' },
+        { name: 'cls', type: 'string' },
+        { name: 'leaf', type: 'boolean' }
+    ]
+});
+
+MainLayout = function () {
+    var frameLayout;
+    var taskDraftID = null;
+    var f1HelpKeyMap;
+
+    return {
+        configure: function (config) {
+            Ext.apply(MainLayout, config);
+        },
+
+        getFrameLayout: function () {
+            return frameLayout;
+        },
+
+        allowMyPeopleLoad: function () {
+            var myPeopleAllowLoad = Ext.util.Cookies.get('myPeopleAllowLoad');
+            return (myPeopleAllowLoad == null || myPeopleAllowLoad === 'true');
+        },
+
+        setMyPeopleLoad: function (allowLoad) {
+            // Decide valid expiration length, etc. and add to parameters
+            Ext.util.Cookies.set('myPeopleAllowLoad', allowLoad);
+        },
+
+        getMyPeoplePanel: function () {
+            var myPeopleAllowLoad = Ext.util.Cookies.get('myPeopleAllowLoad');
+            return {
+                xtype: 'treepanel',
+                id: 'my-people-tree-panel',
+                stateId: 'my-people-tree-panel',
+                title: Shr.LABEL_MyPeople,
+                //contentEl: 'myPeoplePanel',
+                cls: 'shadow',
+                region: 'east',
+                border: false,
+                split: false,
+                width: 240,
+                minSize: 150,
+                maxSize: 750,
+                collapsible: true,
+                collapsed: !this.allowMyPeopleLoad(),
+                animCollapse: true,
+                useArrows: true,
+                //scrollable: true,
+                rootVisible: false,
+                root: { id: 'root' },
+                store: Ext.create('Ext.data.TreeStore', {
+                    model: 'MyPeopleModel',
+                    proxy: {
+                        type: 'ajax',
+                        url: 'API/EmployeeService.svc/GetEmployeeHierarchy',
+                        actionMethods: {
+                            read: 'POST'
+                        }
+                    },
+                    clearOnLoad: false,
+                    listeners: {
+                        beforeLoad: function (treeStore, operation) {
+                            // Prevent load if prior to determining state of
+                            // panel (expanded/collapsed) so we don't load the
+                            // tree in cases where it's not visible.
+                            //return Ext.getCmp('my-people-tree-panel').allowLoad === true;
+                            return MainLayout.allowMyPeopleLoad();
+                        }
+                    }
+                }),
+                listeners: {
+                    stateRestore: function (treePanel) {
+                        // Only allow load of the tree if not collapsed.
+                        MainLayout.setMyPeopleLoad(treePanel.collapsed !== true);
+                    },
+                    collapse: function (treePanel) {
+                        MainLayout.setMyPeopleLoad(false);
+                        //treePanel.placeholder.setTitle(' '); // this removes the vertical text which appears on the slider
+
+                        PanelDisplay.setPanelLayout();
+
+                    },
+                    expand: function (treePanel) {
+                        // On expand to show the tree panel, and it's not
+                        // already loaded, then set it to allow load and do so.
+                        if (MainLayout.allowMyPeopleLoad())
+                            return;
+                        treePanel.setTitle(Shr.LABEL_MyPeople);
+                        MainLayout.setMyPeopleLoad(true);
+
+                        treePanel.reload();
+                        PanelDisplay.setPanelLayout();
+
+                    },
+                    itemClick: function (view, record, item, index, event, eventOptions) {
+                        // Do not open person summary for the current user
+                        if (record.data.id == MainLayout.toolbar.person.guid)
+                            return;
+
+                        //If the user double clicks then a second widow sometimes pops up so check for it
+                        //and do not open another one.
+                        if (this.popupWindow) {
+                            this.popupWindow.close();
+                        }
+
+                        this.popupWindow = new Ext.create('Shr.WebControls.Dialog', {
+                             modal: true,
+                             width: 800,
+                             height: 350,
+                             showImmediate: false,
+                             title: Shr.LABEL_SummaryFor + record.data.text,
+                             sourceControl: MainLayout.toolbar.person.summary,
+                             urlParams: 'person=' + record.data.id,
+                             whiteBackground: false
+                         });
+                        this.popupWindow.show();
+                    }
+                },
+
+                reload: function () {
+                    // If the tree has children already, then it's already been loaded
+                    // and we do not need to load the tree again.  This would be the case
+                    // if the user opened and closed My People multiple times between
+                    // postbacks
+                    var rootNode = this.getRootNode();
+                    if (rootNode.childNodes.length == 0) {
+                        this.store.load({
+                            node: rootNode,
+                            callback: function () {
+                                rootNode.expand();
+                            }
+                        });
+                    }
+                }
+            };
+        },
+        getSimplePanel: function () {
+            return {
+                xtype: 'container',
+                id: 'simplePanelMainContainer',
+
+                bodyBorder: false,
+                border: false,
+                bodyStyle: {
+                    background: 'transparent',
+                },
+
+                region: 'center',
+                contentEl: 'ContentPanel',
+
+                manageHeight:false,
+                padding: '0 10 0 10',
+                flex: 1,
+                listeners: {
+                    afterrender: {
+                        fn: function (cmp, layout, eOpts) {
+                            //First time loading
+                            MainLayout.trackLayouts();
+                            //After each ajax request, they could add components
+                            Ext.Ajax.addListener('requestcomplete', function () {
+                                MainLayout.trackLayouts();
+                            });
+                            //After a call to asynchronous postbacks
+                            Sys.WebForms.PageRequestManager.getInstance().add_endRequest(MainLayout.trackLayouts);
+                        },
+                        single:true
+                    }
+                }
+            };
+        },
+        trackLayouts:function (){
+            //set updateLayout() for all MyHomePage components.
+            Shr.LayoutManager.clear();
+            Ext.onReady(
+                function () {
+                    var el,
+                        cmp = Ext.getCmp('simplePanelMainContainer');
+                    if (!cmp) {
+                        cmp = Ext.getCmp('sectionContent');
+                    }
+
+                    var panels = cmp.el.query('.x-border-box,.x-container,.x-panel');
+                    for (var i = 0; i < panels.length; i++) {
+                        var panel = Ext.getCmp(panels[i].id);
+
+                        if (panel) {
+                            Shr.LayoutManager.addCmp(cmp, panel);
+                        }
+                    }
+                    cmp.updateLayout();
+
+                },
+                this,
+                {
+                    delay:100,
+                    priority: -999
+                }
+            );
+            
+        },
+        getFooterPanel: function () {
+            return {
+                region: 'south',
+                xtype: 'component',
+                el: 'FooterPanel',
+                border: false,
+                split: false
+            };
+        },
+        contentPanel: function () {
+            return {
+                region: 'center',
+                layout: 'fit',
+                contentEl: 'ContentPanel',
+                scrollable: true
+            };
+        },
+        init: function () {
+            var northPanel,
+                mainContainer,
+                menu;
+
+            var root = Ext.get(document.body);
+            var theForm = Ext.get('aspnetForm');
+            var southPanel = this.getFooterPanel();
+            var eastPanel = this.getMyPeoplePanel();
+            var simplePanel = this.getSimplePanel();
+
+            switch (MainLayout.displaymode) {
+                case 'login':
+                case 'candidate':
+                    mainContainer = Ext.create('Shr.main.Screen', Ext.apply(MainLayout.login, { displaymode: MainLayout.displaymode, languagebutton: MainLayout.toolbar }));
+                    break;
+                case 'all':
+                    var isCollapsed = Ext.util.Cookies.get('menuCollapsed') == 'true';
+                    northPanel = Ext.create('Shr.main.Toolbar', MainLayout.toolbar);
+                    var menu = Ext.create('Shr.main.Menu', {
+                        micro: isCollapsed
+                    });
+                    var mainPanel = Ext.create('Shr.main.Container', {
+                        region: 'center',
+                        id: "main-view-detail-wrap",
+                        flex: 1,
+                        items: [menu, simplePanel]
+                    });
+                    mainContainer = Ext.create('Ext.container.Container', {
+                        flex: 1,
+                        layout: 'border',
+                        items: [mainPanel, eastPanel]
+                    });
+                    break;
+                case 'nopeople':
+                case 'requisition':
+                    northPanel = Ext.create('Shr.main.Toolbar', MainLayout.toolbar);
+                    var mainMenu = Ext.create('Shr.store.Menu');
+
+                    var menu = Ext.create('Shr.main.Menu', {
+                        micro: isCollapsed
+                    });
+                    var mainPanel = Ext.create('Shr.main.Container', {
+                        region: 'center',
+                        id: "main-view-detail-wrap",
+                        flex: 1,
+                        items: [menu, simplePanel]
+                    });
+                    mainContainer = Ext.create('Ext.container.Container', {
+                        flex: 1,
+                        layout: 'border',
+                        items: [mainPanel]
+                    });
+                    break;
+                case 'apply':
+                
+                    var mainPanel = Ext.create('Shr.main.Container', {
+                        region: 'center',
+                        id: "main-view-detail-wrap",
+                        flex: 1,
+                        items: [menu, simplePanel]
+                    });
+                    mainContainer = Ext.create('Ext.container.Container', {
+                        flex: 1,
+                        layout: 'border',
+                        items: [mainPanel]
+                    });
+                    break;
+                case 'panelviewer':
+                    var mainContainer = Ext.apply(simplePanel, { scrollable: true });
+                    frameLayout = Ext.create('Shr.main.Viewport', {
+                        stateId: 'defaultViewport',
+                        layout: 'fit',
+                        items: [{
+                            xtype: 'container',
+                            el: theForm,
+                            layout: {
+                                type: 'vbox',
+                                align: 'stretch'
+                            },
+                            items: [mainContainer]
+                        }],
+                    });
+                    Ext.defer(this.initBehaviors, 1, this, [root]);
+                    return;
+                case 'resetpassword':
+                case 'isSelfRegistrationPasswordSetRequest':
+                    mainContainer = Ext.create('Shr.main.Screen', Ext.apply(MainLayout.login, { displaymode: MainLayout.displaymode }));
+                    break;
+                default:
+                    Ext.defer(this.initBehaviors, 1, this, [root]);
+                    return;
+            }
+
+
+            frameLayout = Ext.create('Shr.main.Viewport', {
+                stateId: 'defaultViewport',
+                layout: 'fit',
+                items: [{
+                    xtype: 'container',
+                    el: theForm,
+                    layout: {
+                        type: 'vbox',
+                        align: 'stretch'
+                    },
+                    items: [northPanel, mainContainer, southPanel]
+                }],
+            });
+
+            theForm.removeCls('x-hidden');
+            Ext.defer(this.initBehaviors, 1, this, [root]);
+        },
+        displayError : function(config)
+        {
+            frameLayout = Ext.create('Shr.main.Viewport', {
+                stateId: 'defaultViewport',
+                layout: 'fit',
+                items: {
+                    xtype: 'panel',
+                    height: '100%',
+                    width: '100%',
+                    header: false,
+                    beforeLayout: function () {
+                        var me = this;
+                        me.setBodyStyle({ "background-image": "url(" + config.background + ")" });
+                        me.setBodyStyle({ "background-size": "cover" });
+                    },
+                    layout: {
+                        type: 'hbox',
+                        align: 'center'
+                    },
+                    items: [{
+                        xtype: 'component',
+                        flex: 1
+                    }, {
+                        xtype: 'container',
+                        flex: 1,
+                        layout: {
+                            type: 'vbox',
+                            align: 'center'
+                        },
+                        items: [{
+                            xtype: 'image',
+                            src: 'Images/welcome-screen-logo.png',
+                            alt: 'Epicor - Human Capital Management',
+                            width: 535,
+                            height: 224
+                        }, {
+                            xtype: 'container',
+                            layout: {
+                                type: 'hbox'
+                            },
+                            items: [
+                            {
+                                xtype: 'label',
+                                cls: 'displayError-text',
+                                text: config.errorInstructions,
+                                width: 425
+                            }]
+                        }]
+                    }]
+                }
+            });
+        },
+        logout: function (config) {
+            frameLayout = Ext.create('Shr.main.Viewport', {
+                stateId: 'defaultViewport',
+                layout: 'fit',
+                items: {
+                    xtype: 'panel',
+                    height: '100%',
+                    width: '100%',
+                    header:false,
+                    beforeLayout: function () {
+                        var me = this;
+                        me.setBodyStyle({ "background-image": "url(" + config.background + ")" });
+                        me.setBodyStyle({ "background-size": "cover" });
+                    },
+                    layout: {
+                        type: 'hbox',
+                        align:'center'
+                    },
+                    items: [{
+                        xtype: 'component',
+                        flex: 1
+                    }, {
+                        xtype: 'container',
+                        flex: 1,
+                        layout: {
+                            type: 'vbox',
+                            align:'center'
+                        },
+                        items: [{
+                            xtype: 'image',
+                            src: 'Images/welcome-screen-logo.png',
+                            alt: 'Epicor - Human Capital Management',
+                            width: 535,
+                            height: 224
+                        }, {
+                            xtype: 'container',
+                            layout: {
+                                type: 'hbox',
+                                align:'center'
+                            },
+                            items: [
+                                {
+                                    xtype: 'image',
+                                    src: 'Scripts/ext/ext-6.2.0/classic/theme-admin/images/loadmask/loading.gif',
+                                    width: 15,
+                                    height: 15,
+                                    margin: 5
+                            },
+                            {
+                                xtype: 'label',
+                                cls:'logout-text',
+                                text: config.signingout,
+                                minWidth:150
+                            }]
+                        }]
+                    }]
+                }
+            });
+
+            this.copyright = Ext.create('Ext.container.Container', {
+                renderTo: Ext.getBody(),
+                height: 20,
+                width: '100%',
+                layout: 'auto',
+                style: {
+                    position: 'absolute',
+                    bottom: '0px',
+                    left: '0px',
+                    background: '#f1750b'
+                },
+                items: [{
+                    xtype: 'label',
+                    text: config.copyright,
+                    style: {
+                        padding: '0 0 0 5px',
+                        color: 'white'
+                    }
+                }]
+            });
+        },
+        updateLayout: function () {
+            var mainPanel = Ext.getCmp('simplePanelMainContainer');
+            if (mainPanel) {
+
+                mainPanel.updateLayout();
+            }            
+        },
+        initBehaviors: function (pageEl) {
+            if (pageEl == null)
+                return;
+
+            //Collapse/Expand code
+            pageEl.on('click', this.doCollapseExpand, this, { stopEvent: true, delegate: '.CollapseExpandButton' });
+            pageEl.on('click', this.doCollapseExpandAll, this, { stopEvent: true, delegate: '.CollapseExpandAllButton' });
+            f1HelpKeyMap = new Ext.util.KeyMap(Ext.get(document), {
+                target: Ext.get(document),
+                key: 112, //F1 key
+                fn: Ext.bind(MainLayout.helpKeyPressed, this),
+                scope: MainLayout
+            });
+
+
+            // The following two lines suppress the default F1 help behavior
+            // in MSIE. It was working properly in Firefox (not showing the
+            // default help), but IE needs these lines as well.
+            document.onhelp = function () { return false };
+            window.onhelp = function () { return false };
+        },
+
+        baseUrl: function () {
+            //includes final '/' in url
+            var currentUrl = window.location.href;
+            return currentUrl.substring(0, currentUrl.lastIndexOf('/') + 1);
+        },
+
+        helpKeyPressed: function (key, evt) {
+            // check if the help button is visible. If it's not then help is
+            // disabled for this user and context help is not available.
+            var helpButton = Ext.get('HeaderPanel_helpCommand');
+            if (helpButton == null)
+                return;
+
+            // Retrieve the current onclick action associated with the
+            // help button in the header panel.  If an action exists, then
+            // execute that action as though the user clicked the button.
+            var onclickAttribute = helpButton.getAttribute('onclick', 'dom');
+
+            if (onclickAttribute == null || onclickAttribute == '') {
+                onclickAttribute = helpButton.getAttribute('onclick');
+            }
+
+            // onclickAttribute is sometimes returned as a function object, and so
+            // we need to convert it to a string in order to parse the help file name
+            if (typeof (onclickAttribute) != 'string') {
+                onclickAttribute = onclickAttribute.toString();
+            }
+
+            // Launch the iVantage help page
+            eval(onclickAttribute);
+            evt.stopEvent();
+            return false;
+        },
+
+        getQueryStringVariable: function (variable) {
+            var querystring = window.location.search.substring(1);
+            var variables = querystring.split("&");
+            for (var i = 0; i < variables.length; i++) {
+                var valuepair = variables[i].split("=");
+                if (valuepair[0].toLowerCase() == variable.toLowerCase()) {
+                    return valuepair[1];
+                }
+            }
+
+            return null;
+        },
+
+        doCollapseExpand: function (e, target) {
+            var el = Ext.get(target);
+            while (!el.hasCls('Collapsible')) {
+                var parent = el.dom.parentNode;
+                if (parent == null) return;
+                el = Ext.get(parent);
+            }
+            var navGuid = el.dom.getAttribute('navGuid');
+            if (navGuid != null) {
+                Ext.Ajax.request({
+                    url: 'API/JsonFetcher.svc/Invoke',
+                    params: {
+                        svcprovider: 'JsUpdateMenuItem',
+                        navigatorGuid: navGuid,
+                        isExpanded: el.hasCls('IsCollapsed')
+                    }
+                });
+            }
+
+            if (el.hasCls('IsCollapsed')) {
+                el.addCls('IsExpanded');
+                el.removeCls('IsCollapsed');
+            } else {
+                el.addCls('IsCollapsed');
+                el.removeCls('IsExpanded');
+            }
+
+            // This is a fix for IE6, as the center panel content
+            // disappears for some reason if a collapse/expand causes
+            // the scrollbar to appear or disappear. Forcing the page
+            // to lay itself out again resolves the issue.
+            var frameLayout = MainLayout.getFrameLayout();
+            if (frameLayout != null && Ext.isIE6) {
+                frameLayout.doLayout();
+            }
+        },
+
+        doCollapseExpandAll: function (e, target) {
+            var el = Ext.get(target);
+            var isCollapsed = el.dom.firstElementChild.id == 'ModuleLayoutPanel_expandAll' ? true : false;
+            var navGuid = el.dom.getAttribute('navGuid');
+            if (navGuid != null) {
+                if (navGuid.toString() != null) {
+                    Ext.Ajax.request({
+                        url: 'API/JsonFetcher.svc/Invoke',
+                        params: {
+                            svcprovider: 'JsUpdateAllMenuItem',
+                            navigatorGuid: navGuid,
+                            isExpanded: isCollapsed
+                        },
+                        success: function (response, options) {
+						var collapsers = Ext.select('.Collapsible');
+						if (el.hasCls('IsCollapsed')) {
+							collapsers.addCls('IsExpanded');
+							collapsers.removeCls('IsCollapsed');
+							el.addCls('IsExpanded');
+							el.removeCls('IsCollapsed');
+						} else {
+							collapsers.addCls('IsCollapsed');
+							collapsers.removeCls('IsExpanded');
+							el.addCls('IsCollapsed');
+							el.removeCls('IsExpanded');
+						}
+
+						// This is a fix for IE6, as the center panel content
+						// disappears for some reason if a collapse/expand causes
+						// the scrollbar to appear or disappear. Forcing the page
+						// to lay itself out again resolves the issue.
+						var frameLayout = MainLayout.getFrameLayout();
+						if (frameLayout != null && Ext.isIE6) {
+							frameLayout.doLayout();
+						}
+						var mainMenu = Ext.getCmp('mainmenu');
+						__doPostBack();
+						}
+                    });
+                }
+            }
+        },
+
+        setResizeToPanelContainer: function () {
+            //var panelContainer = Ext.getCmp('main-view-detail-wrap');
+            //if (panelContainer)
+            //    panelContainer.updateLayout();
+        }, 
+
+        openPopup: function(pageContent) {
+ 	        var popup = window.open(pageContent, "popup", "resizable,scrollbars,status");
+              if (popup.outerWidth < screen.availWidth || popup.outerHeight < screen.availHeight)
+              {
+  	            popup.moveTo(0,0);
+  	            popup.resizeTo(screen.availWidth, screen.availHeight);
+              }       
+        }
+    }
+}();
+
+Ext.onReady(MainLayout.init, MainLayout, { single: true });
+
+PanelDisplay = function () {
+    return {
+        _mask: null,
+        _scrollPos: null,
+
+        initializeRequest: function (sender, args) {
+        },
+
+        beginRequest: function (sender, args) {
+            if (document.activeElement != null) {
+                Ext.get('focusElement').value = document.activeElement.id;
+            }
+
+            // Remember the current scroll position as of the postback.
+            var panelContent = Ext.getDom('PanelDisplayPanel_AjaxPanelContent');
+            if (panelContent == null) {
+                panelContent = Ext.getDom('PanelDisplayPanel_PanelContent');
+            }
+            PanelDisplay._scrollPos = panelContent.scrollTop;
+
+            // When we begin an ASP.NET AJAX postback request, we want to display an Ext
+            // load mask over the whole content panel containing the form, (not just the
+            // update panel) so the form will be entirely disabled, and a "Loading..."
+            // message displays.
+            //PanelDisplay._mask = new Ext.LoadMask(Ext.getBody(), { removeMask: true });
+            PanelDisplay._mask = Ext.getBody().mask(Shr.LABEL_Loading);
+            PanelDisplay._mask.show();
+        },
+
+        // Runs at the end of the ASP.NET AJAX postback after data has been received
+        // from the server, but before it has been applied to the document, and before
+        // any embedded or referenced JavaScript is executed.
+        pageLoading: function (sender, args) {
+            //Shr.destroyPanelComponents('PanelDisplayPanel_PanelUpdatePanel', false);
+        },
+
+        pageLoaded: function (sender, args) {
+            PanelDisplay.setPanelLayout();
+
+            // After an asynch postback, we need to reset the value of the form submit
+            // flag so that the page won't think a navigation is a postback after one
+            // has occurred once, because the flag was previously set. The reason for
+            // this flag is to prompt the user if they try to close the browser or change
+            // the URL without going through a postback.
+            Ext.get('IsFormSubmit').value = null;
+
+            // If there is a mask set, which happens when an ASP.NET AJAX request begins,
+            // then it now needs to be hidden so that the user can access the new screen.
+            Shr.destroyLoadMaskComponents(PanelDisplay._mask);
+            PanelDisplay._mask = null
+        },
+
+        // Runs at the end of the ASP.NET AJAX asynchronous postback.
+        endRequest: function (sender, args) {
+        },
+
+        setScrollPos: function () {
+            // Restore the scroll position to the last one.
+            if (PanelDisplay._scrollPos != null) {
+                var panelContent = Ext.getDom('PanelDisplayPanel_AjaxPanelContent');
+                if (panelContent == null) {
+                    panelContent = Ext.getDom('PanelDisplayPanel_PanelContent');
+                }
+
+                panelContent.scrollTop = PanelDisplay._scrollPos;
+            }
+        },
+
+        setPanelLayout: function () {
+            //var centerContentPanel = Ext.getCmp('main-view-detail-wrap');
+            //if (centerContentPanel != null) {
+            //    centerContentPanel.updateLayout();
+            //    centerContentPanel.on('bodyresize', PanelDisplay.resizePanelContent);
+
+            //    var size = centerContentPanel.getSize();
+            //    PanelDisplay.resizePanelContent(centerContentPanel, size.width, size.height,
+            //        size.width, size.height);
+            //}
+
+            // To prevent Firefox errors, I need this to run asynchronously. Otherwise
+            // there's a conflict with the Telerik document manager. There are numerous
+            // posts about FF having problems with the focus() method, and running on a
+            // timer is the standard method for handling it.
+            setTimeout(PanelDisplay.setFocusElement, 1);
+        },
+
+        resizePanelContent: function (sender, adjWidth, adjHeight, rawWidth, rawHeight) {
+            //var panelDisplayPanel = Ext.get('PanelDisplayPanel');
+            //var sContent = Ext.get('TaskExecute_SectionContent');
+            //if (!sContent) {
+            //    sContent = Ext.get('TaskExecute_SectionTabs');
+            //}
+            //if (panelDisplayPanel != null) {
+
+            //    var panelContent = Ext.get('PanelDisplayPanel_AjaxPanelContent');
+            //    if (panelContent == null) {
+            //        panelContent = Ext.get('PanelDisplayPanel_PanelContent');
+            //    }
+
+            //    if (panelContent == null || panelDisplayPanel == null)
+            //        return;
+
+            //    // We're initially hiding the section content so that the display doesn't
+            //    // "jump" while the controls are loading.
+            //    panelContent.removeCls("shr-zeroheight");
+
+            //    // Make sure any child panels within this region are also resized.
+            //    // If this isn't done then nested panels won't always resize because
+            //    // they don't get events from parent DOM elements that aren't Ext
+            //    panelContent.select('.x-panel,.x-container').each(function (panelEl) {
+            //        var panelCmp = Ext.getCmp(panelEl.dom.id);
+            //        if (panelCmp == null) return;
+            //        panelCmp.updateLayout();
+            //    });
+            //}
+            //else if (sContent != null) {
+            //    if (sContent == null) return;
+
+            //    // Make sure any child panels within this region are also resized.
+            //    // If this isn't done then nested panels won't always resize because
+            //    // they don't get events from parent DOM elements that aren't Ext
+            //    sContent.select('.x-container,.x-panel').each(function (panelEl) {
+            //        var panelCmp = Ext.getCmp(panelEl.dom.id);
+            //        if (panelCmp == null) return;
+            //        panelCmp.updateLayout();
+
+            //    });
+            //}
+        },
+
+        setFocusElement: function () {
+            var startElement = null;
+            var focusElement = Ext.get('focusElement');
+
+            if (focusElement != null) {
+                if (focusElement.value != null && focusElement.value != '') {
+                    startElement = Ext.getDom(focusElement.value);
+                }
+
+                // If there isn't a defined focus element, then find the content container
+                // and use that as the starting point to look for a focusable child element.
+                if (startElement == null) {
+                    startElement = Ext.get('PanelDisplayPanel_AjaxPanelContent');
+                }
+
+                var target = PanelDisplay.getElementToFocus(startElement);
+                if (target != null && typeof target != 'undefined') {
+                    try {
+                        target.focus();
+                    }
+                    catch (ex) {
+                        // In the event of an exception, clear the last focus element 
+                        // ID and instead try to find the first valid element and focus
+                        // to that one instead.
+                        if (focusElement.value != null) {
+                            focusElement.value = null;
+                        }
+                    }
+                }
+            }
+
+            setTimeout(PanelDisplay.setScrollPos, 1);
+        },
+
+        getElementToFocus: function (element) {
+            if (element.focus != null
+                && (element.type != 'hidden')
+                && (!element.disabled)
+                && (!element.readOnly)
+                && (element.tagName == 'INPUT' || element.tagName == 'TEXTAREA' || element.tagName == 'A' || element.tagName == 'BUTTON')) {
+
+                return element;
+            }
+
+            else if (element.childNodes != null) {
+                for (var i = 0; i < element.childNodes.length; i++) {
+                    var childResult = PanelDisplay.getElementToFocus(element.childNodes[i]);
+                    if (childResult != null) {
+                        return childResult;
+                    }
+                }
+            }
+            return null;
+        }
+    };
+}();
+
+FileDisplay = new function () {
+    return {
+        defaultConfig:
+        "toolbar=0, " +
+        "location=0, " +
+        "menubar=0, " +
+        "resizable=0, " +
+        "scrollbars=0, " +
+        "width=1, " +
+        "height=1",
+
+        open: function (urlParams) {
+            var currentUrl = window.location.href;
+            var url = currentUrl.substring(0, currentUrl.lastIndexOf('/') + 1);
+            url += 'API/FileDisplay.aspx?' + urlParams;
+            window.open(url, Shr.LABEL_FileDownload, FileDisplay.defaultConfig);
+        },
+
+        prompt: function (prompt, urlParams) {
+            Ext.MessageBox.confirm(Shr.LABEL_Confirm, prompt, function (result) {
+                if (result == 'yes') {
+                    var currentUrl = window.location.href;
+                    var url = currentUrl.substring(0, currentUrl.lastIndexOf('/') + 1);
+                    url += 'API/FileDisplay.aspx?' + urlParams;
+                    window.open(url, Shr.LABEL_FileDownload, FileDisplay.defaultConfig);
+                }
+            });
+        }
+    };
+}();
+
+function DisplayBrowserIncompatibilityWarning(resouces) {
+    var resourcesArray = resouces.split("|");
+    alert(resourcesArray[0]);
+}
+
+
+EmployeePopUpConfig = function () {
+    return {
+
+        pictureAndNAmeFields: function (component) {
+            var items = [];
+            if (component.picture && component.src != null) {
+                pictureField = {
+                    xtype: 'shr.main.profile',
+                    align: 'left',
+                    src: component.src,
+                    width: component.size,
+                    height: component.size,
+                    alt: component.alt
+                }
+            } else {
+                pictureField = {
+                    xtype: 'shr.main.nouserimage',
+                    width: component.size,
+                    height: component.size
+                }
+            }
+            var nameAndDescription = {
+                border: 0,
+                html: "<div class='CardName'><div><span>" + component.personFullname + "</span></div></div><div class='CardDescription'>" + component.description + "</div>",
+                align: 'right'
+
+            }            
+
+
+            //creating the change profile picture control.
+            pictureField.listeners = {
+                click: {
+                    element: 'el', 
+                    fn: function () {
+                        //permission to remove/change profile picture granted by changePicture globalConstant
+                        if (component.changePicture) {
+                            var fu = Ext.create('Shr.WebControls.FileUploadForm', component.fu);
+                            fu.on({
+                                onProfileModification:
+                                     function (thiss, value, eOpts) {
+                                         window.location.reload();
+                                    }                                
+                            });
+                            Ext.create('Ext.window.Window', {
+                                title: component.employeeButtons.changePicLabel,
+                                padding: 10,
+                                items: [fu]
+                            }).show();
+                        }
+
+                    }
+                }
+            }            
+            items.push(pictureField);
+            items.push(nameAndDescription)
+            return items;
+        },
+
+        buttonsContainer: function (component) {           
+            var isHidden = component.employeeButtons.oeDescriptions.length > 0;
+
+            var buttonsContainer = {
+                xtype: 'container',
+                padding: 5,
+                layout: {
+                    type: 'hbox',
+                    align: 'center'
+                },
+                items: [{
+                    xtype: 'button',
+                    iconCls: component.employeeButtons.infoIconCls,
+                    text: component.employeeButtons.infoLabel,
+                    href: MainLayout.baseUrl() + 'default.aspx?Tab=' + component.employeeButtons.infoTabGuid,
+                    hrefTarget: '_self'
+                },
+                {
+                    xtype: 'button',
+                    iconCls: component.employeeButtons.companyIconCls,
+                    text: component.employeeButtons.companyLabel,
+                    href: MainLayout.baseUrl() + 'default.aspx?Tab=' + component.employeeButtons.companyTabGuid,
+                    hrefTarget: '_self'
+                    
+                },
+                {
+                    xtype: 'splitbutton',
+                    text: component.employeeButtons.oeGroupsLabel,
+                    hidden: !isHidden,
+                    menu: new Ext.menu.Menu({    
+                        
+                        items: EmployeePopUpConfig.buttonsContainerItems(component)                        
+
+                    })
+
+                }]
+
+                
+            }
+            return buttonsContainer;
+        },
+
+        buttonsContainerItems: function (component) {
+            var menuItems;
+                    var menuItems = [];
+                    var urls = component.employeeButtons.oEhrefs.split('|');
+                    var oeDescriptions = component.employeeButtons.oeDescriptions.split('|');
+
+                    for (i = 0; i < urls.length; i++) {
+
+                        if (urls[i].length > 0) {
+
+                            var button = {
+                                text: oeDescriptions[i],
+                                href: urls[i]
+                            }
+                            menuItems.push(button);
+
+                        }
+
+                    }
+            
+            return menuItems 
+        }
+
+
+
+    }
+    
+
+
+}();

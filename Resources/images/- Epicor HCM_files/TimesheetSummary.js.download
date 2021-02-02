@@ -1,0 +1,319 @@
+﻿/**
+ * Timesheet Summary JS
+ */
+
+Shr.panel.TimesheetSummary = {
+    dataEdited: false,
+    canReviseApprovedPeriods: false,
+    showEditTab: true,
+    renderSummaryTo: null,
+    displayEditTabFirst: false,
+
+    init: function (config) {
+        Ext.apply(Shr.panel.TimesheetSummary, config);
+    },
+
+    showSummary: function (config) {
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsGetTimePeriodDetails',
+                personTimeGroupPeriodGuid: config.personPeriodId,
+                getEditMetadata: true,
+                isFromTimesheetSummary: true
+            },
+            success: function (resp) {
+                var result = Ext.decode(resp.responseText);
+                var myTextLabels = Shr.panel.TimesheetSummary.textLabels;
+                var mycommandLabels = Shr.panel.TimesheetSummary.commandLabels;
+                // Need to decode the totals, which are returned as a string
+                // because the property names are based on the time types in
+                // the group and can't be written as objects in .NET.
+                result.dailyTotals = Ext.decode(result.dailyTotals);
+
+                var summaryDetailGrid = Ext.create('Shr.timesheets.TimeEntry.GridPanel', {
+                    region: 'center',
+                    border: true,
+                    editable: false,
+                    disableSelection: true,
+                    showRevisions: true,
+                    columnLabels: Shr.panel.TimesheetSummary.columnLabels,
+                    commandLabels: Shr.panel.TimesheetSummary.commandLabels,
+                    textLabels: Shr.panel.TimesheetSummary.textLabels,
+                    timesheetEntryMethod: result.timesheetEntryMethod,
+                    clockInClockOut: result.clockInClockOut,
+                    metadata: result,
+                    tabName: myTextLabels.summary
+                });
+
+                Ext.create('Ext.data.Store', {
+                    storeId: 'summaryDailyGridStore',
+                    fields: result.dailyTotalFields,
+                    data: result.dailyTotals
+                });
+
+                Ext.each(result.dailyTotalColModel, function (col) {
+                    if (col.xtype && col.xtype == "numbercolumn") {
+                        col.summaryRenderer = function (value, summaryData, field) {
+                            return Ext.util.Format.number(value, col.numberFormat == "Shr.NUMBER_FORMAT_DECIMALTWO" ? Shr.NUMBER_FORMAT_DECIMALTWO : Shr.NUMBER_FORMAT_DECIMALFOUR);
+                        },
+                        col.renderer = function (value) {
+                            return Ext.util.Format.number(value, col.numberFormat == "Shr.NUMBER_FORMAT_DECIMALTWO" ? Shr.NUMBER_FORMAT_DECIMALTWO : Shr.NUMBER_FORMAT_DECIMALFOUR);
+                        }
+                    }
+                });
+
+                var summaryDailyGrid = new Ext.grid.GridPanel({
+                    title: myTextLabels.dailySummary,
+                    region: 'center',
+                    disableSelection: true,
+                    viewConfig: { forceFit: true },
+                    features: [{
+                        ftype: 'summary',
+                        dock: 'bottom',
+                        showSummaryRow: true
+                    }],
+                    columns: result.dailyTotalColModel,
+                    store: Ext.data.StoreManager.lookup('summaryDailyGridStore'),
+                    border: true,
+                    forceFit: false
+
+                });
+                //build a title for the page
+                var title = myTextLabels.summary;
+                if (result.positionDescription != null && result.positionDescription.length > 0) {
+                    title += myTextLabels.summaryFor + result.positionDescription;
+                    if (result.OverlappingTimes != "") {
+                        title += myTextLabels.overlappingTimes + result.OverlappingTimes;
+                    }
+                }
+                var height = Ext.Element.getViewportHeight() - 75;
+                var summaryLayout = new Ext.Panel({
+                    title: title,
+                    layout: 'border',
+                    items: [
+                        summaryDetailGrid, {
+                            region: 'south',
+                            layout: 'border',
+                            height: height * .45,
+                            border: false,
+                            split: true,
+                            resize: true,
+                            items: [summaryDailyGrid, {
+                                region: 'east',
+                                title: myTextLabels.employeeComments,
+                                width: 300,
+                                layout: 'fit',
+                                split: true,
+                                resize: true,
+                                items: [new Ext.form.TextArea({
+                                    value: result.employeeComments,
+                                    readOnly: true
+                                })]
+                            }]
+                        }
+                    ]
+                });
+
+                // Set the configuration for the child items within the popup window. If
+                // the period is NOT closed, and is either not approved, or the user has
+                // role rights to revise approved periods, then we show a tab panel with
+                // the summary layout on the first tab and an edit grid on the second.
+                // Otherwise, we just show the summary layout with no edit capability.
+                var items = [];
+                var mycommandLabels = Shr.panel.TimesheetSummary.commandLabels;
+
+                if (Shr.panel.TimesheetSummary.showEditTab
+                    && result.isClosed === false
+                    && (result.isApproved === false || Shr.panel.TimesheetSummary.canReviseApprovedPeriods === true)) {
+
+                    items.push(new Ext.TabPanel({
+                        region: 'center',
+                        border: false,
+                        split: false,
+                        activeTab: (Shr.panel.TimesheetSummary.displayEditTabFirst === true) ? 1 : 0,
+                        tabPosition: 'top',
+                        items: [
+                            summaryLayout,
+                            new Shr.timesheets.TimeEntry.GridPanel({
+                                title: mycommandLabels.edit,
+                                border: true,
+                                editable: true,
+                                selectedPeriod: config.personPeriodId,
+                                showRevisions: true,
+                                columnLabels: Shr.panel.TimesheetSummary.columnLabels,
+                                commandLabels: Shr.panel.TimesheetSummary.commandLabels,
+                                textLabels: Shr.panel.TimesheetSummary.textLabels,
+                                metadata: result,
+                                tabName: 'Edit',
+                                listeners: {
+                                    'afteredit': function () {
+                                        Shr.panel.TimesheetSummary.dataEdited = true;
+                                    }
+                                }
+                            })
+                        ],
+                        listeners: {
+                            'tabchange': function (tp, tab) {
+                                // Reload summary values if any changes made on edit tab
+                                // and switching back to the summary tab, so those changes
+                                // are visible and the user sees what has been modified.
+                                if (tab == summaryLayout && Shr.panel.TimesheetSummary.dataEdited === true) {
+                                    summaryDetailGrid.store.removeAll();
+                                    summaryDailyGrid.store.removeAll();
+
+                                    Ext.Ajax.request({
+                                        url: 'API/JsonFetcher.svc/Invoke',
+                                        params: {
+                                            svcprovider: 'JsGetTimePeriodDetails',
+                                            personTimeGroupPeriodGuid: config.personPeriodId,
+                                            getData: true,
+                                            isFromTimesheetSummary: true
+                                        },
+                                        success: function (resp) {
+                                            var result = Ext.decode(resp.responseText);
+
+                                            // Need to decode the totals, which are returned as a string
+                                            // because the property names are based on the time types in
+                                            // the group and can't be written as objects in .NET.
+                                            result.dailyTotals = Ext.decode(result.dailyTotals);
+
+                                            summaryDetailGrid.store.loadData(result.timeDetail);
+                                            summaryDailyGrid.store.loadData(result.dailyTotals);
+                                        }
+                                    });
+
+                                    Shr.panel.TimesheetSummary.dataEdited = false;
+                                }
+                            }
+                        }
+                    }));
+                } else {
+                    items.push(summaryLayout);
+                }
+
+                // Check whether a Element to apply the panel to was specified, and
+                // if not, create a dialog to display the summary data
+                var summaryEl = Ext.get(Shr.panel.TimesheetSummary.renderSummaryTo);
+                if (summaryEl != null) {
+                    // Getting the width of the summaryEl (div), so that we
+                    // can ensure that the new panel is given a minimum width. We
+                    // need to do this because otherwise the div will have a width
+                    // of 0 effectively hiding the Ext.Panel.  This is because this
+                    // panel can be rendered inside of a collapsed CollapsibleContainer
+                    // when shown on the routing detail pop-up.
+                    var panelWidth = summaryEl.getWidth();
+                    var summaryPanel = new Ext.Panel({
+                        id: 'summaryPanel',
+                        forceLayout: true,
+                        layout: 'fit',
+                        height: height,
+                        width: (panelWidth != null && panelWidth > 0) ? panelWidth - 15 : 945,
+                        autoScroll: true,
+                        renderTo: summaryEl,
+                        items: items,
+                        listeners: [{
+                            'afterrender': function (panel) {
+                                panel.updateLayout();
+                            }
+                        }]
+                    });
+                }
+                else {
+                    var summaryWnd = Ext.create('Ext.window.Window', {
+                        layout: 'fit',
+                        width: Ext.Element.getViewportWidth() - 75,
+                        height: height,
+                        modal: true,
+                        floating: true,
+                        fixed: true,
+                        title: config.title,
+                        listeners: { 'close': function () { __doPostBack(); } },
+                        buttons: [
+                        {
+                            text: mycommandLabels.print,
+                            iconCls: "x-fa fa-print",
+                            handler: function () {
+                                var comment = "";
+                                if (result.employeeComments != null)
+                                    comment = result.employeeComments;
+                                new Shr.WebControls.Dialog({
+                                    title: 'Timesheet Summary',
+                                    sourceControl: 'Controls/PrintTimesheetSummary.ascx',
+                                    urlParams: 'persontimegroupperiodguid=' + result.personTimeGroupPeriodGuid + '&comment=' + comment,
+                                    height: 700,
+                                    width: 900,
+                                    newWindow: true,
+                                    resizable: true
+                                }).show();
+                            }
+                        }, {
+                            text: Shr.LABEL_Close,
+                            iconCls: "x-fa fa-times",
+                            handler: function () {
+                                summaryWnd.close();
+                                summaryWnd.destroy();
+                                __doPostBack();
+                            }
+                        }],
+                        items: items,
+                    });
+                    summaryWnd.show();
+                }
+            }
+        });
+    },
+
+    MassApprove: function (title, RoutingInstanceStepGuids, NoTimePeriodSelectedMsg, PersonTimeGroupPeriodGuids) {
+
+        if (RoutingInstanceStepGuids == '') {
+            Ext.Msg.alert('Error', NoTimePeriodSelectedMsg);
+        } else {
+           
+            //We need check for at least one guid
+            new Shr.WebControls.Dialog({
+                title: title,
+                sourceControl: 'RoutingInstanceSubmittal',
+                showOkCancel: true,
+                updateOnCancel: true,
+                height: 350,
+                width: 675,
+                closeFn: function () {
+                    __doPostBack();
+                },
+                requestMethod: 'POST',
+                postParams: {
+                    routingInstanceStepGuids: RoutingInstanceStepGuids,
+                    routingResponse: 'MASSAPPROVAL',
+                    personTimeGroupPeriodGuids: PersonTimeGroupPeriodGuids
+                }
+            }).show();
+        }
+    },
+    MassSubmit: function (title, RoutingInstanceStepGuids, NoTimePeriodSelectedMsg, PersonTimeGroupPeriodGuids) {
+
+        if (PersonTimeGroupPeriodGuids == '') {
+            Ext.Msg.alert('Error', NoTimePeriodSelectedMsg);
+        } else {
+           
+            //We need check for at least one guid
+            new Shr.WebControls.Dialog({
+                title: title,
+                sourceControl: 'RoutingInstanceSubmittal',
+                showOkCancel: true,
+                updateOnCancel: true,
+                height: 350,
+                width: 675,
+                closeFn: function () {
+                    __doPostBack();
+                },
+                requestMethod: 'POST',
+                postParams: {
+                    routingInstanceStepGuids: RoutingInstanceStepGuids,
+                    routingResponse: 'MASSSUBMIT',
+                    personTimeGroupPeriodGuids: PersonTimeGroupPeriodGuids
+                }
+            }).show();
+        }
+    }
+}

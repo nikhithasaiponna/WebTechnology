@@ -1,0 +1,449 @@
+﻿var WIZARD_DIV_ID = 'WizardDialog';
+// This is the ID of the form element on picker.aspx. This page is under our control, and won't change
+// for each particular embedded picker control, so we can count on the ID always being the same.
+var WIZARD_FORM_ID = "WizardForm";
+var BUTTON_WIDTH = 75;
+var shrWizard = {};
+shrWizard._helpWin = null
+shrWizard._helpHtml = null;
+shrWizard._callbackManager = null;
+
+shrWizard = function () {
+    // everything in this space is private and only accessible in the Wizard block
+
+    // define private variables
+    var wizardLauncherEl;
+    var wizardDialog, queryString, stepIndex, mode, isWizardFinishing;
+    var height, width;
+    var previousButton, nextButton, customButton, finishButton, cancelButton, keymap;
+
+    return {
+        init: function () {
+            isWizardFinishing = false;
+        },
+
+        doCloseTask: function (eventTarget, eventArgument) {
+            var theForm = document.forms['aspnetForm'];
+            if (!theForm) {
+                theForm = document.aspnetForm;
+            }
+            
+            if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+                    theForm.__EVENTTARGET.value = eventTarget;
+                    theForm.__EVENTARGUMENT.value = eventArgument;
+                    theForm.submit();
+            }
+        },
+
+        display: function (wizardConfig) {
+            // Launch the wizard after a brief delay. This is necessary because if
+            // the wizard is being launched by startup script on the page it can
+            // cause an IE scripting error because the browser won't have loaded
+            // the page content before the script tries to modify it.
+            setTimeout(function () { shrWizard.doDisplay(wizardConfig); }, 150);
+        },
+
+        doDisplay: function (wizardConfig) {
+            this.wizardLauncherEl = wizardConfig.wizardLauncherElId;
+            this.width = wizardConfig.width * 1.1;
+            this.height = wizardConfig.height * 1.1;
+            this.queryString = wizardConfig.queryString;
+
+            var bodyHeight = this.height - 44;
+
+            // Remember the original __doPostBack function, because when we
+            // load the new ASP.NET page, it'll overwrite it with a new one!
+            originalDoPostBackFn = __doPostBack;
+
+            previousButton = new Ext.Button({
+                id: 'previousButton',
+                text: (typeof wizardConfig.btnBackLabel == 'undefined') ? '< Back' : wizardConfig.btnBackLabel,
+                handler: shrWizard.buttonClick,
+                action: 'previous',
+                disabled: true,
+                minWidth: BUTTON_WIDTH,
+                scope: this
+            });
+            nextButton = new Ext.Button({
+                id: 'nextButton',
+                text: (typeof wizardConfig.btnNextLabel == 'undefined') ? 'Next >' : wizardConfig.btnNextLabel,
+                handler: shrWizard.buttonClick,
+                action: 'next',
+                disabled: true,
+                minWidth: BUTTON_WIDTH,
+                scope: this
+            });
+            customButton = new Ext.Button({
+                id: 'customButton',
+                text: (typeof wizardConfig.btnCustomLabel == 'undefined') ? 'Custom' : wizardConfig.btnCustomLabel,
+                handler: shrWizard.buttonClick,
+                action: (typeof wizardConfig.btnCustomAction == 'undefined') ? 'custom' : wizardConfig.btnCustomAction,
+                disabled: true,
+                minWidth: BUTTON_WIDTH,
+                scope: this
+            });
+            finishButton = new Ext.Button({
+                id: 'finishButton',
+                text: (typeof wizardConfig.btnFinishLabel == 'undefined') ? 'Finish' : wizardConfig.btnFinishLabel,
+                handler: shrWizard.buttonClick,
+                action: 'finish',
+                disabled: true,
+                minWidth: BUTTON_WIDTH,
+                scope: this
+            });
+            cancelButton = new Ext.Button({
+                id: 'cancelButton',
+                text: (typeof wizardConfig.btnCancelLabel == 'undefined') ? 'Cancel' : wizardConfig.btnCancelLabel,
+                handler: (typeof wizardConfig.btnCancelHandler == 'undefined') ? shrWizard.cancel : wizardConfig.btnCancelHandler,
+                action: 'cancel',
+                disabled: true,
+                minWidth: BUTTON_WIDTH,
+                scope: this
+            });
+
+            shrWizard.wizardDialog = new Ext.Window({
+                layout: 'fit',
+                width: this.width,
+                height: this.height,
+                minimizable: false,
+                modal: true,
+                // Remove close button from those wizards who manipulate the draft
+                closable: (this.queryString.indexOf("draft") == -1) ? true : false,
+                scrollable: true,
+                title: '',
+                autoShow: true,
+                floating: true,
+                fixed: true,
+                listeners: { 'close': shrWizard.cancel, 'resize': shrWizard.resize },
+                items: [{
+                    loader: {
+                        url: 'API/Wizard.aspx?' + this.queryString,
+                        method: 'GET',
+                        scripts: true,
+                        autoLoad: true,
+                        callback: function (el, success, response, options) {
+                            // After the page is loaded, restore the original __doPostBack
+                            // function, so the page and ASP.NET AJAX will function properly.
+                            // We also need to restore the form target for the postbacks to
+                            // the main form on the document, not the form on the picker page.
+                            __doPostBack = originalDoPostBackFn;
+                            theForm = document.forms['aspnetForm'];
+
+                            // Enable scrollbars if needed
+                            el.target.setScrollable(true);
+
+                            // Update is done, so buttons can be enabled for user interaction.
+                            if (previousButton.el.dom != null) {
+                                previousButton.setDisabled(false);
+                            }
+                            if (nextButton.el.dom != null) {
+                                nextButton.setDisabled(false);
+                            }
+                            if (customButton.el.dom != null) {
+                                customButton.setDisabled(false);
+                            }
+                            if (finishButton.el.dom != null) {
+                                finishButton.setDisabled(false);
+                            }
+                            if (cancelButton.el.dom != null) {
+                                cancelButton.setDisabled(false);
+                            }
+                        }
+                    },
+                    buttons: [previousButton, customButton, nextButton, finishButton, cancelButton]
+                }]
+            }).show();
+
+            keymap = new Ext.KeyMap(Ext.getElementById(shrWizard.wizardDialog.id), {
+                key: 13, // or Ext.EventObject.ENTER
+                fn: shrWizard.enterPressed
+            });
+
+            return false;
+        },
+
+        updateNavigation: function (buttonConfig) {
+            shrWizard.wizardDialog.setTitle(buttonConfig.wizTitle);
+            mode = buttonConfig.wizMode;
+            stepIndex = buttonConfig.stepIndex;
+            previousButton.setVisible(buttonConfig.showPrevious);
+            nextButton.setVisible(buttonConfig.showNext);
+            finishButton.setVisible(buttonConfig.showFinish);
+            customButton.setVisible(buttonConfig.showCustom);
+        },
+
+        //Sets the wizard to a non finish state
+        resetFinish: function () {
+            isWizardFinishing = false;
+        },
+
+        enterPressed: function () {
+            if (nextButton.isVisible()) {
+                shrWizard.buttonClick(nextButton);
+            }
+            else if (finishButton.isVisible()) {
+                shrWizard.buttonClick(finishButton);
+            }
+        },
+
+        resize: function () {
+            return;
+        },
+
+        cancel: function () {
+            if (!isWizardFinishing) {
+                shrWizard.wizardDialog.hide();
+                shrWizard.wizardDialog.destroy();
+                window.location.href = window.location.href.split('#')[0];
+            }
+        },
+
+        // The close function is invoked by the server-side wizard code 
+        // when it has completed processing and wants to close the dialog and
+        // refresh the underlying page. This is *not* directly responding 
+        // to a client-side event.
+        close: function () {
+            shrWizard.wizardDialog.close();
+            shrWizard.wizardDialog.destroy();
+            theForm = document.forms['aspnetForm'];
+
+            // Call doPostBack for wizards that doesn't manipulate drafts
+            if (this.queryString.indexOf("draft") == -1) {
+                __doPostBack = originalDoPostBackFn;
+                __doPostBack(this.wizardLauncherEl);
+            }
+            // Reload page for wizards that manipulate drafts
+            else {
+                window.location.href = window.location.href.split('#')[0];
+            }
+        },
+        
+        setStep: function (targetStepIndex) {
+            stepIndex = targetStepIndex;
+            shrWizard.doWizardPostBack('setstep');
+        },
+
+        buttonClick: function (button) {
+            shrWizard.queueDelayedPostBack(button.action);
+        },
+
+        setFirstElementFocus: function (activeWizStepId) {
+            try {
+                var startElement = Ext.getDom(activeWizStepId);
+                var target = this.getFirstWizardInput(startElement);
+
+                if (target != null && typeof target != 'undefined') {
+                    target.focus();
+                }
+            }
+            catch (ex) { }
+        },
+
+        getFirstWizardInput: function (element) {
+            if (element != null && element.focus != null && (element.tagName == 'INPUT' ||
+                element.tagName == 'SELECT' ||
+                element.tagName == 'BUTTON')) {
+                return element;
+            }
+            else if (element != null && element.focus != null && (element.tagName == 'TEXTAREA')) {
+                //Text areas do not work properly when trying to set the focus (probably the spelling icon inclusion)
+                return null;
+            }
+
+            else {
+                for (var i = 0; i < element.childNodes.length; i++) {
+                    var childResult = this.getFirstWizardInput(element.childNodes[i]);
+                    if (childResult != null)
+                        return childResult;
+                }
+            }
+            return null;
+        },
+
+        doWizardPostBack: function (action, eventargs) {
+            setTimeout(function () { shrWizard.doDelayedWizardPostBack(action, eventargs); }, 150);
+        },
+
+        doDelayedWizardPostBack: function (action, eventargs) {
+            // Disable all buttons so the user doesn't try to do another action
+            // while the postback/update is in progress. The buttons will only
+            // get enabled again when the update is completed.
+            if (previousButton.el.dom != null) {
+                previousButton.setDisabled(true);
+            }
+            if (nextButton.el.dom != null) {
+                nextButton.setDisabled(true);
+            }
+            if (customButton.el.dom != null) {
+                customButton.setDisabled(true);
+            }
+            if (finishButton.el.dom != null) {
+                finishButton.setDisabled(true);
+            }
+            if (cancelButton.el.dom != null) {
+                cancelButton.setDisabled(true);
+            }
+
+            previousButton.set, nextButton, customButton, finishButton, cancelButton
+
+            //TODO: Url setting should be changed to use Ext.urlDecode and Ext.urlEncode
+            //since there may already be a parameter and this will add a duplicate
+            var url = 'API/Wizard.aspx?' + this.queryString;
+
+            if (action != null) {
+                url += "&action=" + action;
+            }
+
+            if (stepIndex != null) {
+                url += "&stepindex=" + stepIndex;
+            }
+
+            if (eventargs != null) {
+                url += "&args=" + eventargs;
+            }
+            else {
+                url += "&args=" + "";
+            }
+
+            //For now only set mode if is not already in the url (set from TaskEditor.aspx)
+            if (url.indexOf("&mode") == -1 && mode != null) {
+                url += "&mode=" + mode;
+            }
+
+            // The cancel button is wired to execute when the dialog closes,
+            // so we need to flag the cancel function that the window is closing due to
+            // the user clicking Finish, 
+            isWizardFinishing = (action == 'finish');
+
+            // Pull all the form values in order to pass them as params for the update. This
+            // will cause the UpdateManager to do the update as a POST, rather than a GET,
+            // because it uses the presence of params to do this.
+            var params = getFormValues(WIZARD_FORM_ID);
+            if (typeof params == 'undefined') return;
+
+            // Ext doesn't do a good job of destroying the child components within an
+            // element when that element is updated, so I need to go through and do it.
+            Shr.destroyPanelComponents('WizardBody', false);
+
+            var updatePanel = Ext.create('Ext.panel.Panel', {
+                autoScroll: true,
+                loader: {
+                    loadMask: false,
+                    url: url,
+                    methods: 'POST',
+                    params: params,
+                    scripts: true,
+                    callback: function (el, success, response, options) {
+                        // After the callback completes, restore the original __doPostBack
+                        // function, so the page and ASP.NET AJAX will function properly.
+                        // We also need to restore the form target for the postbacks to
+                        // the main form on the document, not the form on the picker page.
+                        __doPostBack = Shr.originalDoPostBackFn;
+                        theForm = document.forms['aspnetForm'];
+
+                        // Enable scrollbars if needed
+                        el.target.setScrollable(true);
+
+                        // Update is done, so buttons can be enabled for user interaction.
+                        if (previousButton.el.dom != null) {
+                            previousButton.setDisabled(false);
+                        }
+                        if (nextButton.el.dom != null) {
+                            nextButton.setDisabled(false);
+                        }
+                        if (customButton.el.dom != null) {
+                            customButton.setDisabled(false);
+                        }
+                        if (finishButton.el.dom != null) {
+                            finishButton.setDisabled(false);
+                        }
+                        if (cancelButton.el.dom != null) {
+                            cancelButton.setDisabled(false);
+                        }
+                    }
+                },
+                buttons: [previousButton, customButton, nextButton, finishButton, cancelButton]
+            });
+
+            var panel = shrWizard.wizardDialog.items.items[0];
+            shrWizard.wizardDialog.remove(panel, true);
+            shrWizard.wizardDialog.add(updatePanel);
+            updatePanel.loader.load();
+
+            return false;
+        },
+
+        // Queues a delayed postback for a control so it will fire after a short
+        // period. This is so if there is an on-change for a control it won't fire
+        // immediately, in case the user did something else that will cause a postback
+        // and so if the focus moved to another control then focus on return will be
+        // on the new focus control.
+        queueDelayedPostBack: function (elId, args) {
+            shrWizard.doWizardPostBack(elId, args);
+        }
+    };
+} ();
+//End shrWizard
+
+
+shrWizard.configHelpMessageBox = function(buttonId, windowId) {
+    var button = Ext.get(buttonId);
+
+    button.on('click', function() {
+        if (shrWizard._helpWin != null) {
+            shrWizard._helpWin.remove();
+            shrWizard._helpWin = null;
+        }
+
+        if (shrWizard._helpWin == null) {
+            shrWizard._helpWin = new Ext.Window(
+            {
+                contentEl: windowId,
+                title: 'Wizard Help',
+                animateTarget: button,
+                layout: 'fit',
+                width: 400,
+                height: 500,
+                autoWidth: false,
+                autoHeight: false,
+                minWidth: 400,
+                minHeight: 200,
+                resizeable: true,
+                autoScroll: true,
+                closeAction: 'hide',
+                plain: false,
+                modal: true,
+                listeners: { 'close': shrWizard.closeHelpMessageBox },
+                buttons: [{
+                        text: 'Close',
+                        handler: shrWizard.closeHelpMessageBox
+                    }]
+                });
+            }
+
+            shrWizard._helpWin.show();
+        });
+
+        return false;
+    }
+
+shrWizard.closeHelpMessageBox = function() {
+    if (shrWizard._helpWin) {
+        shrWizard._helpWin.hide();
+    }
+}
+
+shrWizard.removeSpecialChars = function (value) {
+    return value.replace(/[^a-zA-Z 0-9]+/g, '').replace(/ /g, '');
+}
+
+shrWizard.setInputDefaultValueAsId = function (e, target) {
+    var el = document.getElementById(target + '_fieldText');
+    if (e.value != null && e.value != "" && el != null) {
+        var x = shrWizard.removeSpecialChars(e.value);
+        el.value = shrWizard.removeSpecialChars(e.value);
+        if (el.attributes["maxlength"] != null && el.value.length > el.attributes["maxlength"].nodeValue) {
+            el.value = el.value.substring(0, el.attributes["maxlength"].nodeValue);
+        }
+    }
+}

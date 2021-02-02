@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <p style="color:white ;background-color:black">Lorem ipsum, dolor sit amet consectetur adipisicing elit.
+         Impedit sunt obcaecati, quos doloribus quaerat 
+         aliquam similique quam quas incidunt optio amet odio
+          dolor itaque, culpa, dolore veniam. Culpa, blanditiis quae?</p>
+          <h1 style="background-color: black; color:white">Nikhitha</h1>
+</body>
+</html>

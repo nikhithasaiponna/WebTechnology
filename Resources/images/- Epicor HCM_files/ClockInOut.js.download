@@ -1,0 +1,105 @@
+﻿/**
+ * Quick Clock In/Out JS
+ */
+Shr.panel.ClockInOut = {
+
+    clockInOutControlName: null,
+
+    updatePersonTimeDetail: function (clockInOutRequest) {
+        clockInOutControlName = clockInOutRequest.clockInOutControlName
+        var me = this;
+        Ext.Ajax.request({
+            loadMask: true,
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsGetTimeGroupGridMetadata',
+                effectiveDate: new Date(),
+                isMultiDayEntry: false
+            },
+            success: function (resp) {
+                var result = Ext.decode(resp.responseText);
+                if(result.errorMessage != null) {
+                    Ext.Msg.show({
+                        title: Shr.LABEL_Warning,
+                        msg: result.errorMessage,
+                        buttons: Ext.Msg.OK,
+                        icon: Ext.Msg.WARNING
+                    });
+                    return;
+                   }
+                    var additionalHeightForAllocations = 0;
+                    if (clockInOutRequest.allocationsCount !== undefined && clockInOutRequest.allocationsCount != null) {
+                        if (clockInOutRequest.allocationsCount > 1)
+                            additionalHeightForAllocations += Math.round((clockInOutRequest.allocationsCount / 2)) * ((Ext.isIE) ? 50 : 55);
+                        else
+                            additionalHeightForAllocations = 55;
+                    }
+
+                    // If this time group requires additional information to be entered
+                    // such as how to alllocate this new person time detail, then we want
+                    // to show a popup to collect that information before clocking the
+                    // employee in.
+                    if (clockInOutRequest.usesAllocations || clockInOutRequest.timeDetailToUpdate != '') {
+                        new Shr.WebControls.Dialog({
+                            title: clockInOutRequest.usesAllocationsTitle,
+                            width: 550,
+                            height: 280 + additionalHeightForAllocations,
+                            sourceControl: 'ClockInOutEdit.ascx',
+                            urlParams: 'timeDetailToEnd=' + clockInOutRequest.timeDetailToEnd + '&timetypecode=' + clockInOutRequest.newTimeType +
+                            '&positioncode=' + clockInOutRequest.position + '&timegroupcode=' + clockInOutRequest.timeGroup + '&timedetailtoupdate=' + clockInOutRequest.timeDetailToUpdate + '&timezonecode=' + clockInOutRequest.timeZone + "&multipleTimeTypesExist=" + clockInOutRequest.multipleTimeTypesExist,
+                            showOkCancel: true
+                        }).show();
+                    }
+                    // Otherwise we just go ahead and make the request to clock the employee
+                    // in on the server.
+                    else {
+                        me.submitClockInOutRequest(clockInOutRequest);
+                    }
+            }
+        });
+            
+    },
+
+    submitClockInOutRequest: function (clockInOutRequest) {
+        Ext.Ajax.request({
+            loadMask: true,
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsClockInOut',
+                timeDetailToEnd: clockInOutRequest.timeDetailToEnd,
+                newTimeType: clockInOutRequest.newTimeType,
+                position: clockInOutRequest.position,
+                comments: clockInOutRequest.comments,
+                company: clockInOutRequest.company,
+                costCenter: clockInOutRequest.costCenter,
+                department: clockInOutRequest.department,
+                division: clockInOutRequest.division,
+                functionalArea: clockInOutRequest.functionalArea,
+                location: clockInOutRequest.location,
+                organizationUnit: clockInOutRequest.organizationUnit,
+                project: clockInOutRequest.project,
+                region: clockInOutRequest.region,
+                section: clockInOutRequest.section,
+                shift: clockInOutRequest.shift,
+                timeDetailToUpdate: clockInOutRequest.timeDetailToUpdate,
+                timeZone: clockInOutRequest.timeZone,
+                multipleTimeTypesExist: clockInOutRequest.multipleTimeTypesExist
+            },
+            success: function (resp) {
+                var result = Ext.decode(resp.responseText);
+                if (result.config) {
+                    var cmp = Ext.getCmp(result.config.id);
+                    if (cmp)
+                        cmp.updateControl(result.config);
+                }
+
+                if (result.isSuccessful == 'False') {
+                    alert(clockInOutRequest.msgAlert);
+                }
+            },
+            failure: function (response) {
+                alert(clockInOutRequest.msgAlert);
+            }
+        });
+    }
+}

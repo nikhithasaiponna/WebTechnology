@@ -1,0 +1,1532 @@
+/// <reference path="vswd-ext_2.2.js" />
+
+// Namespace (Object)
+var Shr = {};
+
+// Date/Time Formats
+Shr.DATE_FORMAT = 'n/j/Y';
+Shr.ALT_DATE_FORMATS = "n/j/Y g:i A|m/d/Y|m/d/y|n/j/Y|m/j/Y|n/j/y|m/j/y|n/d/y|n/d/Y|m-d-y|m-d-Y|n-j-Y|n-j-y|n-d-Y|n-d-y|m/d|n/j|m-d|n-j|n|m|y|Y|d";
+Shr.TIME_FORMAT = 'g:i A';
+Shr.ALT_TIME_FORMATS = 'g:i A|G:i|G';
+Shr.INVALID_TEXT = "{0} is not a valid date - it should be in the format month/day/year or month/day (ex, 3/14/2009, 3/14)";
+
+if (Ext.DateTimePicker) {
+    Ext.apply(Ext.DateTimePicker.prototype, {
+        dateFormat: 'n/j/Y',
+        timeFormat: 'g:i A',
+        invalidText: "{0} is not a valid date - it should be in the format month/day/year or month/day (ex, 3/14/2009, 3/14)"
+    });
+}
+
+Ext.form.field.Date.override({
+    constructor: function (config) {
+        if (config.showClear !== false) {
+            arguments[0].triggers = {
+                clear: {
+                    cls: 'x-form-clear-trigger',
+                    handler: function () { this.clear(); },
+                    hidden: !(config.showClear && !Ext.isEmpty(config.value))
+                }
+            }
+        }
+        this.format = Shr.DATE_FORMAT;
+        this.altFormats = Shr.ALT_DATE_FORMATS;
+        this.invalidText = Shr.INVALID_TEXT;
+        this.formatText = '';
+        this.callParent(arguments);
+    },
+    clear: function () {
+        if (this.getValue() == null || this.getValue() == '' || this.disabled)
+            return;
+        this.setValue();
+        this.fireEvent('select', this);
+        this.showHideClearTrigger();
+    }, 
+    showHideClearTrigger: function () {
+        if (this.triggers && this.triggers.clear)
+            if (this.value != null && this.value != '')
+                this.triggers.clear.show();
+            else
+                this.triggers.clear.hide();
+    },
+    onBlur: function (e) {
+        var me = this,
+            v = me.rawToValue(me.getRawValue());
+        if (Ext.isDate(v)) 
+            me.setValue(v);
+        else 
+            me.setValue();
+        this.showHideClearTrigger();            
+        me.callParent([
+            e
+        ]);
+    }
+});
+
+// Common Labels
+Shr.LABEL_AreYouSureYouWantToLeaveThisTask = "Are you sure you want to leave this task?";
+Shr.LABEL_Close = "Close";
+Shr.LABEL_Continue = "Continue";
+Shr.LABEL_Confirm = "Confirm";
+Shr.LABEL_Failed = "Failed";
+Shr.LABEL_Error = "Error";
+Shr.LABEL_FileDownload = "FileDownload"
+Shr.LABEL_NotFound = "\' not found";
+Shr.LABEL_Save = "Save";
+Shr.LABEL_Search = "Search";
+Shr.LABEL_SpellCheck = "Spell Check";
+Shr.LABEL_Searching = "Searching...";
+Shr.LABEL_UnableToGenerateAutoNumber = "Unable to generate auto number.";
+Shr.LABEL_Warning = "Warning";
+Shr.LABEL_Save_Close = "Save and Close";
+Shr.LABEL_Print = "Print";
+Shr.LABEL_Now = "Now";
+Shr.LABEL_Time = "Time:";
+Shr.LABEL_InvalidText = "{0} is not a valid date - it should be in the format month/day/year or month/day (ex, 3/14/2009, 3/14)";
+
+// Default.js
+Shr.LABEL_MyPeople = "My People";
+Shr.LABEL_SummaryFor = "Summary for ";
+Shr.LABEL_SelectTemplateField = "Select Field Name";
+
+// iVantage.js
+Shr.LABEL_Approve = "Approve";
+Shr.LABEL_CancelRoute = "Cancel Route";
+Shr.LABEL_AreYouSureYouWantToCancelThisRoute = "Are you sure you want to cancel this route?";
+Shr.LABEL_ConfigureCOBRAReportParameters = "Configure COBRA Report Parameters";
+Shr.LABEL_Deny = "Deny";
+Shr.LABEL_DenyResubmit = "Deny / Resubmit";
+Shr.LABEL_Edit = "Edit";
+Shr.LABEL_Error = "Error";
+Shr.LABEL_FinalApprove = "Final Approve"
+Shr.LABEL_FinalProxyApprove = "Final Proxy Approve";
+Shr.LABEL_PostReply = "Post Reply";
+Shr.LABEL_ProxyApprove = "Proxy Approve"
+Shr.LABEL_RoutingDetails = "Routing Details";
+Shr.LABEL_SearchResults = "Search Results";
+Shr.LABEL_SearchText = "Search text '";
+Shr.LABEL_SorryForSomeReasonTheTextOfThisPageIsUnavailableSearchingWillNotWorkPleaseTryAgain = "Sorry, for some reason the text of this page is unavailable. Searching will not work, please try again.";
+Shr.LABEL_WasNotFoundOnThePage = "' was not found on the page.";
+Shr.LABEL_WouldYouLikeToCurrentReportParametersWithNewDefaultValues = "Would you like to current report parameters with new default values?";
+
+// TaskEditor.js
+Shr.LABEL_AreYouSureYouWantToDeleteThisGroup = "Are you sure you want to delete this group?";
+Shr.LABEL_AreYouSureYouWantToDeleteThisItem = "Are you sure you want to delete this item?";
+Shr.LABEL_AreYouSureYouWantMakeThisTabASubTab = "Are you sure you want make this tab a sub tab?";
+Shr.LABEL_NavigatingAwayFromTheEditorMayCauseDataToBeLostAreYouSureYouWantToContinue = "Navigating away from the editor may cause data to be lost. Are you sure you want to continue?";
+
+// WebControls.js
+Shr.LABEL_ConnectionTimeout = 'Unable to save value. Your connection may have timed out. If so, you will need to login again and resume from your last saved point.';
+Shr.LABEL_JsonUpdateFailed = 'Unable to update this field. Please contact a system administrator for further assistance.';
+// TaskExecute
+Shr.LABEL_AuditHistory = "Audit History";
+Shr.LABEL_DraftAlreadyOpen = "Draft Already Open";
+Shr.LABEL_TaskSummary = "Task Summary";
+Shr.LABEL_Open = "Open";
+Shr.LABEL_Refresh = "Refresh";
+Shr.LABEL_Restart = "Restart";
+Shr.LABEL_StaleData = "Stale Data";
+Shr.LABEL_ActionRequired = "Action Required";
+Shr.Time_Label_Width = '100%';
+
+//timesheet labels
+Shr.LABEL_SubmitTimesheet = "Submit Timesheet";
+
+Shr.NAMED_COLORS = [
+    { name: 'Black', value: '000000' },
+    { name: 'Green', value: '008000' },
+    { name: 'LimeGreen', value: '32CD32' },
+    { name: 'Turquoise', value: '40E0D0' },
+    { name: 'RoyalBlue', value: '4169E1' },
+    { name: 'SteelBlue', value: '4682B4' },
+    { name: 'CornflowerBlue', value: '6495ED' },
+    { name: 'Olive', value: '808000' },
+    { name: 'Gray', value: '808080' },
+    { name: 'LightSkyBlue', value: '87CEFA' },
+    { name: 'LightGreen', value: '90EE90' },
+    { name: 'Brown', value: 'A52A2A' },
+    { name: 'PaleTurquoise', value: 'AFEEEE' },
+    { name: 'RosyBrown', value: 'BC8F8F' },
+    { name: 'Silver', value: 'C0C0C0' },
+    { name: 'Tan', value: 'D2B48C' },
+    { name: 'LightGrey', value: 'D3D3D3' },
+    { name: 'Plum', value: 'DDA0DD' },
+    { name: 'Violet', value: 'EE82EE' },
+    { name: 'PaleGoldenRod', value: 'EEE8AA' },
+    { name: 'Beige', value: 'F5F5DC' },
+    { name: 'Coral', value: 'FF7F50' },
+    { name: 'Red', value: 'FF0000' },
+    { name: 'Fuchsia', value: 'FF00FF' },
+    { name: 'LightPink', value: 'FFB6C1' },
+    { name: 'Gold', value: 'FFD700' },
+    { name: 'Yellow', value: 'FFFF00' },
+    { name: 'White', value: 'FFFFFF'}];
+
+function Queue() {
+    var queue = new Array();
+    var queueSpace = 0;
+    this.enqueue = function(element) {
+        queue.push(element);
+    }
+    this.dequeue = function() {
+        if (queue.length) {
+            var element = queue[queueSpace];
+            if (++queueSpace * 2 >= queue.length) {
+                for (var i = queueSpace; i < queue.length; i++) queue[i - queueSpace] = queue[i];
+                queue.length -= queueSpace;
+                queueSpace = 0;
+            }
+            return element;
+        } else {
+            return undefined;
+        }
+    }
+}
+
+Ext.BLANK_IMAGE_URL = getPathRoot() + "/images/spacer.gif"
+
+Ext.PagePanel = Ext.extend(Ext.Viewport, {
+    initComponent: function() {
+        Ext.Viewport.superclass.initComponent.call(this);
+        document.getElementsByTagName('html')[0].className += ' x-viewport';
+        if (this.initialConfig.contentEl == null) {
+            this.el = Ext.getBody();
+        }
+        else {
+            this.el = Ext.get(this.initialConfig.contentEl);
+            this.el.moveTo(0, 0);
+        }
+        this.el.setHeight = Ext.emptyFn;
+        this.el.setWidth = Ext.emptyFn;
+        this.el.setSize = Ext.emptyFn;
+        this.el.dom.scroll = 'no';
+        this.allowDomMove = false;
+        this.autoWidth = true;
+        this.autoHeight = true;
+        Ext.EventManager.onWindowResize(this.fireResize, this);
+        this.renderTo = this.el;
+
+        var h;
+        var w;
+        if (typeof window.innerWidth != 'undefined') {
+            w = window.innerWidth,
+            h = window.innerHeight
+        }
+        // IE6 in standards compliant mode (i.e. with a valid doctype as the first line in the document)
+        else if (typeof document.documentElement != 'undefined'
+          && typeof document.documentElement.clientWidth !=
+          'undefined' && document.documentElement.clientWidth != 0) {
+            w = document.documentElement.clientWidth,
+            h = document.documentElement.clientHeight
+        }
+        // older versions of IE
+        else {
+            w = document.getElementsByTagName('body')[0].clientWidth,
+            h = document.getElementsByTagName('body')[0].clientHeight
+        }
+
+        this.fireResize(w, h);
+    },
+
+    fireResize: function(w, h) {
+        if (this.initialConfig.contentEl != null) {
+            this.el.dom.style.width = w + 'px';
+            this.el.dom.style.height = h + 'px';
+        }
+        this.fireEvent('resize', this, w, h, w, h);
+    }
+});
+
+function getQueryStringVariable(variable) {
+    var querystring = window.location.search.substring(1);
+    var variables = querystring.split("&");
+    for (var i = 0; i < variables.length; i++) {
+        var valuepair = variables[i].split("=");
+        if (valuepair[0] == variable) {
+            return valuepair[1];
+        }
+    }
+    return null;
+}
+
+function getLocationRoot() {
+    return location.protocol + '//' + location.host + getPathRoot();
+}
+
+function getPathRoot() {
+    var s = location.pathname; 
+    if (s.substr(0, 1) != "/") 
+        s = "/" + s;
+
+    var nPos = s.indexOf("/", 1); 
+    var root = (s.substr(0, nPos)).toUpperCase();
+
+    // If running directly under a website there is no virtual
+    // directory name included in location.pathname, so we need to
+    // ensure that if the page is in a subfolder of the web directory
+    // that we not incorrectly identify the subfolder as the root.
+    // Anytime new top level subdirectories are added with an aspx
+    // within, that subfolder should be added to this list.
+    return (root == '/API' || root == '/DEVHELP' || root == '/RADCONTROLS')
+        ? '' 
+        : root; 
+}
+
+Shr.showPersonImage = function (name, personalGuid) {
+    var personImage = Ext.create('Ext.Img', {
+        alt: name,
+        src: getPathRoot() + '/API/FileDisplay.aspx?source=database&b=Personal&p=Picture&k=' + personalGuid
+    });
+
+    var imageWin = new Ext.Window({
+        title: name,
+        width: 200,
+        height: 240,
+        layout: 'fit',
+        items: personImage,
+        modal: true
+    });
+    imageWin.show();
+}
+
+ // Added global variable to always get the belonging website because sometimes loses the reference for some css classes. 
+var domainURL = document.location.protocol + "//" + ((document.location.host == null) ? document.domain : document.domain) + "/" + document.location.pathname.split("/")[1] + "/"
+
+function printElement(elId) {
+    var el = Ext.getDom(elId),
+        width = Ext.get(elId).getWidth();
+    if (el == null || el.innerHTML == null) {
+        return;
+    }
+
+    var printWindow = window.open(domainURL, 'winReport', 'left=50,top=100,*menubar=0,toolbar=0,status=0,scrollbars=1,resizable=0,titlebar=0');
+    printWindow.document.write('<html xmlns="http://www.w3.org/1999/xhtml">');
+    printWindow.document.write('<head>');
+    printWindow.document.write('<link rel="stylesheet" type="text/css" href="Scripts/ext/ext-6.2.0/classic/theme-admin/HCM-all.css" />');
+    printWindow.document.write('<link rel="stylesheet" type="text/css" href="RadControls/Spell/Skins/Vista/Main.css" />');
+    printWindow.document.write('<link rel="stylesheet" type="text/css" href="RadControls/Tabstrip/Skins/dnn/styles.css" />');
+    printWindow.document.write('<link rel="stylesheet" type="text/css" href="Scripts/iVantage.css" />');
+    printWindow.document.write('<link rel="stylesheet" type="text/css" href="Scripts/WebControls/stylesheet.css" />');
+    printWindow.document.write('</head>');
+    if(/Safari/i.test(navigator.userAgent)){
+        printWindow.document.write('<body onload="setTimeout(\'window.print(); window.close();\',100);">');
+    }
+    else {
+        printWindow.document.write('<body onload="window.print(); window.close();">');
+    }
+    printWindow.document.write('<div style="position: absolute; width: ' + width + 'px;" >');
+    printWindow.document.write(el.innerHTML);
+    printWindow.document.write('</div>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+}
+
+var originalElText; //Variable declared globally so that it can be remain uneffected by text highlighting code.
+// Call this method to highlight the searchText within the html element specified
+function highlightSearchTerms(searchText, el, clearOldHighlighting) {
+
+    if (clearOldHighlighting == null || clearOldHighlighting == 'undefined')
+        clearOldHighlighting = true;
+
+    var textColor = "blue";
+    var backgroundColor = "yellow";
+    var highlightStartTag = "<font style='color:" + textColor + "; background-color:" + backgroundColor + ";'>";
+    var highlightEndTag = "</font>";
+    var treatAsPhrase = false;
+    var warnOnFailure = true;
+
+    // By default we want to be able to clear highlighting from previous searches,
+    // so that when the user searches for a different term or phrase the previously
+    // searched text will not remain highlighted.  This is primarily when using Help in
+    // iVantage.  However in other cases the highlighting is done automatically by
+    // iVantage and in those cases we do not care about clearing old highlighting, such
+    // as in Resume.ascx where search terms entered in Applicant Resume Search will be 
+    // highlighted in the the display.
+    if (clearOldHighlighting)
+        clearHighlighting(el);
+
+    // if the treatAsPhrase parameter is true, then we should search for 
+    // the entire phrase that was entered; otherwise, we will split the
+    // search string so that each word is searched for and highlighted
+    // individually
+    if (treatAsPhrase) {
+        searchArray = [searchText];
+    }
+    else {
+        searchArray = searchText.split(" ");
+    }
+
+    var elText;
+    if (el != null) {
+        originalElText = el.dom.innerHTML;
+        elText = originalElText;
+
+        for (var i = 0; i < searchArray.length; i++) {
+            elText = doHighlight(elText, searchArray[i], highlightStartTag, highlightEndTag);
+        }
+
+        if (originalElText != elText) {
+            el.dom.innerHTML = elText;
+            return true;
+        }
+        else {
+            Ext.Msg.alert(Shr.LABEL_Search, Shr.LABEL_SearchText + searchText + Shr.LABEL_WasNotFoundOnThePage);
+            return true;
+        }
+    }
+    else {
+        if (warnOnFailure) {
+            Ext.Msg.alert(Shr.LABEL_Search, Shr.LABEL_SorryForSomeReasonTheTextOfThisPageIsUnavailableSearchingWillNotWorkPleaseTryAgain);
+        }
+        return false;
+    }
+}
+
+/*
+* This is sort of a wrapper function to the doHighlight function.
+* It takes the searchText that you pass, optionally splits it into
+* separate words, and transforms the text on the current web page.
+* Only the "searchText" parameter is required; all other parameters
+* are optional and can be omitted.
+*/
+function clearHighlighting(el) {
+    if (originalElText != null && originalElText != "") {
+        el.dom.innerHTML = originalElText;
+    }
+}
+
+/*
+* This is the function that actually highlights a text string by
+* adding HTML tags before and after all occurrences of the search
+* term. You can pass your own tags if you'd like, or if the
+* highlightStartTag or highlightEndTag parameters are omitted or
+* are empty strings then the default <font> tags will be used.
+*/
+function doHighlight(bodyText, searchTerm, highlightStartTag, highlightEndTag) {
+    // the highlightStartTag and highlightEndTag parameters are optional
+    if ((!highlightStartTag) || (!highlightEndTag)) {
+        highlightStartTag = "<font style='color:blue; background-color:yellow;'>";
+        highlightEndTag = "</font>";
+    }
+
+    // find all occurences of the search term in the given text,
+    // and add some "highlight" tags to them (we're not using a
+    // regular expression search, because we want to filter out
+    // matches that occur within HTML tags and script blocks, so
+    // we have to do a little extra validation)
+    var newText = "";
+    var i = -1;
+    var lcSearchTerm = searchTerm.toLowerCase();
+    var lcBodyText = bodyText.toLowerCase();
+
+    while (bodyText.length > 0) {
+        i = lcBodyText.indexOf(lcSearchTerm, i + 1);
+        if (i < 0) {
+            newText += bodyText;
+            bodyText = "";
+        }
+        else {
+            // skip anything inside an HTML tag
+            if (bodyText.lastIndexOf(">", i) >= bodyText.lastIndexOf("<", i)) {
+                // skip anything inside a <script> block
+                if (lcBodyText.lastIndexOf("/script>", i) >= lcBodyText.lastIndexOf("<script", i)) {
+                    newText += bodyText.substring(0, i) + highlightStartTag + bodyText.substr(i, searchTerm.length) + highlightEndTag;
+                    bodyText = bodyText.substr(i + searchTerm.length);
+                    lcBodyText = bodyText.toLowerCase();
+                    i = -1;
+                }
+            }
+        }
+    }
+
+    return newText;
+}
+
+// retrieve the value of a given form element in the Job Openings module, returning an
+// empty string if the value is null
+function getOpeningsValue(elname, eltype) {
+    var cmp = Ext.getCmp(elname);
+    if (cmp != null && cmp.valueField != null) {
+        return cmp.getValue()[cmp.valueField];
+    }
+
+    var el = Ext.getDom(elname);
+    if (el) {
+        var val;
+
+        if (eltype == 'text') {
+            val = el.value;
+        }
+        else if (eltype == 'check') {
+            if (el.checked) {
+                val = 'true';
+            }
+            else {
+                val = 'false';
+            }
+        }
+
+        if (val != null) {
+            return val;
+        }
+    }
+
+    return '';
+}
+
+COBRAParameters = function () {
+    return {
+
+        _cobraParametersDlg: null,
+        _updateCurrentParametersMessage: Shr.LABEL_WouldYouLikeToCurrentReportParametersWithNewDefaultValues,
+
+        init: function (updateCurrentParametersMessage) {
+            if (this._cobraParametersDlg != null) {
+                return;
+            }
+
+            if (updateCurrentParametersMessage != null) {
+                this._updateCurrentParametersMessage = updateCurrentParametersMessage;
+            }
+
+            Ext.getBody().createChild({
+                tag: 'div',
+                id: 'cobra_parameters',
+                style: 'background-color: white;'
+            });
+
+            // Remember the original __doPostBack function, because when we
+            // load the new ASP.NET page, it'll overwrite it with a new one!
+            if (typeof __doPostBack != 'undefined') {
+                Shr.originalDoPostBackFn = __doPostBack;
+            }
+
+            COBRAParameters._urlParams = 'Source=Panels/Reports/ConfigureCOBRAReportParameters.ascx';
+            Ext.get('cobra_parameters').load({
+                url: 'API/ControlFetcher.aspx?' + COBRAParameters._urlParams,
+                method: 'GET',
+                scripts: true,
+                text: Ext.form.ComboBox.prototype.loadingText,
+                callback: function (el, success, response, options) {
+                    // After the page is loaded, restore the original __doPostBack
+                    // function, so the page and ASP.NET AJAX will function properly.
+                    // We also need to restore the form target for the postbacks to
+                    // the main form on the document, not the form on the picker page.
+                    if (typeof __doPostBack != 'undefined') {
+                        __doPostBack = Shr.originalDoPostBackFn;
+                    }
+                    theForm = document.forms['aspnetForm'];
+                }
+            });
+
+            COBRAParameters._cobraParametersDlg = new Ext.Window({
+                contentEl: 'cobra_parameters',
+                width: 750,
+                height: 500,
+                resizable: false,
+                fixed: true,
+                closable: true,
+                modal: true,
+                title: Shr.LABEL_ConfigureCOBRAReportParameters,
+                autoScroll: true,
+                buttons: [
+                    { text: Shr.LABEL_Save, handler: COBRAParameters.save },
+                    { text: Shr.LABEL_Close, handler: COBRAParameters.close }
+                ],
+                listeners: { 'close': COBRAParameters.close }
+            });
+
+            // Create a mapping so the Enter key fires the update postback.
+            new Ext.KeyMap('cobra_parameters', {
+                //key: Ext.EventObject.ENTER, -- 3.x code
+                key: Ext.event.Event.ENTER,
+                fn: COBRAParameters.save
+            });
+
+            COBRAParameters._cobraParametersDlg.show();
+
+            return false;
+        },
+
+        destroyDialog: function (response) {
+            if (COBRAParameters._cobraParametersDlg) {
+                COBRAParameters._cobraParametersDlg.hide();
+                COBRAParameters._cobraParametersDlg.destroy();
+                COBRAParameters._cobraParametersDlg = null;
+
+                // If user answered yes to prompt to update current parameter values
+                // then we want to cause the page to postback to pick up changes, if they
+                // responded no then we can just let the dialog close.
+                if (response.toLowerCase() == 'yes') {
+                    __doPostBack();
+                }
+            }
+        },
+
+        close: function () {
+            // Prompt user whether or not to update the parameter page with updated values
+            Ext.MessageBox.show({
+                msg: COBRAParameters._updateCurrentParametersMessage,
+                buttons: Ext.Msg.YESNO,
+                fn: COBRAParameters.destroyDialog,
+                icon: Ext.MessageBox.QUESTION
+            });
+        },
+
+        save: function () {
+            // postback pop-up to update values in database
+            COBRAParameters.update('save');
+        },
+
+        update: function (action) {
+
+            //3.x code
+            //var callbackManager = new Ext.UpdateManager('cobra_parameters');
+            //callbackManager.showLoadIndicator = true;
+            //callbackManager.method = 'POST';
+            //callbackManager.timeout = 300;
+
+            var url = 'API/ControlFetcher.aspx?' + COBRAParameters._urlParams;
+            if (action != null) {
+                url += "&Action=" + action;
+            }
+
+            // Pull all the form values in order to pass them as params for the update. This
+            // will cause the UpdateManager to do the update as a POST, rather than a GET,
+            // because it uses the presence of params to do this.
+            //var pickerForm = new Ext.form.Basic("controlForm_Panels_Reports_ConfigureCOBRAReportParameters_ascx");
+            //var params = pickerForm.getValues();
+            var params = getFormValues("controlForm_Panels_Reports_ConfigureCOBRAReportParameters_ascx");
+            Ext.get('cobra_parameters').load({
+                loadMask: true,
+                url: url,
+                params: params,
+                method: 'POST',
+                timeout: 300,
+                scripts: true,
+                callback: function (el, success, response, options) {
+                    // After the page is loaded, restore the original __doPostBack
+                    // function, so the page and ASP.NET AJAX will function properly.
+                    // We also need to restore the form target for the postbacks to
+                    // the main form on the document, not the form on the picker page.
+                    if (typeof __doPostBack != 'undefined') {
+                        __doPostBack = Shr.originalDoPostBackFn;
+                    }
+                    theForm = document.forms['aspnetForm'];
+                }
+            });
+
+            return false;
+        }
+    }
+} ();
+
+RoutingDetails = function () {
+    return {
+        _routingDlg: null,
+        _containerElId: null,
+        _confirmCancelMessage: Shr.LABEL_AreYouSureYouWantToCancelThisRoute,
+
+
+        init: function (routingId, containerElId, confirmCancelMessage) {
+            if (this._routingDlg != null) {
+                return;
+            }
+
+            if (containerElId != null) {
+                this._containerElId = containerElId;
+            }
+
+            if (confirmCancelMessage != null) {
+                this._confirmCancelMessage = confirmCancelMessage;
+            }
+
+            // Remember the original __doPostBack function, because when we
+            // load the new ASP.NET page, it'll overwrite it with a new one!
+            if (typeof __doPostBack != 'undefined') {
+                Shr.originalDoPostBackFn = __doPostBack;
+            }
+
+            RoutingDetails._urlParams = 'source=Controls/RoutingInstanceDetails.ascx&RouteGuid=' + routingId;
+            RoutingDetails._routingDlg = new Ext.Window({
+                layout: 'fit',
+                width: 1000,
+                height: Ext.dom.Element.getViewportHeight() - 75,
+                resizable: false,
+                closable: true,
+                modal: true,
+                title: Shr.LABEL_RoutingDetails,
+                autoScroll: true,
+                buttons: [
+                    { text: Shr.LABEL_FinalProxyApprove, handler: RoutingDetails.approve, hidden: true }, // Defaulting to the longest text to fix resizing in IE.
+                    {text: Shr.LABEL_Deny, handler: RoutingDetails.deny, hidden: true },
+                    { text: Shr.LABEL_DenyResubmit, handler: RoutingDetails.denyresubmit, hidden: true },
+                    { text: Shr.LABEL_CancelRoute, handler: RoutingDetails.cancel, hidden: true },
+                    { text: Shr.LABEL_Edit, handler: RoutingDetails.edit, hidden: true },
+                    { text: Shr.LABEL_PostReply, handler: RoutingDetails.postcomment, hidden: true },
+                    { text: Shr.LABEL_Close, handler: RoutingDetails.close }
+                ],
+                listeners: { 'close': RoutingDetails.close },
+                items: {
+                    autoScroll: true,
+                    loader: {
+                        loadMask: true,
+                        url: 'API/ControlFetcher.aspx?' + RoutingDetails._urlParams,
+                        method: 'GET',
+                        scripts: true,
+                        timeout: 300,
+                        text: Ext.form.ComboBox.prototype.loadingText,
+                        callback: function (el, success, response, options) {
+                            // After the page is loaded, restore the original __doPostBack
+                            // function, so the page and ASP.NET AJAX will function properly.
+                            // We also need to restore the form target for the postbacks to
+                            // the main form on the document, not the form on the picker page.
+                            if (typeof __doPostBack != 'undefined') {
+                                __doPostBack = Shr.originalDoPostBackFn;
+                            }
+                            theForm = document.forms['aspnetForm'];
+                        }
+                    }
+                },
+	            floating: true,
+                fixed: true
+            });
+
+            //SCR 48910 Routing - Hitting enter while typing comments clears data and closes screen - leaving comment here as the reason for this code
+            // is unknown at this time, but appears to correct the scr when taken out and i could not find a scenario that did not let the route work
+            // as expected.
+            //            // Create a mapping so the Enter key fires the update postback.
+            //            new Ext.KeyMap('routing_details', {
+            //                key: Ext.EventObject.ENTER,
+            //                fn: RoutingDetails.close
+            //            });
+            RoutingDetails._routingDlg.show();
+            RoutingDetails._routingDlg.items.items[0].loader.load();
+            return false;
+        },
+
+        close: function () {
+            if (RoutingDetails._routingDlg) {
+                RoutingDetails._routingDlg.hide();
+                RoutingDetails._routingDlg.destroy();
+                RoutingDetails._routingDlg = null;
+
+                // Reload the page to ensure that the open/initiated route modules are
+                // both updated to show current data. This will make sure we don't have
+                // a route showing up in a state that's no longer accurate.
+                // NOTE: Don't use window.location.reload(), as that will re-post form
+                // data, and the browser will prompt the user to confirm.
+                document.location.href = document.location.href;
+            }
+        },
+
+        setCommands: function (isFinal, isProxyAdmin, canApprove, canDeny, canDenyResubmit, canCancel, canEdit, isReviewer, isRecipient, routeStatusCode) {
+            var buttons = RoutingDetails._routingDlg.getDockedItems('toolbar[dock="bottom"]')[0].items.items;
+            //in the error case just show 'cancel' and 'close', but only if they are allowed to cancel it
+            if (routeStatusCode == 'e') {
+                //show no action buttons to start
+                if (canCancel == true) {
+                    buttons[3].show(); //canCancel
+                }
+            }
+            else {
+                if (RoutingDetails._routingDlg != null) {
+                    if (canApprove == true) {
+                        if (isFinal != true && isRecipient == true) {
+                            buttons[0].setText(Shr.LABEL_Approve);
+                        }
+                        else if (isFinal == true && isProxyAdmin == true && !isRecipient) {
+                            buttons[0].setText(Shr.LABEL_FinalProxyApprove);
+                        }
+                        else if (isFinal == true) {
+                            buttons[0].setText(Shr.LABEL_FinalApprove);
+                        }
+                        else if (isProxyAdmin == true && !isRecipient) {
+                            buttons[0].setText(Shr.LABEL_ProxyApprove);
+                        }
+                        buttons[0].show();
+                    }
+                    if (canDeny == true) {
+                        buttons[1].show();
+                    }
+                    if (canDenyResubmit == true) {
+                        buttons[2].show();
+                    }
+                    if (canCancel == true) {
+                        buttons[3].show();
+                    }
+                    if (canEdit == true) {
+                        buttons[4].show();
+                    }
+                    if (isReviewer == true) {
+                        buttons[5].show();
+                    }
+                }
+            }
+        },
+        expandCollapse: function (containers) {
+
+            if (containers !== null && containers.length > 0) {
+                var inExpandMode = false;
+                var collapsibleRows = document.getElementsByClassName('expand');
+                while (collapsibleRows.length > 0) {
+                    //We skip the DIV item which is collapsibleRows[0]
+                    var row = collapsibleRows[1];
+                    //This is the DIV item which will be the final one
+                    if (collapsibleRows.length == 1)
+                    {
+                        break;
+                    }
+                    //Note that after the 'onclick' the collapsibleRows object has a reduced count/length
+                    //because it reflects the actual DOM objects
+                    row.onclick();
+                    inExpandMode = true;
+                }
+                if (inExpandMode == false) {
+                    var collapsibleRows = document.getElementsByClassName('collapse');
+                    while (collapsibleRows.length > 0) {
+                        var row = collapsibleRows[0];
+                        row.onclick();
+                    }
+
+                }
+
+                //now look for details in a grid
+                var collapsibleGridRows = document.getElementsByClassName('Expand');
+                while (collapsibleGridRows.length > 0) {
+                    var row = collapsibleGridRows[0];
+                    row.parentNode.nextSibling.style.display = ''; // this is a TR
+                    row.className = 'Collapse';
+                }
+
+            }
+        },
+
+        approve: function () { RoutingDetails.update('approve'); },
+        deny: function () { RoutingDetails.update('deny'); },
+        denyresubmit: function () { RoutingDetails.update('denyresubmit'); },
+        cancel: function () {
+            Ext.Msg.show({
+                title: Shr.LABEL_Warning,
+                msg: RoutingDetails._confirmCancelMessage,
+                buttons: Ext.Msg.OKCANCEL,
+                icon: Ext.MessageBox.Question,
+                fn: function (buttonName) {
+                    if (buttonName.toLowerCase() == 'ok') {
+                        RoutingDetails.update('cancel');
+                    }
+                }
+            });
+        },
+
+        edit: function () { RoutingDetails.update('edit'); },
+        postcomment: function () { RoutingDetails.update('postcomment'); },
+
+        update: function (action) {
+            var url = 'API/ControlFetcher.aspx?' + RoutingDetails._urlParams;
+            if (action != null) {
+                url += "&Action=" + action;
+            }
+
+            // Pull all the form values in order to pass them as params for the update. This
+            // will cause the UpdateManager to do the update as a POST, rather than a GET,
+            // because it uses the presence of params to do this.
+            var params = getFormValues('controlForm_Controls_RoutingInstanceDetails_ascx');
+
+            var updatePanel = Ext.create('Ext.panel.Panel', {
+                autoScroll: true,
+                loader: {
+                    loadMask: true,
+                    url: url,
+                    methods: 'POST',
+                    ajaxOptions: {
+                        timeout: 300000
+                    },
+                    params: params,
+                    scripts: true,
+                    callback: function (el, success, response, options) {
+                        // After the callback completes, restore the original __doPostBack
+                        // function, so the page and ASP.NET AJAX will function properly.
+                        // We also need to restore the form target for the postbacks to
+                        // the main form on the document, not the form on the picker page.
+                        __doPostBack = Shr.originalDoPostBackFn;
+                        theForm = document.forms['aspnetForm'];
+                    }
+                }
+
+            });
+
+            var panel = RoutingDetails._routingDlg.items.items[0];
+            RoutingDetails._routingDlg.remove(panel, true);
+            RoutingDetails._routingDlg.add(updatePanel);
+            updatePanel.loader.load();
+
+
+            return false;
+        }
+    };
+} ();
+
+
+OESummaryEdit = new function () {
+    return {
+        _gridContainer: null,
+        _postbackControl: null,
+        _selectedBenefitTypeCode: null,
+
+        init: function (gridContainer, postbackControl, selectedBenefitTypeCode) {
+            OESummaryEdit._gridContainer = gridContainer;
+            OESummaryEdit._postbackControl = postbackControl;
+            OESummaryEdit._selectedBenefitTypeCode = selectedBenefitTypeCode;
+        },
+
+        showError: function (message) {
+            Ext.Msg.show({
+                title: Shr.LABEL_Error,
+                msg: message,
+                buttons: Ext.Msg.OK,
+                icon: Ext.MessageBox.ERROR
+            });
+        },
+        showOnlyWarning: function (message) {
+            var config = Ext.decode(message);
+            var inlineData = config.data.split(',');
+            var arrayData = [];
+            for (var i = 0; i < inlineData.length; i++) {
+                arrayData[i] = {name: inlineData[i] }
+            }
+            var warningWindow = Ext.create('Ext.window.Window', {
+                title: Shr.LABEL_Warning,
+                id: 'warningWindow',
+                modal: true,
+                height: 200,
+                width: 400,
+                layout: 'fit',
+                floating: true,
+                fixed: true,
+                items: {
+                    xtype: 'grid',
+                    border: false,
+                    title: config.gridTitle,
+                    columns: [{ dataIndex: 'name', flex: 1}],
+                    store: Ext.create('Ext.data.Store', {
+                        fields: ['name'],
+                        data: arrayData
+                    })
+                },
+                buttons: [{
+                    text: Shr.LABEL_Close,
+                    handler: function () {
+                        var win = Ext.getCmp('warningWindow').close();
+                    }
+                }]
+            }).show();
+
+
+        },
+        showWarning: function (message) {
+            Ext.Msg.show({
+                title: Shr.LABEL_Warning,
+                msg: message,
+                buttons: Ext.Msg.OKCANCEL,
+                icon: Ext.MessageBox.Question,
+                fn: function (buttonName) {
+                    if (buttonName.toLowerCase() == 'ok') {
+                        OESummaryEdit.close();
+                    }
+                }
+            });
+        },
+
+        //in ESS of OE, in Chrome, once the emp changes their enrollment option and clicks
+        // OK to close the dialog, the page throws an ajax update error which chrome seems to
+        // care about.  in this case, we just can tell the dialog to update at a different time
+        close: function (componentId) {
+            /* This code no longer works properly in Ext 6.0 so we moved some logic into OpenEnrollmentSummary.aspx.cs - writeEditEnrollmentCell()
+            if (Ext.isChrome) {
+            dw.closeOnUpdate = 1;
+            } else {
+            dw.close();
+            }
+            */
+        }
+    };
+} ();
+
+OETableDisplay = new function() {
+    return {
+        init: function(elId) {
+            var el = Ext.get(elId);
+            el.select('.expand, .collapse').each(function(btnEl) {
+                btnEl.dom.onclick = function() { OETableDisplay.toggleExpandCollapse(this); };
+                if (btnEl.hasCls('expand')) {
+                    btnEl.getFirstChild().replaceCls('fa-minus-square-o', 'fa-plus-square-o')
+                    OETableDisplay.collapseChildren(btnEl);
+                }
+            });
+        },
+
+        toggleExpandCollapse: function(cell) {
+            var el = Ext.get(cell);
+            if (el.hasCls('expand')) {
+                el.replaceCls('expand', 'collapse');
+                el.getFirstChild().replaceCls('fa-plus-square-o', 'fa-minus-square-o')
+                OETableDisplay.expandChildren(el);
+            } else {
+                el.replaceCls('collapse', 'expand');
+                el.getFirstChild().replaceCls('fa-minus-square-o', 'fa-plus-square-o')
+                OETableDisplay.collapseChildren(el);
+            }
+            MainLayout.updateLayout();
+        },
+
+        collapseChildren: function(clickedEl) {
+            var row = clickedEl.parent();
+            var rowClass = row.dom.attributes['class'].value;
+            var sibling = row.next();
+            while (sibling != null && !sibling.hasCls(rowClass) && !sibling.hasCls('GroupHeader_Windows') && !sibling.hasCls('GroupHeader')) {
+                sibling.setDisplayed('none');
+                sibling = sibling.next();
+            }
+            MainLayout.updateLayout();
+        },
+
+        expandChildren: function(clickedEl) {
+            var row = clickedEl.parent();
+            var rowClass = row.dom.attributes['class'].value;
+            var sibling = row.next();
+            while (sibling != null && !sibling.hasCls(rowClass) && !sibling.hasCls('GroupHeader_Windows')) {
+                sibling.setDisplayed(true);
+                sibling = sibling.next();
+            }
+
+            sibling = row.next();
+            while (sibling != null && !sibling.hasCls(rowClass) && !sibling.hasCls('GroupHeader_Windows')) {
+                var collapseNode = sibling.child('.expand');
+                if (collapseNode != null) {
+                    OETableDisplay.collapseChildren(collapseNode);
+                }
+                sibling = sibling.next();
+            }
+            MainLayout.updateLayout();
+        },
+
+        updateEnrollmentStatus: function (control, enrollmentGuid, fieldName, enrollmentType, enrollmentGroupCode, futureEnrollmentGuid) {
+            Ext.Ajax.request({
+                url: 'API/JsonFetcher.svc/Invoke',
+                params: {
+                    svcprovider: 'JsSetOpenEnrollmentStatus',
+                    enrollmentId: enrollmentGuid,
+                    enrollmentType: enrollmentType,
+                    enrollmentGroupCode: enrollmentGroupCode,
+                    fieldName: fieldName,
+                    value: control.value,
+                    futureEnrollmentId: futureEnrollmentGuid
+                },
+                success: function(response, options) {
+                    var result = Ext.decode(response.responseText);
+                    if (result.success == false) {
+                        Ext.MessageBox.alert(Shr.LABEL_Failed, Shr.LABEL_JsonUpdateFailed);
+                    }
+                },
+                failure: function(response, options) {
+                    Ext.MessageBox.alert(Shr.LABEL_Failed, Shr.LABEL_JsonUpdateFailed);
+                }
+            });
+
+        }
+    };
+} ();
+
+//THE USE OF Shr.modalWindow has been DEPRECATED.  DO NOT USE IT.  Use Shr.WebControls.Dialog instead.
+Shr.modalWindow = new function() {
+    return {
+        _onclosefn: null,
+
+        open: function(url, title, onclosefn, useEntireScreen) {
+            var w = 800;
+            var h = 600;
+            if ((useEntireScreen === null || useEntireScreen === true) && window.screen) { 
+                w = window.screen.availWidth; 
+                h = window.screen.availHeight; 
+            }
+
+            if(Ext.isIE) {
+                Shr.modalWindow._onclosefn = onclosefn;
+                var result = window.showModalDialog(url + '&rnd=' + Math.random(), null, 'dialogWidth:'+w+'px;dialogHeight:'+h+'px;resizable:1');
+                if(Shr.modalWindow._onclosefn != null) {
+                    Shr.modalWindow._onclosefn(result);
+                    Shr.modalWindow._onclosefn = null;
+                }
+            } else if(window.showModalDialog != null) {
+                Shr.modalWindow._onclosefn = onclosefn;
+                var result = window.showModalDialog(url + '&rnd=' + Math.random(), null, 'dialogLeft:0;dialogTop:0;dialogWidth:'+w+';dialogHeight:'+h+';resizable:1');
+                if(Shr.modalWindow._onclosefn != null) {
+                    Shr.modalWindow._onclosefn(result);
+                    Shr.modalWindow._onclosefn = null;
+                }
+            } else {
+                var modalWindow = window.open(url + '&rnd=' + Math.random(), title, 'left=0,top=0,width='+w+',height='+h+',resizable=1,scrollbars=1,dialog=1,modal=1');
+                window.onfocus = function() {
+                    if(modalWindow && !modalWindow.closed) {
+                        modalWindow.focus();
+                    }
+                };
+                modalWindow.onload = function() {
+                    modalWindow.focus();
+                };
+                Shr.modalWindow._onclosefn = onclosefn;
+            }
+        },
+
+        close: function(result) {
+            if(window.opener != null && window.opener.Shr.modalWindow._onclosefn != null) {
+                window.opener.Shr.modalWindow._onclosefn(result);
+                window.opener.Shr.modalWindow._onclosefn = null;
+                window.close();
+            } else {
+                window.returnValue = result;
+                window.close();
+            }
+        }
+    };
+}();
+
+var slideList = function(chkbox, lstElement) {
+    var list = Ext.get(lstElement);
+    var direction = chkbox.checked ? 'up' : 'down';
+
+    if (Ext.isIE7) {
+        switch (direction) {
+            case 'up':
+                if (list.isVisible()) {
+                    list.hide();
+                }
+                break;
+            case 'down':
+                if (!list.isVisible()) {
+                    list.show();
+                }
+                break;
+            default:
+                list.toggle();
+                break
+
+        }
+    }
+    else {
+        switch (direction) {
+            case 'up':
+                if (list.isVisible()) {
+                    list.slideOut('t', {
+                        easing: 'easeOut',
+                        duration: .5,
+                        remove: false,
+                        useDisplay: true
+                    });
+
+                }
+                break;
+            case 'down':
+                if (!list.isVisible()) {
+                    list.slideIn('t', {
+                        easing: 'easeOut',
+                        duration: .5,
+                        callback: function() { Ext.get(lstElement).repaint(); }
+                    });
+                }
+                break;
+            default:
+                list.toggle();
+                break
+
+        }
+    }
+};
+
+
+/**************************************************************************
+* Namspaces
+***************************************************************************/
+Ext.namespace('Shr.task');
+Ext.namespace('Shr.panel');
+
+Shr.EmailTemplate = function() {
+    return {
+        _entityId: null,
+        _pickerEl: null,
+        _pickerDlg: null,
+
+        showFieldPicker: function(target, entityId, showRoutingFields, showOnlyByteFields, isSysRule) {
+            Shr.EmailTemplate._target = Ext.getCmp(target + '_htmlEditor');
+            Shr.EmailTemplate._entityId = entityId;
+            
+            // Check if the tree control has been launched
+            // from the Rules Comparision task instead of 
+            // the Email and Letter Templates task.
+            Shr.EmailTemplate._isSysRule = false;
+            if(isSysRule == 'True'){
+                Shr.EmailTemplate._isSysRule = true;
+            }
+            
+            if (Shr.EmailTemplate._target == null) {
+                Shr.EmailTemplate._textTarget = Ext.get(target);
+            }
+
+            if (Shr.EmailTemplate._target == null && Shr.EmailTemplate._textTarget == null) {
+                return;
+            }
+
+            if (Shr.EmailTemplate._pickerEl == null) {
+                Shr.EmailTemplate._pickerEl = Ext.getBody().createChild({
+                    tag: 'div',
+                    id: 'template_field_picker'
+                });
+            }
+
+            // Remember the original __doPostBack function, because when we
+            // load the new ASP.NET page, it'll overwrite it with a new one!
+            if (typeof __doPostBack != 'undefined') {
+                Shr.originalDoPostBackFn = __doPostBack;
+            }
+
+            Shr.EmailTemplate._pickerEl.load({
+                url: 'API/ControlFetcher.aspx?source=Controls/SelectDataField.ascx&entity=' + entityId 
+                    + '&showroutingfields=' + showRoutingFields
+                    + '&showonlybytefields=' + showOnlyByteFields
+                    + '&showonlyentityfields=' + isSysRule,
+                method: 'GET',
+                scripts: true,
+                text: Ext.form.ComboBox.prototype.loadingText,
+                callback: function(el, success, response, options) {
+                    // After the page is loaded, restore the original __doPostBack
+                    // function, so the page and ASP.NET AJAX will function properly.
+                    // We also need to restore the form target for the postbacks to
+                    // the main form on the document, not the form on the picker page.
+                    if (typeof __doPostBack != 'undefined') {
+                        __doPostBack = Shr.originalDoPostBackFn;
+                    }
+                    theForm = document.forms['aspnetForm'];
+                }
+            });
+
+            Shr.EmailTemplate._pickerDlg = new Ext.Window({
+                contentEl: 'template_field_picker',
+                width: 450,
+                height: 500,
+                resizable: false,
+                closable: true,
+                modal: true,
+                title: Shr.LABEL_SelectTemplateField,
+                autoScroll: true,
+                floating: true,
+                fixed: true,
+                buttons: [
+                    { text: Ext.MessageBox.buttonText.ok, handler: Shr.EmailTemplate.setValue },
+                    { text: Ext.MessageBox.buttonText.cancel, handler: Shr.EmailTemplate.close }
+                ],
+                listeners: { 'close': Shr.EmailTemplate.close }
+            });
+
+            Shr.EmailTemplate._pickerDlg.show();
+        },
+
+        setValue: function() {
+            if (Shr.EmailTemplate._pickerDlg) {
+                var fieldString = '';
+                var fieldcheckboxChecked = []; 
+                
+                Shr.EmailTemplate._pickerEl.select('input[type=checkbox]').each(function(checkboxEl) {                                    
+                    if (checkboxEl.dom.checked == true) {
+                    
+                        fieldcheckboxChecked.push(checkboxEl);
+
+                        // If the tree control has been launched from the
+                        // Rules Comparison task, then return the fields
+                        // string without the brackets "{}"
+                        if(Shr.EmailTemplate._isSysRule == true) {
+                            fieldString += checkboxEl.dom.getAttribute('path');
+                        }
+                        else{                    
+                            fieldString += ' {{';
+                            fieldString += checkboxEl.dom.getAttribute('path');
+                            fieldString += '}}';
+                        }
+                    }
+                });
+
+                //Validate if the user have checked more than one field name, return a warning message
+                if (fieldcheckboxChecked && fieldcheckboxChecked.length > 1) {
+                    Ext.Msg.alert(Shr.LABEL_Warning, 'Please verify, You may select only one field name.');
+                    return;
+                }
+
+                Shr.EmailTemplate._pickerDlg.hide();
+                Shr.EmailTemplate._pickerDlg.destroy();
+                Shr.EmailTemplate._pickerDlg = null;
+                Shr.EmailTemplate._pickerEl = null;
+
+                if (Shr.EmailTemplate._target != null) {
+                    if (!Shr.EmailTemplate._target.activated) {
+                        Shr.EmailTemplate._target.onFirstFocus();
+                    }
+                    Shr.EmailTemplate._target.focus();
+                    Shr.EmailTemplate._target.insertAtCursor(fieldString);
+                } else {
+                    Shr.EmailTemplate._textTarget.dom.value = Shr.EmailTemplate._textTarget.getValue() + ' ' + fieldString;
+                    Shr.EmailTemplate._textTarget.focus();                    
+                }
+
+                if (Shr.EmailTemplate._isSysRule == true) {
+                    Shr.EmailTemplate._textTarget.dom.value = fieldString;
+                    __doPostBack();
+                }
+            }
+        },
+
+        close: function() {
+            if (Shr.EmailTemplate._pickerDlg) {
+                Shr.EmailTemplate._pickerDlg.hide();
+                Shr.EmailTemplate._pickerDlg.destroy();
+                Shr.EmailTemplate._pickerDlg = null;
+                Shr.EmailTemplate._pickerEl = null;
+            }
+        }
+    };
+} ();
+
+Shr.util = new function() {
+    return {
+        javacriptPostBack: function(formName, source, container, action) {
+
+            var params = new Object();
+            params = new Ext.form.Basic(formName).getValues();
+            var mgr = new Ext.UpdateManager(formName);
+            mgr.loadScripts = true;
+            mgr.update('API/ControlFetcher.aspx?Source=' + source, params);
+        }
+    }
+};
+
+Shr.showSearchResults = function(source) {
+    if (source == null) return;
+
+    if (source.value != null && source.value != '') {
+        var control= new Shr.WebControls.Search({ originalSearch: source.value });
+        control.show();
+        control.mask(Shr.LABEL_Loading);
+    } else {
+        Ext.Ajax.request({
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: { svcprovider: 'JsClearUserSearch' }
+        });
+    }
+};
+
+Shr.updateUserLanguage = function (newLanguage) {
+    Ext.Ajax.request({
+        url: 'API/JsonFetcher.svc/Invoke',
+        params: {
+            svcprovider: 'JsSetPreferredLanguage',
+            languageCode: newLanguage
+        },
+        success: function (response, options) {
+            var currentUrl = document.location.href;
+            // If the current url ends in # as the result of a postback,
+            // then we need to strip that off in order for the browser
+            // to actually refresh.
+            if (currentUrl.charAt(currentUrl.length - 1) == '#') {
+                document.location.href = currentUrl.substring(0, currentUrl.length - 1);
+            }
+            else {
+                document.location.href = document.location.href;
+            }
+        }
+    })
+};
+
+Shr.toJavacriptString = function(s) {
+    return s.replace(/'/g, "\'");
+};
+
+// Used to keep track of how long a user has been idle, and to notify a user that 
+// they are about to timeout on the server if they don't take another action.  This
+// will display a popup dialog as the IIS session timeout is about to expire and 
+// indicate to the user that they are about to expire.  The popup will display a count
+// down of seconds before expiration and also a button that will trigger the page to 
+// be reloaded using the current location.
+Shr.TimeoutWarning = function() {
+    return {
+        serverTimeout: null,
+        serverWillTimeoutIn: null,
+        timeoutWarningTitle: '',
+        timeoutWarningMessage: '',
+    
+        updateTimeout: function(config) {
+            Ext.apply(this, config);
+
+            Shr.TimeoutWarning.clearTimeoutWarning();
+            
+            if (Shr.TimeoutWarning.serverWillTimeoutIn != null) {
+                // Set timeout equal to now plus the timeDifference
+                // minus 30 seconds so that the warning appears with
+                // enough time for the user to react and refresh their
+                // session
+                Shr.TimeoutWarning.serverTimeout = setTimeout(Shr.TimeoutWarning.showTimeoutWarning, Shr.TimeoutWarning.serverWillTimeoutIn);
+            }
+        },
+        
+        showTimeoutWarning: function() {
+            Ext.Msg.show({
+                title: Shr.TimeoutWarning.timeoutWarningTitle,
+                msg: Shr.TimeoutWarning.timeoutWarningMessage,
+                buttons: Ext.Msg.OKCANCEL,
+                icon: Ext.Msg.WARNING,
+                fn: function(btn, text) {
+                    if (btn == 'ok') {
+                        __doPostBack();
+                    }
+                }
+            });
+        },
+        
+        clearTimeoutWarning: function() {
+            // If timeout has been specified, clear it
+            if (Shr.TimeoutWarning.serverTimeout != null) {
+                clearTimeout(Shr.TimeoutWarning.serverTimeout);
+            }
+        }
+    }
+} ();
+
+// Need to get list of all components as an array as of
+// Ext 4.0.6 in order to be able to use a loop to
+// destroy those components that should be destroyed
+// and remove them from the panel.
+Shr.destroyPanelComponents = function (panel, removePanel) {
+    var panelContent = Ext.get(panel);
+        
+    if (panelContent != null) {
+        var myCmps = new Array(),
+            gridElArray = new Array(),
+            treeElArray = new Array(),
+            panelElArray = new Array(),
+            htmlElArray = new Array();
+
+        //Destroy grid panels first, this allows the grid to destroy its internal components
+        //such as tableviews, columns, toolbar items and others.
+        //Then destroy the remaining elements, this is due to an incompatibility with IE
+
+        Ext.Array.forEach(Ext.ComponentManager.getAll(), function (cmp) {
+            var cmpEl = cmp.getEl();
+
+            if (cmpEl && cmpEl.dom && cmpEl.up('#' + panelContent.id))
+                if (cmp instanceof Ext.grid.Panel)
+                    gridElArray.push(cmp);                    
+                else if (cmp instanceof Ext.tree.Panel) //The same for a tree panel
+                    treeElArray.push(cmp);
+                else if (cmp instanceof Ext.panel.Panel) //The same for a panel panel - IE 11 issues
+                    panelElArray.push(cmp);
+                else if (cmp instanceof Ext.form.HtmlEditor) //The same HtmlEditor - Microsoft IE 11 & Edge Browser issues
+                    htmlElArray.push(cmp);
+                else
+                    myCmps.push(cmp);
+        });
+
+        Shr.destroyComponentsArray(gridElArray);
+        Shr.destroyComponentsArray(treeElArray);
+        Shr.destroyComponentsArray(panelElArray);
+        Shr.destroyComponentsArray(htmlElArray);
+        Shr.destroyComponentsArray(myCmps);
+
+        if (removePanel) {
+            panelContent.remove();
+        }
+    }
+};
+
+Shr.destroyComponentsArray = function (cmpArray) {
+    while (cmpArray.length > 0) {
+        var myCmp = cmpArray.pop();
+        myCmp.destroy();
+    }
+};
+
+//we want to find the additional component that is created when we create a new LoadMask, in a general manner.
+// the below check looks to see if the component is an ancestor of the load mask and if it's the right component
+// and may need additional tests, but it is only returning the desired component under current test scenarios
+// also, it seems the difference in finding the extra component is due to the element used when creating it. it
+// may be that we are needing to cover the entire application in a mask in ever case, maybe not, and in some cases
+// it may not matter, if so perhaps, we can standardize that and thus standardize the way we are finding the component to destroy.
+Shr.destroyLoadMaskComponents = function (loadMask) {
+    if (loadMask == undefined || loadMask == null) return;
+
+    var myComponentes = Ext.ComponentQuery.query('panel');
+    var cmpLoop = 0;
+
+    myComponentes.forEach(function (item) {
+        var cmpEl = item.getEl();
+        //if (typeof (cmpEl) !== 'undefined' && cmpEl != null && cmpEl.getXType() == "component" && cmpEl.el.contains(loadMask.id)) {
+        if (typeof (cmpEl) !== 'undefined' && cmpEl != null && cmpEl.el != null && cmpEl.el.contains(loadMask.id)) {
+            item.destroy();
+        }
+        else {
+            cmpLoop++;
+        }
+    });
+
+
+
+
+    /*Ext.Array.forEach(Ext.ComponentManager.all.getArray(), function (cmp) {
+        if (cmp.el != undefined && cmp.el != null && cmp.getXType() == "component" && cmp.el.contains(loadMask.id)) {
+            cmp.destroy();
+        }
+    });
+    */
+        
+    loadMask.hide();
+    loadMask.destroy();
+};
+
+
+Shr.getWeatherForecast = function (containerId, controlName, valueControlId, zipCode) {
+
+    if (valueControlId != null && valueControlId != '') {
+        zipCode = Ext.get(valueControlId + '_fieldText').getValue();
+    }
+
+    Shr.Async.update(containerId, controlName, '&weatherRequested=true&zip=' + zipCode, true);
+};
+
+Shr.IgnoreTimeZoneDate = function (serverTimeZoneOffset, dateValue, gmtDateValueIsDaylightSavingTime) {
+    // Create Date object for client's time zone
+    var clientDate = new Date(dateValue);
+    // Take clientDate expressed as the number of milleseconds since 1/1/1970 
+    // for the client machine's local time zone. Then get the timezone offset for the
+    // client machine's local time zone in order to convert the date to UTC (GMT
+    // time zone).  The result of getTimezoneOffset is in minutes, so the value must
+    // be multiplied by 60 and 1000 to convert it to milleseconds.  Combining all of
+    // these values provides a date that represents what clientDate would be if
+    // the local time zone was GMT.
+    var utc = clientDate.getTime() + (clientDate.getTimezoneOffset() * (60 * 1000));
+
+    // If the client date is in DaylightSavingTime and the converted date is NOT in DaylightSavingTime
+    // then we add one to the offset
+    if (isIsDaylightSavingTime(clientDate) && !gmtDateValueIsDaylightSavingTime) {
+        serverTimeZoneOffset = serverTimeZoneOffset + 1;
+    }
+
+    // Return new Date object that expresses that same point in
+    // converted to a specified time zone which is expressed by
+    // Shr.timeOffset and will be a value from -12 to 12 indicating
+    // the number of hours that that time zone is ahead or behind
+    // GMT.  3600000 represents one hour in milleseconds.
+    return new Date(utc + (3600000 * serverTimeZoneOffset));
+}
+
+isIsDaylightSavingTime = function (clientDate) {
+    var jan = new Date(clientDate.getFullYear(), 0, 1).getTimezoneOffset();
+    var jul = new Date(clientDate.getFullYear(), 6, 1).getTimezoneOffset();
+    return Math.min(jan, jul) == clientDate.getTimezoneOffset();
+}

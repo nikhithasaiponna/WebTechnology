@@ -1,0 +1,1490 @@
+/*global Ext */
+
+Ext.state.Manager.setProvider(Ext.create('Ext.state.CookieProvider'));
+
+//Extending Ext Ajax Timeout
+Ext.Ajax.timeout = 6000000;
+
+Ext.define('Ext.data.LocalComboStore', {
+    extend: 'Ext.data.Store',
+
+    codeField: 'Code',
+    descriptionField: 'Description',
+
+    createFilterFn: function (property, value, anyMatch, caseSensitive) {
+        if (Ext.isEmpty(value, false)) {
+            return false;
+        }
+        value = this.data.createValueMatcher(value, anyMatch, caseSensitive);
+        return function (r) {
+            return value.test(r.data[this.codeField]) || value.test(r.data[this.descriptionField]);
+        };
+    }
+});
+
+Ext.override(Ext.dom.Element, {
+    setHtml: function(html, loadScripts, callback) {
+		// If this content is being loaded into an element that is a child of
+		// a form, then we need to remove any form tags and the hidden input
+		// to track viewstate. This is because nesting forms is not valid HTML
+		// and will cause exceptions in IE and mess up the viewstate in FF.
+		if (this.findParent('FORM')) {
+			html = html.replace(/(<div>[^<]*<input.*?__VIEWSTATE.*?>[^<]*<\/div>)/ig, "");
+			html = html.replace(/(<input.*?__EVENTTARGET.*\/>)/ig, "");
+			html = html.replace(/(<input.*?__EVENTARGUMENT.*\/>)/ig, "");
+			html = html.replace(/(<input.*?__VIEWSTATEENCRYPTED.*\/>)/ig, "");
+			html = html.replace(/(?:<form.*?>)/ig, "");
+			html = html.replace(/(?:<\/form>)/ig, "");
+		}
+		
+        return this.callParent([html, loadScripts, callback]);
+    }
+});
+
+Ext.override(Ext.form.HtmlEditor, {
+    insertAtCursor: function (text) {
+        var me = this,
+            win = me.getWin(),
+            doc = me.getDoc(),
+            sel, range, el, frag, node, lastNode, firstNode;
+        if (me.activated) {
+            win.focus();
+            if (win.getSelection) {
+                sel = win.getSelection();
+                if (sel.getRangeAt && sel.rangeCount) {
+                    range = sel.getRangeAt(0);
+                    range.deleteContents();
+                    // Range.createContextualFragment() would be useful here but is
+                    // only relatively recently standardized and is not supported in
+                    // some browsers (IE9, for one)
+                    el = doc.createElement("div");
+                    el.innerHTML = text;
+                    frag = doc.createDocumentFragment();
+                    while ((node = el.firstChild)) {
+                        lastNode = frag.appendChild(node);
+                    }
+                    firstNode = frag.firstChild;
+                    range.insertNode(frag);
+                    // Preserve the selection
+                    if (lastNode) {
+                        range = range.cloneRange();
+                        range.setStartAfter(lastNode);
+                        range.collapse(true);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    }
+                }
+                else {
+                    // if nothing is selected or the selection is lost then add it to the end
+                    el = doc.createElement("div");
+                    el.innerHTML = text;
+                    frag = doc.createDocumentFragment();
+                    while ((node = el.firstChild)) {
+                        lastNode = frag.appendChild(node);
+                    }
+                    doc.body.appendChild(frag);
+                }
+            } else if (doc.selection && sel.type !== 'Control') {
+                sel = doc.selection;
+                range = sel.createRange();
+                range.collapse(true);
+                sel.createRange().pasteHTML(text);
+            } 
+            me.syncValue(); // this needs to be added for HCM tasks
+            me.deferFocus();
+        }
+     }
+});
+
+Ext.override(Ext.Component, {
+    initComponent: function () {
+        this.cleanup();
+        this.callParent();
+    },
+    cleanup: function () {
+        var ctl = Ext.getCmp(this.id);
+        if (ctl) {
+            if (ctl.el == undefined) {
+                ctl.destroy();
+                return;
+            }
+            if (ctl.el === null || ctl.el.dom === null) {
+                Ext.ComponentManager.unregister(ctl);
+            } else {
+                ctl.destroy();
+            }
+
+        }
+    }
+});
+
+//We need to override the code below because when we have a component that has an Ext window (a modal one) that has a grid which has
+//controls with triggers (such as a combobox or numeric control with spinners) the triggers do not fire. 
+Ext.Component.override({
+    toFront: function (preventFocus) {
+        var me = this;
+        if (me.hasModalPopupWithGridWithTriggerFields) {
+            return me;
+        }
+        // ZIndexManager#onCollectionSort will call setActive if this component ends up on the top.
+        // That will focus it if we have been requested to do so.
+        if (me.zIndexManager.bringToFront(me, preventFocus || !me.focusOnToFront)) {
+            if (me.hasListeners.tofront) {
+                me.fireEvent('tofront', me, me.el.getZIndex());
+            }
+        }
+        return me;
+    }
+});
+
+
+/**
+ * Basic status bar component that can be used as the bottom toolbar of any {@link Ext.Panel}.  In addition to
+ * supporting the standard {@link Ext.toolbar.Toolbar} interface for adding buttons, menus and other items, the StatusBar
+ * provides a greedy status element that can be aligned to either side and has convenient methods for setting the
+ * status text and icon.  You can also indicate that something is processing using the {@link #showBusy} method.
+ *
+ *     Ext.create('Ext.Panel', {
+ *         title: 'StatusBar',
+ *         // etc.
+ *         bbar: Ext.create('Ext.ux.StatusBar', {
+ *             id: 'my-status',
+ *      
+ *             // defaults to use when the status is cleared:
+ *             defaultText: 'Default status text',
+ *             defaultIconCls: 'default-icon',
+ *      
+ *             // values to set initially:
+ *             text: 'Ready',
+ *             iconCls: 'ready-icon',
+ *      
+ *             // any standard Toolbar items:
+ *             items: [{
+ *                 text: 'A Button'
+ *             }, '-', 'Plain Text']
+ *         })
+ *     });
+ *
+ *     // Update the status bar later in code:
+ *     var sb = Ext.getCmp('my-status');
+ *     sb.setStatus({
+ *         text: 'OK',
+ *         iconCls: 'ok-icon',
+ *         clear: true // auto-clear after a set interval
+ *     });
+ *
+ *     // Set the status bar to show that something is processing:
+ *     sb.showBusy();
+ *
+ *     // processing....
+ *
+ *     sb.clearStatus(); // once completeed
+ *
+ */
+Ext.define('Ext.ux.statusbar.StatusBar', {
+    extend: 'Ext.toolbar.Toolbar',
+    alternateClassName: 'Ext.ux.StatusBar',
+    alias: 'widget.statusbar',
+    requires: ['Ext.toolbar.TextItem'],
+    /**
+     * @cfg {String} statusAlign
+     * The alignment of the status element within the overall StatusBar layout.  When the StatusBar is rendered,
+     * it creates an internal div containing the status text and icon.  Any additional Toolbar items added in the
+     * StatusBar's {@link #cfg-items} config, or added via {@link #method-add} or any of the supported add* methods, will be
+     * rendered, in added order, to the opposite side.  The status element is greedy, so it will automatically
+     * expand to take up all sapce left over by any other items.  Example usage:
+     *
+     *     // Create a left-aligned status bar containing a button,
+     *     // separator and text item that will be right-aligned (default):
+     *     Ext.create('Ext.Panel', {
+     *         title: 'StatusBar',
+     *         // etc.
+     *         bbar: Ext.create('Ext.ux.statusbar.StatusBar', {
+     *             defaultText: 'Default status text',
+     *             id: 'status-id',
+     *             items: [{
+     *                 text: 'A Button'
+     *             }, '-', 'Plain Text']
+     *         })
+     *     });
+     *
+     *     // By adding the statusAlign config, this will create the
+     *     // exact same toolbar, except the status and toolbar item
+     *     // layout will be reversed from the previous example:
+     *     Ext.create('Ext.Panel', {
+     *         title: 'StatusBar',
+     *         // etc.
+     *         bbar: Ext.create('Ext.ux.statusbar.StatusBar', {
+     *             defaultText: 'Default status text',
+     *             id: 'status-id',
+     *             statusAlign: 'right',
+     *             items: [{
+     *                 text: 'A Button'
+     *             }, '-', 'Plain Text']
+     *         })
+     *     });
+     */
+    /**
+     * @cfg {String} [defaultText='']
+     * The default {@link #text} value.  This will be used anytime the status bar is cleared with the
+     * `useDefaults:true` option.
+     */
+    /**
+     * @cfg {String} [defaultIconCls='']
+     * The default {@link #iconCls} value (see the iconCls docs for additional details about customizing the icon).
+     * This will be used anytime the status bar is cleared with the `useDefaults:true` option.
+     */
+    /**
+     * @cfg {String} text
+     * A string that will be <b>initially</b> set as the status message.  This string
+     * will be set as innerHTML (html tags are accepted) for the toolbar item.
+     * If not specified, the value set for {@link #defaultText} will be used.
+     */
+    /**
+     * @cfg {String} [iconCls='']
+     * @inheritdoc Ext.panel.Header#cfg-iconCls
+     * @localdoc **Note:** This CSS class will be **initially** set as the status bar 
+     * icon.  See also {@link #defaultIconCls} and {@link #busyIconCls}.
+     *
+     * Example usage:
+     *
+     *     // Example CSS rule:
+     *     .x-statusbar .x-status-custom {
+     *         padding-left: 25px;
+     *         background: transparent url(images/custom-icon.gif) no-repeat 3px 2px;
+     *     }
+     *
+     *     // Setting a default icon:
+     *     var sb = Ext.create('Ext.ux.statusbar.StatusBar', {
+     *         defaultIconCls: 'x-status-custom'
+     *     });
+     *
+     *     // Changing the icon:
+     *     sb.setStatus({
+     *         text: 'New status',
+     *         iconCls: 'x-status-custom'
+     *     });
+     */
+
+    /**
+     * @cfg {String} cls
+     * The base class applied to the containing element for this component on render.
+     */
+    cls: 'x-statusbar',
+    /**
+     * @cfg {String} busyIconCls
+     * The default {@link #iconCls} applied when calling {@link #showBusy}.
+     * It can be overridden at any time by passing the `iconCls` argument into {@link #showBusy}.
+     */
+    busyIconCls: 'x-status-busy',
+    /**
+     * @cfg {String} busyText
+     * The default {@link #text} applied when calling {@link #showBusy}.
+     * It can be overridden at any time by passing the `text` argument into {@link #showBusy}.
+     */
+    busyText: 'Loading...',
+    /**
+     * @cfg {Number} autoClear
+     * The number of milliseconds to wait after setting the status via
+     * {@link #setStatus} before automatically clearing the status text and icon.
+     * Note that this only applies when passing the `clear` argument to {@link #setStatus}
+     * since that is the only way to defer clearing the status.  This can
+     * be overridden by specifying a different `wait` value in {@link #setStatus}.
+     * Calls to {@link #clearStatus} always clear the status bar immediately and ignore this value.
+     */
+    autoClear: 5000,
+
+    /**
+     * @cfg {String} emptyText
+     * The text string to use if no text has been set. If there are no other items in
+     * the toolbar using an empty string (`''`) for this value would end up in the toolbar
+     * height collapsing since the empty string will not maintain the toolbar height.
+     * Use `''` if the toolbar should collapse in height vertically when no text is
+     * specified and there are no other items in the toolbar.
+     */
+    emptyText: '&#160;',
+
+    /**
+     * @private
+     */
+    activeThreadId: 0,
+
+    initComponent: function () {
+        var right = this.statusAlign === 'right';
+
+        this.callParent(arguments);
+        this.currIconCls = this.iconCls || this.defaultIconCls;
+        this.statusEl = Ext.create('Ext.toolbar.TextItem', {
+            cls: 'x-status-text ' + (this.currIconCls || ''),
+            text: this.text || this.defaultText || ''
+        });
+
+        if (right) {
+            this.cls += ' x-status-right';
+            this.add('->');
+            this.add(this.statusEl);
+        } else {
+            this.insert(0, this.statusEl);
+            this.insert(1, '->');
+        }
+    },
+
+    /**
+     * Sets the status {@link #text} and/or {@link #iconCls}. Also supports automatically clearing the
+     * status that was set after a specified interval.
+     *
+     * Example usage:
+     *
+     *     // Simple call to update the text
+     *     statusBar.setStatus('New status');
+     *
+     *     // Set the status and icon, auto-clearing with default options:
+     *     statusBar.setStatus({
+     *         text: 'New status',
+     *         iconCls: 'x-status-custom',
+     *         clear: true
+     *     });
+     *
+     *     // Auto-clear with custom options:
+     *     statusBar.setStatus({
+     *         text: 'New status',
+     *         iconCls: 'x-status-custom',
+     *         clear: {
+     *             wait: 8000,
+     *             anim: false,
+     *             useDefaults: false
+     *         }
+     *     });
+     *
+     * @param {Object/String} config A config object specifying what status to set, or a string assumed
+     * to be the status text (and all other options are defaulted as explained below). A config
+     * object containing any or all of the following properties can be passed:
+     *
+     * @param {String} config.text The status text to display.  If not specified, any current
+     * status text will remain unchanged.
+     *
+     * @param {String} config.iconCls The CSS class used to customize the status icon (see
+     * {@link #iconCls} for details). If not specified, any current iconCls will remain unchanged.
+     *
+     * @param {Boolean/Number/Object} config.clear Allows you to set an internal callback that will
+     * automatically clear the status text and iconCls after a specified amount of time has passed. If clear is not
+     * specified, the new status will not be auto-cleared and will stay until updated again or cleared using
+     * {@link #clearStatus}. If `true` is passed, the status will be cleared using {@link #autoClear},
+     * {@link #defaultText} and {@link #defaultIconCls} via a fade out animation. If a numeric value is passed,
+     * it will be used as the callback interval (in milliseconds), overriding the {@link #autoClear} value.
+     * All other options will be defaulted as with the boolean option.  To customize any other options,
+     * you can pass an object in the format:
+     * 
+     * @param {Number} config.clear.wait The number of milliseconds to wait before clearing
+     * (defaults to {@link #autoClear}).
+     * @param {Boolean} config.clear.anim False to clear the status immediately once the callback
+     * executes (defaults to true which fades the status out).
+     * @param {Boolean} config.clear.useDefaults False to completely clear the status text and iconCls
+     * (defaults to true which uses {@link #defaultText} and {@link #defaultIconCls}).
+     *
+     * @return {Ext.ux.statusbar.StatusBar} this
+     */
+    setStatus: function (o) {
+        var me = this;
+
+        o = o || {};
+        Ext.suspendLayouts();
+        if (Ext.isString(o)) {
+            o = { text: o };
+        }
+        if (o.text !== undefined) {
+            me.setText(o.text);
+        }
+        if (o.iconCls !== undefined) {
+            me.setIcon(o.iconCls);
+        }
+
+        if (o.clear) {
+            var c = o.clear,
+                wait = me.autoClear,
+                defaults = { useDefaults: true, anim: true };
+
+            if (Ext.isObject(c)) {
+                c = Ext.applyIf(c, defaults);
+                if (c.wait) {
+                    wait = c.wait;
+                }
+            } else if (Ext.isNumber(c)) {
+                wait = c;
+                c = defaults;
+            } else if (Ext.isBoolean(c)) {
+                c = defaults;
+            }
+
+            c.threadId = this.activeThreadId;
+            Ext.defer(me.clearStatus, wait, me, [c]);
+        }
+        Ext.resumeLayouts(true);
+        return me;
+    },
+
+    /**
+     * Clears the status {@link #text} and {@link #iconCls}. Also supports clearing via an optional fade out animation.
+     *
+     * @param {Object} [config] A config object containing any or all of the following properties.  If this
+     * object is not specified the status will be cleared using the defaults below:
+     * @param {Boolean} config.anim True to clear the status by fading out the status element (defaults
+     * to false which clears immediately).
+     * @param {Boolean} config.useDefaults True to reset the text and icon using {@link #defaultText} and
+     * {@link #defaultIconCls} (defaults to false which sets the text to '' and removes any existing icon class).
+     *
+     * @return {Ext.ux.statusbar.StatusBar} this
+     */
+    clearStatus: function (o) {
+        o = o || {};
+
+        var me = this,
+            statusEl = me.statusEl;
+
+        if (o.threadId && o.threadId !== me.activeThreadId) {
+            // this means the current call was made internally, but a newer
+            // thread has set a message since this call was deferred.  Since
+            // we don't want to overwrite a newer message just ignore.
+            return me;
+        }
+
+        var text = o.useDefaults ? me.defaultText : me.emptyText,
+            iconCls = o.useDefaults ? (me.defaultIconCls ? me.defaultIconCls : '') : '';
+
+        if (o.anim) {
+            // animate the statusEl Ext.Element
+            statusEl.el.puff({
+                remove: false,
+                useDisplay: true,
+                callback: function () {
+                    statusEl.el.show();
+                    me.setStatus({
+                        text: text,
+                        iconCls: iconCls
+                    });
+                }
+            });
+        } else {
+            me.setStatus({
+                text: text,
+                iconCls: iconCls
+            });
+        }
+        return me;
+    },
+
+    /**
+     * Convenience method for setting the status text directly.  For more flexible options see {@link #setStatus}.
+     * @param {String} text (optional) The text to set (defaults to '')
+     * @return {Ext.ux.statusbar.StatusBar} this
+     */
+    setText: function (text) {
+        var me = this;
+        me.activeThreadId++;
+        me.text = text || '';
+        if (me.rendered) {
+            me.statusEl.setText(me.text);
+        }
+        return me;
+    },
+
+    /**
+     * Returns the current status text.
+     * @return {String} The status text
+     */
+    getText: function () {
+        return this.text;
+    },
+
+    /**
+     * Convenience method for setting the status icon directly.  For more flexible options see {@link #setStatus}.
+     * See {@link #iconCls} for complete details about customizing the icon.
+     * @param {String} iconCls (optional) The icon class to set (defaults to '', and any current icon class is removed)
+     * @return {Ext.ux.statusbar.StatusBar} this
+     */
+    setIcon: function (cls) {
+        var me = this;
+
+        me.activeThreadId++;
+        cls = cls || '';
+
+        if (me.rendered) {
+            if (me.currIconCls) {
+                me.statusEl.removeCls(me.currIconCls);
+                me.currIconCls = null;
+            }
+            if (cls.length > 0) {
+                me.statusEl.addCls(cls);
+                me.currIconCls = cls;
+            }
+        } else {
+            me.currIconCls = cls;
+        }
+        return me;
+    },
+
+    /**
+     * Convenience method for setting the status text and icon to special values that are pre-configured to indicate
+     * a "busy" state, usually for loading or processing activities.
+     *
+     * @param {Object/String} config (optional) A config object in the same format supported by {@link #setStatus}, or a
+     * string to use as the status text (in which case all other options for setStatus will be defaulted).  Use the
+     * `text` and/or `iconCls` properties on the config to override the default {@link #busyText}
+     * and {@link #busyIconCls} settings. If the config argument is not specified, {@link #busyText} and
+     * {@link #busyIconCls} will be used in conjunction with all of the default options for {@link #setStatus}.
+     * @return {Ext.ux.statusbar.StatusBar} this
+     */
+    showBusy: function (o) {
+        if (Ext.isString(o)) {
+            o = { text: o };
+        }
+        o = Ext.applyIf(o || {}, {
+            text: this.busyText,
+            iconCls: this.busyIconCls
+        });
+        return this.setStatus(o);
+    }
+});
+
+/*
+**  Override to Ext.Date to allow an one digit representation of a year 
+**  by default only allowed 2 and 4 digits.
+**  e.g.: 1/1/1 to 01 Jan 2001.
+**
+**/
+Ext.override(Ext.Date, {
+    /**
+* @private
+*/
+    parseCodes: {
+        /*
+     * Notes:
+     * g = {Number} calculation group (0 or 1. only group 1 contributes to date calculations.)
+     * c = {String} calculation method (required for group 1. null for group 0. {0} = currentGroup - position in regex result array)
+     * s = {String} regex pattern. all matches are stored in results[], and are accessible by the calculation mapped to 'c'
+     */
+        d: {
+            g: 1,
+            c: "d = parseInt(results[{0}], 10);\n",
+            s: "(3[0-1]|[1-2][0-9]|0[1-9])"
+        },
+        // day of month with leading zeroes (01 - 31)
+        j: {
+            g: 1,
+            c: "d = parseInt(results[{0}], 10);\n",
+            s: "(3[0-1]|[1-2][0-9]|[1-9])"
+        },
+        // day of month without leading zeroes (1 - 31)
+        D: function () {
+            for (var a = [],
+                i = 0; i < 7; a.push(utilDate.getShortDayName(i)), ++i) { }
+            // get localised short day names
+            return {
+                g: 0,
+                c: null,
+                s: "(?:" + a.join("|") + ")"
+            };
+        },
+        l: function () {
+            return {
+                g: 0,
+                c: null,
+                s: "(?:" + utilDate.dayNames.join("|") + ")"
+            };
+        },
+        N: {
+            g: 0,
+            c: null,
+            s: "[1-7]"
+        },
+        // ISO-8601 day number (1 (monday) - 7 (sunday))
+        //<locale type="object" property="parseCodes">
+        S: {
+            g: 0,
+            c: null,
+            s: "(?:st|nd|rd|th)"
+        },
+        //</locale>
+        w: {
+            g: 0,
+            c: null,
+            s: "[0-6]"
+        },
+        // JavaScript day number (0 (sunday) - 6 (saturday))
+        z: {
+            g: 1,
+            c: "z = parseInt(results[{0}], 10);\n",
+            s: "(\\d{1,3})"
+        },
+        // day of the year (0 - 364 (365 in leap years))
+        W: {
+            g: 1,
+            c: "W = parseInt(results[{0}], 10);\n",
+            s: "(\\d{2})"
+        },
+        // ISO-8601 week number (with leading zero)
+        F: function () {
+            return {
+                g: 1,
+                c: "m = parseInt(me.getMonthNumber(results[{0}]), 10);\n",
+                // get localised month number
+                s: "(" + utilDate.monthNames.join("|") + ")"
+            };
+        },
+        M: function () {
+            for (var a = [],
+                i = 0; i < 12; a.push(utilDate.getShortMonthName(i)), ++i) { }
+            // get localised short month names
+            return Ext.applyIf({
+                s: "(" + a.join("|") + ")"
+            }, utilDate.formatCodeToRegex("F"));
+        },
+        m: {
+            g: 1,
+            c: "m = parseInt(results[{0}], 10) - 1;\n",
+            s: "(1[0-2]|0[1-9])"
+        },
+        // month number with leading zeros (01 - 12)
+        n: {
+            g: 1,
+            c: "m = parseInt(results[{0}], 10) - 1;\n",
+            s: "(1[0-2]|[1-9])"
+        },
+        // month number without leading zeros (1 - 12)
+        t: {
+            g: 0,
+            c: null,
+            s: "(?:\\d{2})"
+        },
+        // no. of days in the month (28 - 31)
+        L: {
+            g: 0,
+            c: null,
+            s: "(?:1|0)"
+        },
+        o: {
+            g: 1,
+            c: "y = parseInt(results[{0}], 10);\n",
+            s: "(\\d{4})"
+        },
+        // ISO-8601 year number (with leading zero)
+        Y: {
+            g: 1,
+            c: "y = parseInt(results[{0}], 10);\n",
+            s: "(\\d{4})"
+        },
+        // 4-digit year
+        y: {
+            g: 1,
+            c: "var ty = parseInt(results[{0}], 10);\n" + "y = ty > me.y2kYear ? 1900 + ty : 2000 + ty;\n",
+            // 2-digit year
+            s: "(\\d{1,2})"
+        },
+        /*
+     * In the am/pm parsing routines, we allow both upper and lower case
+     * even though it doesn't exactly match the spec. It gives much more flexibility
+     * in being able to specify case insensitive regexes.
+     */
+        //<locale type="object" property="parseCodes">
+        a: {
+            g: 1,
+            c: "if (/(am)/i.test(results[{0}])) {\n" + "if (!h || h == 12) { h = 0; }\n" + "} else { if (!h || h < 12) { h = (h || 0) + 12; }}",
+            s: "(am|pm|AM|PM)",
+            calcAtEnd: true
+        },
+        //</locale>
+        //<locale type="object" property="parseCodes">
+        A: {
+            g: 1,
+            c: "if (/(am)/i.test(results[{0}])) {\n" + "if (!h || h == 12) { h = 0; }\n" + "} else { if (!h || h < 12) { h = (h || 0) + 12; }}",
+            s: "(AM|PM|am|pm)",
+            calcAtEnd: true
+        },
+        //</locale>
+        g: {
+            g: 1,
+            c: "h = parseInt(results[{0}], 10);\n",
+            s: "(1[0-2]|[0-9])"
+        },
+        //  12-hr format of an hour without leading zeroes (1 - 12)
+        G: {
+            g: 1,
+            c: "h = parseInt(results[{0}], 10);\n",
+            s: "(2[0-3]|1[0-9]|[0-9])"
+        },
+        // 24-hr format of an hour without leading zeroes (0 - 23)
+        h: {
+            g: 1,
+            c: "h = parseInt(results[{0}], 10);\n",
+            s: "(1[0-2]|0[1-9])"
+        },
+        //  12-hr format of an hour with leading zeroes (01 - 12)
+        H: {
+            g: 1,
+            c: "h = parseInt(results[{0}], 10);\n",
+            s: "(2[0-3]|[0-1][0-9])"
+        },
+        //  24-hr format of an hour with leading zeroes (00 - 23)
+        i: {
+            g: 1,
+            c: "i = parseInt(results[{0}], 10);\n",
+            s: "([0-5][0-9])"
+        },
+        // minutes with leading zeros (00 - 59)
+        s: {
+            g: 1,
+            c: "s = parseInt(results[{0}], 10);\n",
+            s: "([0-5][0-9])"
+        },
+        // seconds with leading zeros (00 - 59)
+        u: {
+            g: 1,
+            c: "ms = results[{0}]; ms = parseInt(ms, 10)/Math.pow(10, ms.length - 3);\n",
+            s: "(\\d+)"
+        },
+        // decimal fraction of a second (minimum = 1 digit, maximum = unlimited)
+        O: {
+            g: 1,
+            c: [
+                "o = results[{0}];",
+                "var sn = o.substring(0,1),",
+                // get + / - sign
+                "hr = o.substring(1,3)*1 + Math.floor(o.substring(3,5) / 60),",
+                // get hours (performs minutes-to-hour conversion also, just in case)
+                "mn = o.substring(3,5) % 60;",
+                // get minutes
+                "o = ((-12 <= (hr*60 + mn)/60) && ((hr*60 + mn)/60 <= 14))? (sn + Ext.String.leftPad(hr, 2, '0') + Ext.String.leftPad(mn, 2, '0')) : null;\n"
+            ].// -12hrs <= GMT offset <= 14hrs
+            join("\n"),
+            s: "([+-]\\d{4})"
+        },
+        // GMT offset in hrs and mins
+        P: {
+            g: 1,
+            c: [
+                "o = results[{0}];",
+                "var sn = o.substring(0,1),",
+                // get + / - sign
+                "hr = o.substring(1,3)*1 + Math.floor(o.substring(4,6) / 60),",
+                // get hours (performs minutes-to-hour conversion also, just in case)
+                "mn = o.substring(4,6) % 60;",
+                // get minutes
+                "o = ((-12 <= (hr*60 + mn)/60) && ((hr*60 + mn)/60 <= 14))? (sn + Ext.String.leftPad(hr, 2, '0') + Ext.String.leftPad(mn, 2, '0')) : null;\n"
+            ].// -12hrs <= GMT offset <= 14hrs
+            join("\n"),
+            s: "([+-]\\d{2}:\\d{2})"
+        },
+        // GMT offset in hrs and mins (with colon separator)
+        T: {
+            g: 0,
+            c: null,
+            s: "[A-Z]{1,5}"
+        },
+        // timezone abbrev. may be between 1 - 5 chars
+        Z: {
+            g: 1,
+            c: "zz = results[{0}] * 1;\n" + // -43200 <= UTC offset <= 50400
+            "zz = (-43200 <= zz && zz <= 50400)? zz : null;\n",
+            s: "([+-]?\\d{1,5})"
+        },
+        // leading '+' sign is optional for UTC offset
+        c: function () {
+            var calc = [],
+                arr = [
+                    utilDate.formatCodeToRegex("Y", 1),
+                    // year
+                    utilDate.formatCodeToRegex("m", 2),
+                    // month
+                    utilDate.formatCodeToRegex("d", 3),
+                    // day
+                    utilDate.formatCodeToRegex("H", 4),
+                    // hour
+                    utilDate.formatCodeToRegex("i", 5),
+                    // minute
+                    utilDate.formatCodeToRegex("s", 6),
+                    // second
+                    {
+                        c: "ms = results[7] || '0'; ms = parseInt(ms, 10)/Math.pow(10, ms.length - 3);\n"
+                    },
+                    // decimal fraction of a second (minimum = 1 digit, maximum = unlimited)
+                    {
+                        c: [
+                            // allow either "Z" (i.e. UTC) or "-0530" or "+08:00" (i.e. UTC offset) timezone delimiters. assumes local timezone if no timezone is specified
+                            "if(results[8]) {",
+                            // timezone specified
+                            "if(results[8] == 'Z'){",
+                            "zz = 0;",
+                            // UTC
+                            "}else if (results[8].indexOf(':') > -1){",
+                            utilDate.formatCodeToRegex("P", 8).c,
+                            // timezone offset with colon separator
+                            "}else{",
+                            utilDate.formatCodeToRegex("O", 8).c,
+                            // timezone offset without colon separator
+                            "}",
+                            "}"
+                        ].join('\n')
+                    }
+                ],
+                i, l;
+            for (i = 0, l = arr.length; i < l; ++i) {
+                calc.push(arr[i].c);
+            }
+            return {
+                g: 1,
+                c: calc.join(""),
+                s: [
+                    arr[0].s,
+                    // year (required)
+                    "(?:",
+                    "-",
+                    arr[1].s,
+                    // month (optional)
+                    "(?:",
+                    "-",
+                    arr[2].s,
+                    // day (optional)
+                    "(?:",
+                    "(?:T| )?",
+                    // time delimiter -- either a "T" or a single blank space
+                    arr[3].s,
+                    ":",
+                    arr[4].s,
+                    // hour AND minute, delimited by a single colon (optional). MUST be preceded by either a "T" or a single blank space
+                    "(?::",
+                    arr[5].s,
+                    ")?",
+                    // seconds (optional)
+                    "(?:(?:\\.|,)(\\d+))?",
+                    // decimal fraction of a second (e.g. ",12345" or ".98765") (optional)
+                    "(Z|(?:[-+]\\d{2}(?::)?\\d{2}))?",
+                    // "Z" (UTC) or "-0530" (UTC offset without colon delimiter) or "+08:00" (UTC offset with colon delimiter) (optional)
+                    ")?",
+                    ")?",
+                    ")?"
+                ].join("")
+            };
+        },
+        U: {
+            g: 1,
+            c: "u = parseInt(results[{0}], 10);\n",
+            s: "(-?\\d+)"
+        }
+    }
+});
+
+
+/**
+    To adjust the button position    
+*/
+Ext.override(Ext.grid.RowEditor, {
+
+    afterRender: function () {
+        var me = this,
+            plugin = me.editingPlugin,
+            grid = plugin.grid;
+
+        me.scroller = grid.getScrollable();
+
+        me.callParent(arguments);
+
+        // The scrollingViewEl is the TableView which scrolls 
+        me.scrollingView = grid.lockable ? grid.normalGrid.view : grid.view;
+        me.scrollingViewEl = me.scrollingView.el;
+        me.scroller.on('scroll',
+            function (scroller, x, y) {
+                me.onViewScroll(scroller, x, y);
+                if(me.context != null) me.context.grid.headerCt.setScrollX(me.context.grid.getScrollX());
+            }, me);
+
+        // Prevent from bubbling click events to the grid view 
+        me.mon(me.el, {
+            click: Ext.emptyFn,
+            stopPropagation: true
+        });
+
+        // Ensure that the editor width always matches the total header width 
+        me.mon(grid, 'resize', me.onGridResize, me);
+
+        if (me.lockable) {
+            grid.lockedGrid.view.on('resize', 'onGridResize', me);
+        }
+
+        me.el.swallowEvent([
+            'keypress',
+            'keydown'
+        ]);
+
+        me.mon(plugin.view, {
+            beforerefresh: me.onBeforeViewRefresh,
+            refresh: me.onViewRefresh,
+            itemremove: me.onViewItemRemove,
+            scope: me
+        });
+
+        me.syncAllFieldWidths();
+
+        if (me.floatingButtons) {
+            me.body.dom.setAttribute('aria-owns', me.floatingButtons.id);
+        }
+    },
+    // determines the amount by which the row editor will overflow, and flips the buttons 
+    // to the top of the editor if the required scroll amount is greater than the available 
+    // scroll space. Returns the scrollDelta required to scroll the editor into view after 
+    // adjusting the button position. 
+    syncButtonPosition: function (context) {
+        var me = this,
+            scrollDelta = me.getScrollDelta(),
+            floatingButtons = me.getFloatingButtons(),
+            scrollingView = me.scrollingView,
+            // If this is negative, it means we're not scrolling so lets just ignore it 
+            scrollHeight = Math.max(0, me.scroller.getSize().y - me.scroller.getClientSize().y),
+            overflow = scrollDelta - (scrollHeight - me.scroller.getPosition().y);
+
+        floatingButtons.show();
+
+        // If that's the last visible row, buttons should be at the top regardless of scrolling, 
+        // but not if there is just one row which is both first and last. 
+        if (overflow > 0) {
+            if (!me._buttonsOnTop) {
+                floatingButtons.setButtonPosition('top');
+                me._buttonsOnTop = true;
+                me.layout.setAlign('bottom');
+                me.updateLayout();
+            }
+            scrollDelta = 0;
+        } else if (me._buttonsOnTop !== false) {
+            floatingButtons.setButtonPosition('bottom');
+            me._buttonsOnTop = false;
+            me.layout.setAlign('top');
+            me.updateLayout();
+        }
+            // Ensure button Y position is synced with Editor height even if button 
+            // orientation doesn't change 
+        else {
+            floatingButtons.setButtonPosition(floatingButtons.position);
+        }
+
+        return scrollDelta;
+    },
+});
+
+Ext.grid.RowEditorButtons.override({
+    constructor: function (config) {
+        var me = this,
+            rowEditor = config.rowEditor,
+            cssPrefix = Ext.baseCSSPrefix,
+            plugin = rowEditor.editingPlugin;
+
+        if (rowEditor.saveAndAddBtnText) {        
+            var buttons = [];
+            var saveBtn = {
+                ref: 'shrSaveBtn',
+                itemId: 'update',
+                text: rowEditor.saveBtnText,
+                handler: function (editor, context, eOpts) {
+                    var me = this;
+                    //options 0 = save only, 1 = save and add new, 2 = save, copy and add new record
+                    me.grid.onGridEditorEdit(me, context, 0);
+                },
+                disabled: rowEditor.updateButtonDisabled
+            };
+            var saveAndAddBtn = {
+                ref: 'shrSaveAndAddBtn',
+                text: rowEditor.saveAndAddBtnText,
+                handler: function (editor, context, eOpts) {
+                    var me = this;
+                    //options 0 = save only, 1 = save and add new, 2 = save, copy and add new record
+                    me.grid.onGridEditorEdit(me, context, 1);
+                }
+            };
+            var saveAndCopyBtn = {
+                ref: 'shrSaveAndCopyBtn',
+                text: rowEditor.saveAndCopyBtnText,
+                handler: function (editor, context, eOpts) {
+                    var me = this;
+                    //options 0 = save only, 1 = save and add new, 2 = save, copy and add new record
+                    me.grid.onGridEditorEdit(me, context, 2);
+                }
+            };
+            var cancelButton = {
+                ref: 'shrCancelBtn',
+                text: rowEditor.cancelBtnText,
+                handler: function (editor, context, eOpts){
+                    var me = this;
+                    me.grid.onGridEditorCancel(me);
+                    plugin.cancelEdit();
+                }
+                
+            };
+
+            buttons.push(saveBtn);
+            buttons.push(saveAndAddBtn);
+            if (!rowEditor.clockInClockOut) {
+                buttons.push(saveAndCopyBtn);
+            }
+            buttons.push(cancelButton);
+
+            config = Ext.apply({
+                baseCls: cssPrefix + 'grid-row-editor-buttons',
+                defaults: {
+                    xtype: 'button',
+                    ui: rowEditor.buttonUI,
+                    scope: plugin,
+                    flex: 1,
+                    minWidth: Ext.panel.Panel.prototype.minButtonWidth
+                },
+                items: buttons
+            }, config);
+
+        } else {
+            config = Ext.apply({
+                baseCls: cssPrefix + 'grid-row-editor-buttons',
+                defaults: {
+                    xtype: 'button',
+                    ui: rowEditor.buttonUI,
+                    scope: plugin,
+                    flex: 1,
+                    minWidth: Ext.panel.Panel.prototype.minButtonWidth
+                },
+                items: [
+                    {
+                        cls: cssPrefix + 'row-editor-update-button',
+                        itemId: 'update',
+                        handler: plugin.completeEdit,
+                        text: rowEditor.saveBtnText,
+                        disabled: rowEditor.updateButtonDisabled,
+                        listeners: {
+                            element: 'el',
+                            keydown: me.onUpdateKeyDown,
+                            scope: me
+                        }
+                    },
+                    {
+                        cls: cssPrefix + 'row-editor-cancel-button',
+                        itemId: 'cancel',
+                        handler: plugin.cancelEdit,
+                        text: rowEditor.cancelBtnText,
+                        listeners: {
+                            element: 'el',
+                            keydown: me.onCancelKeyDown,
+                            scope: me
+                        }
+                    }
+                ]
+            }, config);
+        }
+
+        Ext.grid.RowEditorButtons.superclass.constructor.call(this, config);
+        me.addClsWithUI(me.position);
+    }
+});
+
+Ext.override(Ext.dd.DragDropManager, {
+	
+	stopEvent: function(e) {
+	    if (this.stopPropagation) {
+	        e.stopPropagation();
+	    }
+	    // prevent text-selection while dragging items
+	    // see https://www.sencha.com/forum/showthread.php?335100
+	    if (this.preventDefault) {
+	        e.preventDefault();
+	    }
+	}
+});
+
+//Method stays the same only adding id to hidden input tag so Ext.get() is able to find it.
+Ext.define('App.overrides.ComboBox', {
+    override: 'Ext.form.field.ComboBox',
+    setHiddenValue: function (values) {
+        var me = this,
+            name = me.hiddenName,
+            i,
+            dom, childNodes, input, valueCount, childrenCount;
+
+        if (!me.hiddenDataEl || !name) {
+            return;
+        }
+        values = Ext.Array.from(values);
+        dom = me.hiddenDataEl.dom;
+        childNodes = dom.childNodes;
+        input = childNodes[0];
+        valueCount = values.length;
+        childrenCount = childNodes.length;
+
+        if (!input && valueCount > 0) {
+            me.hiddenDataEl.setHtml(Ext.DomHelper.markup({
+                tag: 'input',
+                type: 'hidden',
+                id: name,
+                name: name
+            }));
+            childrenCount = 1;
+            input = dom.firstChild;
+        }
+        while (childrenCount > valueCount) {
+            dom.removeChild(childNodes[0]);
+            --childrenCount;
+        }
+        while (childrenCount < valueCount) {
+            dom.appendChild(input.cloneNode(true));
+            ++childrenCount;
+        }
+        for (i = 0; i < valueCount; i++) {
+            childNodes[i].value = values[i];
+        }
+    },
+});
+
+/*This override is to fix an issue with Firefox when checking checkboxes in a grid (changed tdCls)
+This fix also requires the use of the following CSS:
+.x-gecko .x-selmodel-checkonly .x-grid-checkcolumn {
+    pointer-events: none;
+}
+Note that this code came from 6.2.1 and can be removed once we upgrade (currently on 6.2)
+*/
+Ext.override(Ext.selection.CheckboxModel, {
+        getHeaderConfig: function() {
+        var me = this,
+            showCheck = me.showHeaderCheckbox !== false,
+            htmlEncode = Ext.String.htmlEncode,
+            config;
+        config = {
+            xtype: 'checkcolumn',
+            headerCheckbox: showCheck,
+            isCheckerHd: showCheck,
+            // historically used as a dicriminator property before isCheckColumn
+            ignoreExport: true,
+            text: me.headerText,
+            width: me.headerWidth,
+            sortable: false,
+            draggable: false,
+            resizable: false,
+            hideable: false,
+            menuDisabled: true,
+            checkOnly: me.checkOnly,
+            checkboxAriaRole: 'presentation',
+            // Firefox needs pointer-events: none on the checkbox span with checkOnly: true
+            // to work around focusing issues
+            tdCls: (me.checkOnly ? Ext.baseCSSPrefix + 'selmodel-checkonly ' : '') + me.tdCls,
+            cls: Ext.baseCSSPrefix + 'selmodel-column',
+            editRenderer: me.editRenderer || me.renderEmpty,
+            locked: me.hasLockedHeader(),
+            processEvent: me.processColumnEvent,
+            // It must not attempt to set anything in the records on toggle.
+            // We handle that in onHeaderClick.
+            toggleAll: Ext.emptyFn,
+            // The selection model listens to the navigation model to select/deselect
+            setRecordCheck: Ext.emptyFn,
+            // It uses our isRowSelected to test whether a row is checked
+            isRecordChecked: me.isRowSelected.bind(me)
+        };
+        if (!me.checkOnly) {
+            config.tabIndex = undefined;
+            config.ariaRole = 'presentation';
+            config.focusable = false;
+            config.cellFocusable = false;
+        } else {
+            config.useAriaElements = true;
+            config.ariaLabel = htmlEncode(me.headerAriaLabel);
+            config.headerSelectText = htmlEncode(me.headerSelectText);
+            config.headerDeselectText = htmlEncode(me.headerDeselectText);
+            config.rowSelectText = htmlEncode(me.rowSelectText);
+            config.rowDeselectText = htmlEncode(me.rowDeselectText);
+        }
+        return config;
+    }
+});
+
+/*
+This override is to fix an issue in Query Builder after saving the query.
+ext-all-debug.js:34164 Uncaught TypeError: Cannot read property 'mousedown' of null
+*/
+Ext.override(Ext.event.publisher.Dom, {
+    unsubscribe: function(element, eventName, delegated, capture) {
+        var me = this,
+            captureSubscribers, bubbleSubscribers, subscribers, id;
+        if (delegated && !me.directEvents[eventName]) {
+            captureSubscribers = me.captureSubscribers;
+            bubbleSubscribers = me.bubbleSubscribers;
+            subscribers = capture ? captureSubscribers : bubbleSubscribers;
+            if (subscribers != null && subscribers[eventName]) {
+                --subscribers[eventName];
+            }
+            if (me != null && bubbleSubscribers != null && captureSubscribers != null && !me.handles[eventName] && !bubbleSubscribers[eventName] && !captureSubscribers[eventName]) {
+                // decremented subscribers back to 0 - and the event is not in "handledEvents"
+                // no longer need to listen at the dom level
+                this.removeDelegatedListener(eventName);
+            }
+        } else {
+            subscribers = capture ? me.directCaptureSubscribers : me.directSubscribers;
+            id = element.id;
+            subscribers = subscribers[eventName];
+            if (subscribers[id]) {
+                --subscribers[id];
+            }
+            if (!subscribers[id]) {
+                // no more direct subscribers for this element/id/capture, so we can safely
+                // remove the dom listener
+                delete subscribers[id];
+                me.removeDirectListener(eventName, element, capture);
+            }
+        }
+    },
+});
+
+// Override default sort functions to use localeCompare if available so strings with accents are correctly placed.
+Ext.override(Ext.util.Sorter, {
+    sortFn: function (item1, item2) {
+        var me = this,
+            transform = me._transform,
+            root = me._root,
+            property = me._property,
+            lhs, rhs;
+        if (root) {
+            item1 = item1[root];
+            item2 = item2[root];
+        }
+        lhs = item1[property];
+        rhs = item2[property];
+        if (transform) {
+            lhs = transform(lhs);
+            rhs = transform(rhs);
+        }
+        return (typeof lhs != "undefined" && lhs != null && lhs.localeCompare != null)
+            ? lhs.localeCompare(rhs)
+            : (lhs > rhs) ? 1 : (lhs < rhs ? -1 : 0);
+    }
+});
+Ext.override(Ext.util.Grouper, {
+    sortFn: function (item1, item2) {
+        var me = this,
+            lhs = me._groupFn(item1),
+            rhs = me._groupFn(item2),
+            property = me._sortProperty,
+            // Sorter's sortFn uses "_property"
+            root = me._root,
+            sorterFn = me._sorterFn,
+            transform = me._transform;
+        // Items with the same groupFn result must be equal... otherwise we sort them
+        // by sorterFn or sortProperty.
+        if (lhs === rhs) {
+            return 0;
+        }
+        if (property || sorterFn) {
+            if (sorterFn) {
+                return sorterFn.call(this, item1, item2);
+            }
+            if (root) {
+                item1 = item1[root];
+                item2 = item2[root];
+            }
+            lhs = item1[property];
+            rhs = item2[property];
+            if (transform) {
+                lhs = transform(lhs);
+                rhs = transform(rhs);
+            }
+        }
+        return (typeof lhs != "undefined" && lhs.localeCompare != null)
+            ? lhs.localeCompare(rhs)
+            : (lhs > rhs) ? 1 : (lhs < rhs ? -1 : 0);
+    }
+});
+
+// This override is to save in user preferences the columns' visibility, sequence ans sort order of each Ext Grid.
+Ext.define('Overrides.grid.Panel', {
+    override: 'Ext.grid.Panel',
+    // Allows/Prevents user preferences for an Ext grid
+    allowUserPreferences: true,
+    // Sets an extgrid's id for a group of grids, i.e. Absence Summary
+    gridGroupId: null,
+    // Allows/Prevents showing Delete Grid Preferences menu item
+    hasUserPreferences: false,
+    initComponent: function () {
+        var me = this;
+        me.callParent();
+
+        if (me.allowUserPreferences) {
+            // Get the user's column preferences
+            Ext.Ajax.request({
+                loadMask: true,
+                url: 'API/JsonFetcher.svc/Invoke',
+                async: false,
+                params: {
+                    svcprovider: 'JsExtGridPreferences',
+                    action: 'getPreferences',
+                    gridId: me.gridGroupId == null ? me.id : me.gridGroupId
+                },
+                success: function (response) {
+                    var result = Ext.decode(response.responseText);
+
+                    if (result.success) {
+                        me.setPreferences(me, result.columns, result.sortBy, result.direction);
+                    }
+                }
+            });
+        }
+
+        me.on('afterrender', me.addDeleteGridPreferencesMenu, me);
+    },
+    destroy: function () {
+        var me = this;
+
+        if (me.allowUserPreferences) {
+            me.un('columnschanged', me.handleColumnsChanged, me);
+            me.un('sortchange', me.handleSortChange, me);
+            me.un('afterrender', me.addDeleteGridPreferencesMenu, me);
+        }
+
+        me.callSuper();
+    },
+    handleColumnsChanged: function (ct, eOpts) {
+        var me = this;
+        var columns = [];
+
+        me.getColumns().forEach(function (column) {
+            if (column.dataIndex != null) {
+                columns.push({
+                    dataIndex: column.dataIndex,
+                    hidden: column.hidden
+                });
+            }
+        });
+
+        Ext.Ajax.request({
+            loadMask: true,
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsExtGridPreferences',
+                action: 'setPreferences',
+                gridId: me.gridGroupId == null ? me.id : me.gridGroupId,
+                columns: Ext.util.JSON.encode(columns)
+            },
+            success: function (resp) {
+                var result = Ext.decode(resp.responseText);
+
+                if (result.success) {
+                    me.hasUserPreferences = true;
+                    me.addDeleteGridPreferencesMenu(me);
+
+                    // If this grid is part of a group, we need to update the other grids in that group
+                    if (me.gridGroupId != null) {
+                        var grids = Ext.ComponentQuery.query("[gridGroupId='" + me.gridGroupId + "']");
+                        grids.forEach(function (grid) {
+                            if (me != grid) {
+                                me.setPreferences(grid, columns, null, null);
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    },
+    handleSortChange: function (ct, column, direction, eOpts) {
+        var me = this;
+        Ext.Ajax.request({
+            loadMask: true,
+            url: 'API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsExtGridPreferences',
+                action: 'setPreferences',
+                gridId: me.gridGroupId == null ? me.id : me.gridGroupId,
+                sortBy: column.dataIndex,
+                direction: direction
+            },
+            success: function (resp) {
+                var result = Ext.decode(resp.responseText);
+
+                if (result.success) {
+                    me.hasUserPreferences = true;
+                    me.addDeleteGridPreferencesMenu(me);
+
+                    // If this grid is part of a group, we need to update the other grids in that group
+                    if (me.gridGroupId != null) {
+                        var grids = Ext.ComponentQuery.query("[gridGroupId='" + me.gridGroupId + "']");
+                        grids.forEach(function (grid) {
+                            if (me != grid) {
+                                me.setPreferences(grid, null, column.dataIndex, direction);
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    },
+    handleDeleteGridPreferences: function () {
+        var me = this.up('grid');
+        if (me != null) {
+            Ext.Ajax.request({
+                loadMask: true,
+                url: 'API/JsonFetcher.svc/Invoke',
+                params: {
+                    svcprovider: 'JsExtGridPreferences',
+                    action: 'deletePreferences',
+                    gridId: me.gridGroupId == null ? me.id : me.gridGroupId
+                },
+                success: function (resp) {
+                    var result = Ext.decode(resp.responseText);
+                    if (result.success) {
+                        // refresh page
+                        window.location.href = window.location.href.split('#')[0];
+                    }
+                }
+            });
+        }
+    },
+    addDeleteGridPreferencesMenu: function (grid) {
+        var menu = grid.headerCt.getMenu();
+        if (grid.hasUserPreferences == true && (typeof menu.hasDeleteGridPreferencesMenu == 'undefined' || menu.hasDeleteGridPreferencesMenu == false)) {
+            var menuItem = menu.add({
+                text: Shr.LABEL_ResetToDefaultSettings,
+                iconCls: 'x-fa fa-undo',
+                handler: grid.handleDeleteGridPreferences
+            });
+
+            menu.hasDeleteGridPreferencesMenu = true;
+        }
+    },
+    setPreferences: function (grid, columns, sortBy, direction) {
+        // Remove listeners before setting new settings
+        // to avoid sending them over and over
+        grid.un('columnschanged', grid.handleColumnsChanged, grid);
+        grid.un('sortchange', grid.handleSortChange, grid);
+
+        // Set default column settings
+        if (grid != null && columns != null && columns.length > 0) {
+            var newColumns = [];
+            var originalColumns = grid.getColumns();
+            columns.forEach(function (column) {
+                var originalColumn = null;
+                originalColumns.forEach(function (col) {
+                    if (col.dataIndex == column.dataIndex) {
+                        originalColumn = col.initialConfig;
+                        originalColumn.hidden = column.hidden;
+                    }
+                });
+
+                if (originalColumn != null) {
+                    newColumns.push(originalColumn);
+                }
+            });
+
+            if (newColumns.length > 0) {
+                grid.reconfigure(newColumns);
+                grid.hasUserPreferences = true;
+            }
+        }
+
+        // Set default sort settings
+        if (sortBy != null && direction != null) {
+            grid.store.sort(sortBy, direction);
+            grid.hasUserPreferences = true;
+        }
+
+        // Restore listeners
+        grid.on('columnschanged', grid.handleColumnsChanged, grid);
+        grid.on('sortchange', grid.handleSortChange, grid);
+    }
+});

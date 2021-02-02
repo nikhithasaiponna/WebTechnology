@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CombinationDemo</title>
+    <style>
+         h1
+    {
+        border: 1px solid;
+        background-color: aqua;
+    }
+    .abc
+        {
+            background-color: black;
+            color: blanchedalmond;
+        }
+        .container
+        {
+            border: 2px solid;
+        }
+        .container1
+        {
+            border: 2px solid;
+            padding: 5px;
+            margin: 15px;
+        }
+        /* 
+            Combinators
+
+            1.desendent combinator (space) -> all the childers
+            2.child Combinator (>) -> only direct childrens
+            3.adjecent Sibbling combinator (+) 
+            4.general sibbling combinator (~)
+         */
+         .container  p{
+             color: blueviolet;
+         }
+         .container>p
+         {
+            background-color: orange;
+         }
+         div+h1{
+             font-size: 70px;
+         }
+         .container~p{
+             color:chartreuse;
+         }
+         .container~h1{
+             color: yellow;
+         }
+    
+    </style>
+   
+</head>
+<body>
+    <h1>Combinators Demo</h1>
+
+    <div class="container">
+        <h1 class="abc">this is first h1 tag inside div class=container 1</h1>
+        <p>
+            Lorem ipsum dolor sit amet consectetur, adipisicing elit. Quibusdam distinctio repudiandae facilis, eveniet laudantium at. Accusamus, distinctio. Et ut consectetur repellendus cupiditate sit! Totam dolor tempora consectetur suscipit facere dignissimos.
+            Facilis deserunt soluta, beatae quidem inventore ipsum rem at molestiae eos. Quibusdam nobis, aut minima, accusamus quia illum atque saepe perferendis expedita optio doloribus pariatur id maiores ea porro illo.
+            Minima quisquam atque pariatur officia ratione laborum labore dicta deleniti esse eveniet nostrum quae eaque obcaecati sequi, facere, voluptates molestias non. Aut assumenda nobis, quis soluta nulla voluptatum blanditiis. Aspernatur.
+        </p>
+        <div class="container1">
+            <h1 class="abc">This is h1 tag inside div class=container1 2</h1>
+            <p>
+                Lorem ipsum dolor sit amet consectetur, adipisicing elit. Quibusdam distinctio repudiandae facilis, eveniet laudantium at. Accusamus, distinctio. Et ut consectetur repellendus cupiditate sit! Totam dolor tempora consectetur suscipit facere dignissimos.
+                Facilis deserunt soluta, beatae quidem inventore ipsum rem at molestiae eos. Quibusdam nobis, aut minima, accusamus quia illum atque saepe perferendis expedita optio doloribus pariatur id maiores ea porro illo.
+                Minima quisquam atque pariatur officia ratione laborum labore dicta deleniti esse eveniet nostrum quae eaque obcaecati sequi, facere, voluptates molestias non. Aut assumenda nobis, quis soluta nulla voluptatum blanditiis. Aspernatur.
+            </p>
+        </div>
+        <h1 class="abc">this is last h1 tag inside div class=container 3</h1>
+        <p>
+            Lorem ipsum dolor sit amet consectetur, adipisicing elit. Quibusdam distinctio repudiandae facilis, eveniet laudantium at. Accusamus, distinctio. Et ut consectetur repellendus cupiditate sit! Totam dolor tempora consectetur suscipit facere dignissimos.
+            Facilis deserunt soluta, beatae quidem inventore ipsum rem at molestiae eos. Quibusdam nobis, aut minima, accusamus quia illum atque saepe perferendis expedita optio doloribus pariatur id maiores ea porro illo.
+            Minima quisquam atque pariatur officia ratione laborum labore dicta deleniti esse eveniet nostrum quae eaque obcaecati sequi, facere, voluptates molestias non. Aut assumenda nobis, quis soluta nulla voluptatum blanditiis. Aspernatur.
+        </p>
+    </div>
+
+    <h1>this h1 tag after div</h1>
+
+    <h1>other h1 tag</h1>
+</body>
+</html>

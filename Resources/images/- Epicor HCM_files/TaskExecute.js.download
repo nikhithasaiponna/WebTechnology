@@ -1,0 +1,838 @@
+/// <reference path="vswd-ext_2.2.js" />
+
+function _dom_trackActiveElement(evt) {
+  if (evt && evt.target && (Ext.isIE || Ext.isSafari)) {
+    document.activeElement = evt.target == document ? null : evt.target;
+  }
+}
+function _dom_trackActiveElementLost(evt) {
+    if (Ext.isIE || Ext.isSafari) {
+        document.activeElement = null;
+    }
+}
+if (document.addEventListener) {
+    if (Ext.isIE || Ext.isSafari) {
+        document.addEventListener("focus", _dom_trackActiveElement, true);
+        document.addEventListener("blur", _dom_trackActiveElementLost, true);
+    }
+}
+
+// The TaskExecute js object allows the execute page to perform a number of
+// layout and functional operations for tasks. This includes setting focus
+// to the first page.
+TaskExecute = function () {
+    return {
+        _mask: null,
+        _scrollPos: null,
+        _taskRegionId: null,
+        _taskExecuteEl: null,
+        _collisionActionEl: null,
+        _collisionDialog: null,
+        _taskCleared: false,
+        _currentSectionId: null,
+        _warningActionEl: null,
+        _warningDialog: null,
+        _isReadOnly: "False",
+        _suppressNavigatePostback: false,
+
+        // Runs before the AJAX postback begins and clears the flag for a
+        // pending, delayed postback, so we don't do double postbacks.
+        initializeRequest: function (sender, args) {
+            Shr._pendingPostBackTarget = null;
+        },
+
+        // Runs at the beginning of an ASP.NET AJAX partial postback.
+        beginRequest: function (sender, args) {
+            if (document.activeElement != null) {
+                TaskExecute.focusElement = document.activeElement.id;
+            }
+
+            // Need to remember the scroll position of the div so we can return
+            // to it after the AJAX postback. This is the center panel that is the
+            // parent of the main form.
+            var contentPanel = Ext.getDom('TaskExecute_SectionContent');
+            if (contentPanel != null) {
+                //set hidden field with the scroll positions to remember 
+                TaskExecute._scrollPos = contentPanel.scrollTop;
+            }
+
+            // Unsubscribe the 'bodyresize' event handler for the center content panel
+            // in which the TaskExecute panel is located so that we don't get event
+            // handlers piling up, or getting called during a postback.
+            var centerContentPanel = Ext.getCmp('centerContentPanel');
+            if (centerContentPanel != null) {
+                centerContentPanel.un('bodyresize', TaskExecute.resizeExecuteContent);
+            }
+
+            // When we begin an ASP.NET AJAX postback request, we want to display an Ext
+            // load mask over the whole content panel containing the form, (not just the
+            // update panel) so the form will be entirely disabled, and a "Loading..."
+            // message displays.
+            //////TaskExecute._mask = new Ext.LoadMask(Ext.getBody(), { removeMask: true, targetElementId: Ext.getBody().id });
+            TaskExecute._mask = Ext.getBody().mask(Shr.LABEL_Loading);
+            TaskExecute._mask.show();
+        },
+
+        // Runs at the end of the ASP.NET AJAX postback after data has been received
+        // from the server, but before it has been applied to the document, and before
+        // any embedded or referenced JavaScript is executed.
+        pageLoading: function (sender, args) {
+            var taskRegion = Ext.get(TaskExecute._taskRegionId);
+            if (taskRegion != null) {
+                taskRegion.select('*').each(function (childEl) {
+                    var childCmp = Ext.getCmp(childEl.dom.id)
+                    if (childCmp) {
+                        childCmp.clearListeners();
+                    }
+                    childEl.onclick = null;
+                    childEl.onchange = null;
+                });
+                Shr.destroyPanelComponents('TaskExecute_SectionPanel', false);
+                taskRegion.remove();
+            }
+
+            // Explicitly clear the Ext Element cache to free orphaned DOM nodes.
+            Ext.Element.cache = {};
+        },
+
+        pageLoaded: function (sender, args) {
+            // Finalize the layout of the task section content.
+            TaskExecute.setTaskExecuteBehavior();
+
+            // After an asynch postback, we need to reset the value of the form submit
+            // flag so that the page won't think a navigation is a postback after one
+            // has occurred once, because the flag was previously set. The reason for
+            // this flag is to prompt the user if they try to close the browser or change
+            // the URL without going through a postback.
+            Ext.get('IsFormSubmit').value = null;
+
+            // There's an error in IE8 when using a popup window to edit a code where
+            // the call to hide the mask will cause the browser to crash if called
+            // immediately. Queuing the remove causes the error to not occur.
+            setTimeout(TaskExecute.doDelayedRemoveMask, 1);
+        },
+
+        // Runs at the end of the ASP.NET AJAX asynchronous postback.
+        endRequest: function (sender, args) {
+            // If the current section is the same as the one we were on before (so the
+            // user hasn't moved to another section tab) then restore the scroll pos to
+            // the last one. This must be done asynchronously or it doesn't "stick".
+            if (TaskExecute._isSameSection) {
+                setTimeout(TaskExecute.setScrollPos, 100);
+            }
+        },
+
+        // If there is a mask set, which happens when an ASP.NET AJAX request begins,
+        // then it now needs to be hidden so that the user can access the new screen.
+        doDelayedRemoveMask: function () {
+            Shr.destroyLoadMaskComponents(TaskExecute._mask);
+            TaskExecute._mask = null;
+        },
+
+        suppressNavigatePostback: function () {
+            TaskExecute._suppressNavigatePostback = true;
+        },
+
+        initTaskLaunch: function (taskLaunchRegionId) {
+            TaskExecute.focusElement = Ext.get(taskLaunchRegionId);
+            if (TaskExecute.focusElement == null) return;
+
+            setTimeout(TaskExecute.setFocusElement, 1);
+        },
+
+        // This general method sets up all client-side functionality and layout for the task
+        // execute based on the control ID of the TaskExecute.ascx main region.
+        setTaskExecuteBehavior: function (taskRegionId, isReadOnly) {
+            if (taskRegionId != null) {
+                TaskExecute._taskRegionId = taskRegionId;
+            }
+            if (isReadOnly != null) {
+                TaskExecute._isReadOnly = isReadOnly;
+            }
+
+            // Check if this the same section the user was on before and store the
+            // current section that's selected to track it.
+            TaskExecute._isSameSection = TaskExecute._currentSectionId == Ext.get('TaskExecute_CurrentSectionId').dom.value;
+            TaskExecute._currentSectionId = Ext.get('TaskExecute_CurrentSectionId').dom.value;
+
+            var taskRegion = Ext.get(TaskExecute._taskRegionId);
+            if (taskRegion != null) {
+                var centerContentPanel = Ext.getCmp('main-view-detail-wrap');
+                TaskExecute._taskExecuteEl = Ext.get('TaskExecute_executePanel');
+                if (centerContentPanel != null && TaskExecute._taskExecuteEl != null) {
+                    centerContentPanel.on('bodyresize', TaskExecute.resizeExecuteContent);
+
+                    // Do a deferred resize operation. This must be deferred, and not occur
+                    // immediately, because otherwise the screen isn't loaded yet and it won't
+                    // fill the full region when running Safari.
+                    setTimeout(function () {
+                        var size = centerContentPanel.getSize();
+                        TaskExecute.resizeExecuteContent(centerContentPanel, size.width, size.height,
+                        size.width, size.height);
+                    }, 1);
+                }
+
+                // Because of a bug in IE where it's not possible to apply CSS to disabled
+                // INPUT and TEXTAREA elements (the text color is hardcoded and can't be
+                // set), we need to change these elements to be readonly, not disabled,
+                // and add a CSS class to manually set the display attributes.
+                taskRegion.select('textarea[disabled], input[disabled]').each(function (disabledEl) {
+                    disabledEl.dom.readOnly = true;
+                    disabledEl.dom.disabled = false;
+                    disabledEl.addCls('shr-disabled');
+                });
+
+                // We're initially hiding the section content so that the display doesn't
+                // "jump" while the controls are loading.
+                taskRegion.removeCls("shr-zeroheight");
+
+                // To prevent Firefox errors, I need this to run asynchronously. Otherwise
+                // there's a conflict with the Telerik document manager. There are numerous
+                // posts about FF having problems with the focus() method, and running on a
+                // timer is the standard method for handling it.
+                if (!TaskExecute._isSameSection) TaskExecute.focusElement = null;
+                setTimeout(TaskExecute.setFocusElement, 1);
+                setTimeout(TaskExecute.setFocusElement, 1);
+            }
+            else {
+                TaskExecute._taskCleared = true;
+            }
+
+            // Set an event handler for the window to force a page postback to save
+            // changes the user may have made before navigating away from the page or
+            // performing a postback. This ensures the user won't lose any changes they
+            // have in progress if they navigate away. In order to avoid doing the
+            // this on the event of a form submit, the form fills in the hidden
+            // 'IsFormSubmit' field in the onsubmit event.
+            if (window.onbeforeunload == null) {
+                window.onbeforeunload = function () {
+                    var isFormSubmit = Ext.get('IsFormSubmit').value;
+                    if (!TaskExecute._suppressNavigatePostback
+                        && !TaskExecute._taskCleared
+                        && (TaskExecute._isReadOnly != "True")
+                        && (typeof isFormSubmit == 'undefined' || isFormSubmit == null)) {
+
+                        var is_chrome = navigator.userAgent.toLowerCase().indexOf('chrome') > -1;
+                        var is_safari = navigator.userAgent.toLowerCase().indexOf('safari') > -1;
+
+                        if (is_chrome) {
+                            if (taskRegion.dom != null) {
+                                __doPostBack(taskRegion.dom.id);
+                            }
+                        }
+                        else if (is_safari) {
+                            //Show message box that they might lose data, since safari doesn't handle
+                            //stuff in this event properly
+                            var message = 'Navigating away from the task may cause data to be lost. Are you sure you want to continue?';
+                            if (typeof evt == 'undefined') {
+                                evt = window.event;
+                            }
+                            if (evt) {
+                                evt.returnValue = message;
+                            }
+                            return message;
+                        }
+                        else {
+                            var taskForm = document.forms['aspnetForm'];
+                            taskForm.submit();
+                        }
+
+                        // This code is necessary to slow down the browser momentarily
+                        // to allow the form to submit back to the server before moving
+                        // away from the page, which would cause the submit to not occur.
+                        // This delay is not deterministic, but appears to be sufficient.
+                        var x = 2;
+                        for (var i = 0; i < 100000; i++) {
+                            x = x * x;
+                            var y = Math.sqrt(x);
+                        }
+                    }
+
+                    TaskExecute._suppressNavigatePostback = false;
+                }
+            }
+
+            var is_chrome = navigator.userAgent.toLowerCase().indexOf('chrome') > -1;
+            if (is_chrome && window.onclick == null) {
+                window.onclick = function () {
+                    if (typeof evt == 'undefined') {
+                        evt = window.event;
+                    }
+                    if (evt) {
+                        if (evt.target && evt.target.href && evt.target.href.indexOf("mailto:") != -1) {
+                            TaskExecute.suppressNavigatePostback();
+                        }
+                    }
+                }
+            }
+        },
+
+        setScrollPos: function () {
+            // Reset the scroll position after an Ajax postback using the 
+            // values that were stored in the hidden fields. This has to
+            // happen AFTER the mask is removed, or else scrolling is off.
+            if (TaskExecute._scrollPos != null) {
+                var contentPanel = Ext.getDom('TaskExecute_SectionContent');
+                if (contentPanel != null) {
+                    contentPanel.scrollTop = TaskExecute._scrollPos;
+                }
+            }
+        },
+
+        // Called as an event handler when the container that holds all TaskExecute
+        // content is resized so the task region can resize accordingly so it won't
+        // overflow and scroll all together. This allows scrolling to only apply to
+        // the task data content, not the whole thing.
+        resizeExecuteContent: function (sender, adjWidth, adjHeight, rawWidth, rawHeight) {
+            var panelContainer = Ext.getCmp('main-view-detail-wrap');
+            if (panelContainer)
+                panelContainer.updateLayout();
+
+
+            //            if (TaskExecute._taskExecuteEl != null) {
+            //                TaskExecute._taskExecuteEl.setSize(adjWidth, adjHeight);
+
+            //                var sContent = Ext.get('TaskExecute_SectionContent');
+            //                if (sContent == null) return;
+
+            //                var alignPos = sContent.getAlignToXY(TaskExecute._taskExecuteEl, "tl");
+            //                var actualHeight = adjHeight - (sContent.getTop() - TaskExecute._taskExecuteEl.getTop());
+            //                sContent.setSize(adjWidth, actualHeight);
+            //                if (TaskExecute.resize != null) {
+            //                    TaskExecute.resize.apply(sContent, [sContent, adjWidth, actualHeight]);
+            //                }
+
+            //                // Make sure any child panels within this region are also resized.
+            //                // If this isn't done then nested panels won't always resize because
+            //                // they don't get events from parent DOM elements that aren't Ext
+            //                sContent.select('.x-panel').each(function (panelEl) {
+            //                    var panelCmp = Ext.getCmp(panelEl.dom.id);
+            //                    if (panelCmp == null) return;
+            //                });
+            //            }
+        },
+
+        // Sets the focus to either the recorded ID of the previous focused element or
+        // to the first control in the task region thats of a focusable type. Note that
+        // if the last focused element can't be focused again, then this will clear the
+        // name of that element and call back to itself to focus the first one.
+        setFocusElement: function (focusRegion) {
+            var startElement = null;
+            if (TaskExecute.focusElement != null && TaskExecute.focusElement != '') {
+                startElement = Ext.getDom(TaskExecute.focusElement);
+            }
+
+            // If there isn't a defined focus element, then find the section body container
+            // and use that as the starting point to look for a focusable child element. The
+            // body is used, rather than the task region, because we don't want to focus to
+            // the toolbar or to the list, only to the section data fields.
+            if (startElement == null) {
+                startElement = Ext.get(TaskExecute._taskRegionId).child('.SectionBody');
+                if (startElement != null) {
+                    startElement = startElement.dom;
+                }
+                else {
+                    startElement = Ext.getDom(TaskExecute._taskRegionId);
+                }
+            }
+
+            var target = TaskExecute.getElementToFocus(startElement);
+            if (target != null && typeof target != 'undefined') {
+                try {
+                    target.focus();
+                }
+                catch (ex) {
+                    // In the event of an exception, clear the last focus element ID
+                    // and instead try to find the first valid element in the task
+                    // region and focus to that one instead.
+                    if (TaskExecute.focusElement != null) {
+                        TaskExecute.focusElement = null;
+                    }
+                }
+            }
+        },
+
+        getElementToFocus: function (element) {
+            if (element.focus != null
+            && (element.type != 'hidden')
+            && (!element.disabled)
+            && (!element.readOnly)
+            && (element.tagName == 'SELECT'
+                || element.tagName == 'INPUT'
+                || element.tagName == 'TEXTAREA'
+                || element.tagName == 'A'
+                || element.tagName == 'BUTTON')) {
+
+                return element;
+            }
+            else {
+                for (var i = 0; i < element.childNodes.length; i++) {
+                    var childResult = TaskExecute.getElementToFocus(element.childNodes[i]);
+                    if (childResult != null) {
+                        return childResult;
+                    }
+                }
+            }
+            return null;
+        },
+
+        addHighlight: function (ev, el) {
+            el = Ext.get(el).findParent('.shr-group', null, true);
+            if (el != null)
+                el.radioClass('shr-group-active');
+        },
+
+        showValidationWarning: function () {
+            Ext.getBody().createChild({
+                tag: 'div',
+                id: 'validation_warning',
+                style: 'height: 300px; background-color: white; overflow: auto'
+            });
+
+            // Remember the original __doPostBack function, because when we
+            // load the new ASP.NET page, it'll overwrite it with a new one!
+            if (typeof __doPostBack != 'undefined') {
+                TaskExecute.originalDoPostBackFn = __doPostBack;
+            }
+
+            Ext.get('validation_warning').load({
+                url: 'API/ControlFetcher.aspx?source=controls/TaskValidationWarning.ascx',
+                method: 'GET',
+                scripts: true,
+                disableCaching: true,
+                text: Ext.form.field.ComboBox.prototype.loadingText,
+                callback: function (el, success, response, options) {
+                    // After the page is loaded, restore the original __doPostBack
+                    // function, so the page and ASP.NET AJAX will function properly.
+                    // We also need to restore the form target for the postbacks to
+                    // the main form on the document, not the form on the picker page.
+                    if (typeof __doPostBack != 'undefined') {
+                        __doPostBack = TaskExecute.originalDoPostBackFn;
+                    }
+                    theForm = document.forms['aspnetForm'];
+                }
+            });
+
+            TaskExecute.taskValidationWarning = Ext.create('Ext.window.Window', {
+                contentEl: 'validation_warning',
+                width: 600,
+                resizable: false,
+                closable: false,
+                modal: true,
+                fixed: true,
+                floating: true,
+                title: Shr.LABEL_Warning,
+                autoScroll: true,
+                buttons:
+                [
+                    { text: Ext.MessageBox.buttonText.ok, handler: TaskExecute.closeValidationWarning, action: 'OK' },
+                    { text: Ext.MessageBox.buttonText.cancel, handler: TaskExecute.closeValidationWarning, action: 'Cancel' }
+                ]
+            });
+
+            TaskExecute.taskValidationWarning.show();
+        },
+
+        closeValidationWarning: function (params) {
+            var containerEl = Ext.get('validation_warning');
+            var action = params.getText();
+            var urlParams;
+
+            if (action == 'Cancel') {
+                urlParams = 'Action=ClearWarning';
+            }
+            else {
+                urlParams = 'Action=IgnoreWarning';
+            }
+
+            if (containerEl != null) {
+                // Remember the original __doPostBack function, because when we
+                // load the new ASP.NET page, it'll overwrite it with a new one!
+                if (typeof __doPostBack != 'undefined') {
+                    TaskExecute.originalDoPostBackFn = __doPostBack;
+                }
+
+                var url = 'API/ControlFetcher.aspx?source=controls/TaskValidationWarning.ascx&' + urlParams;
+                containerEl.load({
+                    url: url,
+                    method: 'GET',
+                    scripts: true,
+                    disableCaching: true,
+                    text: Ext.form.field.ComboBox.prototype.loadingText,
+                    callback: function (el, success, response, options) {
+                        // After the callback completes, restore the original __doPostBack
+                        // function, so the page and ASP.NET AJAX will function properly.
+                        // We also need to restore the form target for the postbacks to
+                        // the main form on the document, not the form on the picker page.
+
+                        __doPostBack = TaskExecute.originalDoPostBackFn;
+                        theForm = document.forms['aspnetForm'];
+
+                        if (TaskExecute.taskValidationWarning != null) {
+                            TaskExecute.taskValidationWarning.destroy();
+                        }
+
+                        // execute postback to submit task draft if user clicked
+                        // OK to the warning message.
+                        if (action == 'OK') {
+                            var taskSubmitButton = Ext.get('TaskExecute_TaskSubmitButton');
+                            eval(taskSubmitButton.dom.getAttribute('postbackcommand'));
+                        }
+                    }
+                });
+            }
+        },
+
+        showSummary: function () {
+            Ext.getBody().createChild({
+                tag: 'div',
+                id: 'task_summary'
+            });
+
+            // Remember the original __doPostBack function, because when we
+            // load the new ASP.NET page, it'll overwrite it with a new one!
+            if (typeof __doPostBack != 'undefined') {
+                TaskExecute.originalDoPostBackFn = __doPostBack;
+            }
+
+            Ext.get('task_summary').load({
+                url: 'API/ControlFetcher.aspx?source=controls/TaskSummary.ascx',
+                method: 'GET',
+                scripts: true,
+                disableCaching: true,
+                text: Ext.form.field.ComboBox.prototype.loadingText,
+                callback: function (el, success, response, options) {
+                    // After the page is loaded, restore the original __doPostBack
+                    // function, so the page and ASP.NET AJAX will function properly.
+                    // We also need to restore the form target for the postbacks to
+                    // the main form on the document, not the form on the picker page.
+                    if (typeof __doPostBack != 'undefined') {
+                        __doPostBack = TaskExecute.originalDoPostBackFn;
+                    }
+                    theForm = document.forms['aspnetForm'];
+                }
+            });
+
+            TaskExecute.taskSummaryDialog = Ext.create('Ext.window.Window', {
+                contentEl: 'task_summary',
+                width: 500,
+                height: 500,
+                resizable: true,
+                closable: true,
+                modal: true,
+                title: Shr.LABEL_TaskSummary,
+                autoScroll: true,
+                fixed: true,
+                floating: true,
+                buttons:
+                [
+                    { text: Ext.MessageBox.buttonText.ok, iconCls: 'x-fa fa-check', handler: TaskExecute.closeSummaryBtn, action: 'OK' }
+                ],
+                listeners: { 'close': TaskExecute.closeSummaryBtn }
+            });
+
+            TaskExecute.taskSummaryDialog.show();
+        },
+
+        closeSummaryBtn: function (params) {
+            TaskExecute.closeSummary('action=release');
+        },
+
+        closeSummary: function (params) {
+            var containerEl = Ext.get('task_summary');
+            if (containerEl != null) {
+                // Remember the original __doPostBack function, because when we
+                // load the new ASP.NET page, it'll overwrite it with a new one!
+                if (typeof __doPostBack != 'undefined') {
+                    TaskExecute.originalDoPostBackFn = __doPostBack;
+                }
+
+                var url = 'API/ControlFetcher.aspx?source=controls/TaskSummary.ascx&' + params;
+                containerEl.load({
+                    url: url,
+                    method: 'GET',
+                    scripts: true,
+                    disableCaching: true,
+                    text: Ext.form.field.ComboBox.prototype.loadingText,
+                    callback: function (el, success, response, options) {
+                        // After the callback completes, restore the original __doPostBack
+                        // function, so the page and ASP.NET AJAX will function properly.
+                        // We also need to restore the form target for the postbacks to
+                        // the main form on the document, not the form on the picker page.
+                        __doPostBack = TaskExecute.originalDoPostBackFn;
+                        theForm = document.forms['aspnetForm'];
+
+                        if (TaskExecute.taskSummaryDialog != null) {
+                            TaskExecute.taskSummaryDialog.hide();
+                            //not used in EXT 6.0 TaskExecute.taskSummaryDialog.destroy();
+                            //not used in EXT 6.0 TaskExecute.taskSummaryDialog = null;
+                        }
+                    }
+                });
+            }
+        },
+
+        setCollisionResult: function (result) {
+            TaskExecute._collisionDialog.close();
+            TaskExecute._collisionDialog.destroy();
+            TaskExecute._collisionDialog = null;
+            if ((typeof result.value != 'undefined') && (result.value != null)) {
+                TaskExecute._collisionActionEl.dom.value = result.value.toLowerCase();
+            }
+            else {
+                TaskExecute._collisionActionEl.dom.value = result.text.toLowerCase();
+            }
+            TaskExecute._collisionActionEl.dom.onchange();
+        },
+
+        warnTaskCollision: function (msg, resultElId) {
+            TaskExecute._collisionActionEl = Ext.get(resultElId);
+            TaskExecute._collisionDialog = Ext.create('Ext.window.Window', {
+                title: Shr.LABEL_DraftAlreadyOpen,
+                width: 300,
+                height: 150,
+                modal: true,
+                fixed: true,
+                floating: true,
+                html: '<div style=margin-left:5px;margin-right:5px >' + msg + '</div>',
+                buttons: [
+                    { text: Shr.LABEL_Open, value: 'Open', handler: TaskExecute.setCollisionResult },
+                    { text: Shr.LABEL_Restart, value: 'Restart', handler: TaskExecute.setCollisionResult },
+                    { text: Ext.MessageBox.buttonText.cancel, value: 'Cancel', handler: TaskExecute.setCollisionResult }
+                    ],
+                icon: Ext.MessageBox.Question
+            });
+            TaskExecute._collisionDialog.show();
+        },
+
+        setWarningResult: function (result) {
+            TaskExecute._warningDialog.close();
+            TaskExecute._warningDialog.destroy();
+            TaskExecute._warningDialog = null;
+            TaskExecute._warningActionEl.dom.value = result.text.toLowerCase();
+            TaskExecute._warningActionEl.dom.onchange();
+        },
+
+        warnDraftUserActionRequired: function (msg, resultElId) {
+            TaskExecute._warningActionEl = Ext.get(resultElId);
+            TaskExecute._warningDialog = Ext.create('Ext.window.Window', {
+                title: Shr.LABEL_ActionRequired,
+                width: 450,
+                height: 200,
+                modal: true,
+                fixed: true,
+                floating: true,
+                html: '<div style=margin-left:5px;margin-right:5px >' + msg + '</div>',
+                buttons: [
+                    { text: Shr.LABEL_Continue, handler: TaskExecute.setWarningResult },
+                    { text: Ext.MessageBox.buttonText.cancel, handler: TaskExecute.setWarningResult }
+                ],
+                icon: Ext.MessageBox.Question
+            });
+            TaskExecute._warningDialog.show();
+        },
+
+        showAuditHistory: function (recordGuid) {
+            Ext.create('Shr.WebControls.Dialog', {
+                title: Shr.LABEL_AuditHistory,
+                sourceControl: 'controls/RecordAuditHistory.ascx',
+                urlParams: 'recordid=' + recordGuid,
+                width: 600,
+                height: 400
+            }).show();
+        },
+
+        warnStaleData: function (msg, resultElId) {
+            TaskExecute._collisionActionEl = Ext.get(resultElId);
+            TaskExecute._collisionDialog = Ext.create('Ext.window.Window', {
+                title: Shr.LABEL_StaleData,
+                width: 300,
+                height: 150,
+                modal: true,
+                fixed: true,
+                floating: true,
+                html: '<div style=margin-left:5px;margin-right:5px >' + msg + '</div>',
+                buttons: [
+                    { text: Shr.LABEL_Refresh, handler: TaskExecute.setCollisionResult },
+                    { text: Ext.MessageBox.buttonText.cancel, handler: TaskExecute.setCollisionResult }
+                    ],
+                icon: Ext.MessageBox.Question
+            });
+            TaskExecute._collisionDialog.show();
+        },
+
+        showDraftCSFInfo: function (guid, title) {
+            new Shr.WebControls.Dialog({
+                modal: false,
+                width: 600,
+                height: 400,
+                resizable: true,
+                title: title,
+                sourceControl: 'controls/ViewDraftCSFInfo.ascx',
+                urlParams: 'guid=' + guid
+            }).show();
+        },
+
+        showTaskOverview: function (taskId) {
+            Ext.create('Shr.WebControls.Dialog', {
+                height: 'max',
+                modal: true,
+                width: 700,
+                resizable: false,
+                sourceControl: 'TaskEditor/TaskOverview.ascx',
+                urlParams: 'taskid=' + taskId,
+                destroyContentOnClose: false
+            }).show();
+        },
+
+        showDataDictionary: function (taskId) {
+            new Shr.WebControls.Dialog({
+                height: 'max',
+                modal: true,
+                width: 850,
+                resizable: false,
+                sourceControl: 'panels/TaskDataDictionary.ascx',
+                urlParams: 'TaskId=' + taskId
+            }).show();
+        },
+
+        copyTaskWizardLauncher: function (taskId) {
+            var params = 'width=' + screen.width;
+            params += ', height=' + screen.height;
+            params += ', top=0, left=0';
+
+            newwin = window.open("TaskEditor.aspx?autolaunch=CopyTaskWizardLauncher&taskId=" + taskId, 'TaskEditorCopy', params);
+            if (window.focus) { newwin.focus() }
+            return false;
+        }, 
+
+        editTaskWizardLauncher: function (taskId) {
+            var params = 'width=' + screen.width;
+            params += ', height=' + screen.height;
+            params += ', top=0, left=0';
+
+            newwin = window.open("TaskEditor.aspx?autolaunch=EditTaskWizardLauncher&taskId=" + taskId, 'TaskEditorEdit', params);
+            if (window.focus) { newwin.focus() }
+            return false;
+        }
+    };
+} ();
+
+/**************************************************************************
+* Global interfaces
+***************************************************************************/
+Ext.namespace('Shr.task');
+
+/**************************************************************************
+*  Urls for requests
+***************************************************************************/
+Shr.task.JsonUrl = {
+    prControlFetcherUrl: 'API/ControlFetcher.aspx?Source=Controls/PerformanceReview/',
+    baseJsonFetcherUrl: 'API/JsonFetcher.svc/Invoke'
+};
+/**************************************************************************
+* Shr.task.Gui for commonly used functions
+***************************************************************************/
+Shr.task.Gui = function(config) {
+    Ext.apply(this, config);
+    Shr.task.Gui.superclass.constructor.call(this);
+    this.addEvents('ajaxRequestSuccess');
+}
+
+Ext.define('Shr.task.Gui', {
+    extend: 'Ext.util.Observable',
+    draft: null,
+    loadingText: 'Loading',
+    baseControlFetcherUrl: 'API/ControlFetcher.aspx?Source=Controls/',
+    baseJsonFetcherUrl: 'API/JsonFetcher.svc/Invoke',
+
+    postLoad: function (controlName, params, contentPanel, callback) {
+        var me = this;
+
+        var cmp = Ext.getCmp(contentPanel);
+        cmp.loader =
+        {
+        loadMask: true,
+        url: this.baseControlFetcherUrl + controlName,
+        params: params,
+        scripts: true
+        };
+
+        cmp.getLoader().load();
+    },
+    post: function (controlName, params, callback) {
+        params.draft = this.draft;
+        Ext.Ajax.request({
+            loadMask: true,
+            url: this.baseControlFetcherUrl + controlName,
+            params: params,
+            text: this.loadingText,
+            success: callback
+        });
+    },
+    sendJsonRequest: function (params) {
+        var obj = this;
+        Ext.Ajax.request({
+            loadMask: true,
+            url: this.baseJsonFetcherUrl,
+            params: params,
+            success: function (resp) {
+                var messages = Ext.decode(resp.responseText).messages;
+                var displayMessage = Shr.LABEL_Messages + ": <br /><ul>";
+                Ext.each(messages, function (op) {
+                    if (op.name === null || op.name.length === 0) {
+                        displayMessage += '<li style="padding:5px 2px 2.5px 2px">' + op.message + '</li>';
+                    } else {
+                        displayMessage += '<li style="padding:5px 2px 2.5px 2px">' + op.name + ': ' + op.message + '</li>';
+                    }
+                });
+                displayMessage += '</ul>';
+                Ext.Msg.show({
+                    title: Shr.LABEL_Message,
+                    msg: displayMessage,
+                    width: 400,
+                    buttons: Ext.Msg.OK,
+                    icon: Ext.MessageBox.INFO,
+                    fn: function (btn) {
+                        obj.fireEvent('ajaxRequestSuccess', this);
+                        obj.purgeListeners('ajaxRequestSuccess');
+                    }
+                });
+            }
+        });
+    },
+    closeDlg: function (dlgId, gridPanel) {
+
+        var dlg = Ext.getCmp(dlgId);
+        if (dlg !== null) {
+            dlg.close();
+            dlg.destroy();
+        }
+
+        if (gridPanel !== null) {
+            this.refreshGrid(gridPanel);
+        }
+    },
+    showWarning: function (message) {
+        Ext.Msg.show({
+            title: Shr.LABEL_Warning,
+            msg: message,
+            buttons: Ext.Msg.OK,
+            icon: Ext.MessageBox.WARNING
+        });
+    },
+    refreshGrid: function (gridPanel) {
+        if (gridPanel) {
+            var gp = Ext.getCmp(gridPanel)
+            if (gp != null) {
+                gp.getStore().reload();
+            }
+        }
+    },
+    renderStatus: function (recordState) {
+        if (!recordState) {
+            return '<img src="Scripts/WebControls/images/icon_warning.gif">';
+        }
+        return '<img src="Scripts/WebControls/images/spacer.gif">';
+    }
+});

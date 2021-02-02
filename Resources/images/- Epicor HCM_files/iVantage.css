@@ -1,0 +1,2808 @@
+BODY
+{
+    margin: 0;
+    padding: 0;
+    border: 0px none;
+}
+
+TABLE.shr-page-table
+{
+    width: 100%;
+    border-collapse: inherit;
+    border-spacing: 10px;
+}
+
+/****************************************************
+* The TEXTAREA and INPUT elements don't inherit font
+* from parent controls, so must be set explicitly.
+****************************************************/
+.shr-field TEXTAREA
+{    
+	white-space: pre-wrap;
+}
+
+INPUT[readonly].x-form-text
+{
+    background-color: #ccc;
+    background-image: none;
+}
+
+.shr-field INPUT[type=checkbox]
+{
+    margin-left: 10px;
+}
+
+.shr-grid .shr-field
+{
+    font-size: Small;
+}
+
+/* Need to change */
+.shr-grid .red
+{
+    font-size: Small;
+    color: red;
+}
+
+.shr-grid .yellow
+{
+    font-size: Small;
+    color: #FFCC33;
+}
+
+.shr-grid .green
+{
+    font-size: Small;
+    color: green;
+}
+
+.gray
+{
+    font-size: Small;
+    color: slategray;
+}
+
+/* End Need to change */
+/******************************************
+* Fix for Telerik RadTabStrip for IE6. The
+* default CSS for it has _height:1%
+******************************************/
+BODY .tabstrip
+{
+    _height: auto;
+    font-size: medium;
+    border-bottom: solid 1px black;
+}
+
+BODY .RadGrid_Windows
+{
+    font-size: medium;
+}
+
+BODY .MasterTable_Windows
+{
+    font-size: medium;
+}
+
+
+
+/**************************************************
+Overrides for Ext styles. Allows for setting fonts
+***************************************************/
+
+.x-form-element
+{
+    padding-left: 0px;
+    position: relative;
+}
+.x-window-body-override ul, .x-window-body-override ol
+{
+    list-style-type: square;
+    list-style-position: outside;
+    margin: 12px;
+}
+
+.x-window-body-override li
+{
+    margin: 12px;
+}
+
+.x-window-body-override p
+{
+    margin: 6px 0px 6px 0px;
+}
+
+.x-window-body-override strong
+{
+    font-weight: bold;
+}
+
+.x-layout-panel
+{
+    border: 0px none !important;
+}
+
+.x-date-inner
+{
+    font-size: medium;
+}
+
+.x-tip .x-tip-mc
+{
+    font-size: medium;
+}
+.x-tip .x-tip-header-text
+{
+    font-size: medium;
+}
+
+.x-menu-list-item
+{
+    font-size: small;
+}
+
+.x-boundlist-item
+{
+    font-size: small;
+}
+
+.x-panel-header
+{
+    font-size: medium;
+}
+
+.x-panel-tl .x-panel-header
+{
+    font-size: medium;
+}
+
+.x-panel-mc
+{
+    font-size: medium;
+}
+
+.x-window-tl .x-window-header
+{
+    font-size: medium;
+}
+
+.x-window-mc
+{
+    font-size: medium;
+}
+
+.x-window-dlg
+{
+    font-size: medium;
+}
+
+.ext-mb-content 
+{
+    overflow:visible;
+}
+
+.ext-el-mask-msg
+{
+    font-size: medium;
+}
+
+.x-box-mc
+{
+    font-size: medium;
+}
+
+.x-tab-strip-text
+{
+    font-size: medium;
+}
+
+.x-form-trigger-wrap .x-form-add-trigger
+{
+    background-image: url(../images/add-trigger.gif);
+}
+
+.x-tool-spellcheck
+{
+    background-image: url(../Images/SpellCheck.gif) !important;
+}
+
+.x-tool-excel 
+{
+	background-image: url(../images/excel.gif);
+}
+
+.x-tool-print-query
+{
+	background-image: url(../images/print-small.gif);
+}
+
+
+/*********************************************************************************
+* Toolbar button icon images
+*********************************************************************************/
+
+.x-toolbar-btn-add
+{
+	background-image: url(../images/menu/add.gif);
+}
+
+.x-toolbar-btn-add-people
+{
+	background-image: url(../images/addpeople.gif);
+}
+
+.x-toolbar-btn-delete
+{
+	background-image: url(../images/menu/delete.gif);
+}
+
+.x-toolbar-btn-edit
+{
+	background-image: url(../images/menu/edit.gif);
+}
+
+.x-toolbar-btn-excel
+{
+	background-image: url(../images/excel.gif);
+}
+
+.x-toolbar-btn-exit
+{
+	background-image: url(../images/taskeditor/exit.gif);
+}
+
+.x-toolbar-btn-file
+{
+	background-image: url(../images/file.gif);
+}
+
+.x-toolbar-btn-folder
+{
+	background-image: url(../images/taskeditor/tablist.gif);
+}
+
+.x-toolbar-btn-person
+{
+	background-image: url(../images/person.gif);
+}
+
+.x-toolbar-btn-print
+{
+	background-image: url(../images/print-small.gif);
+}
+
+.x-toolbar-btn-redo
+{
+	background-image: url(../images/redo.gif);
+}
+
+.x-toolbar-btn-save
+{
+	background-image: url(../images/menu/save.gif);
+}
+
+.x-toolbar-btn-security
+{
+	background-image: url(../images/security.gif);
+}
+
+.x-toolbar-btn-task
+{
+	background-image: url(../images/taskeditor/task.gif);
+}
+
+.x-toolbar-btn-task-copy
+{
+	background-image: url(../images/taskeditor/taskcopy.gif);
+}
+
+.x-toolbar-btn-undo
+{
+	background-image: url(../images/undo.png);
+}
+
+.x-toolbar-btn-update-status
+{
+	background-image: url(../images/SendUpdate.gif);
+}
+
+.x-toolbar-btn-refresh
+{
+	background-image: url(../images/Refresh.png);
+}
+
+.x-btn 
+{
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+/*********************************************************************************
+* Highlight Ext buttons when focused, same style as when mouse over. Necessary
+* because we don't use the Ext form CSS class, which their styles are based on.
+*********************************************************************************/
+.x-btn-focus .x-btn-tl{
+	background-position: -6px 0;
+}
+
+.x-btn-focus .x-btn-tr{
+	background-position: -9px 0;
+}
+
+.x-btn-focus .x-btn-tc{
+	background-position: 0 -9px;
+}
+
+.x-btn-focus .x-btn-ml{
+	background-position: -6px -24px;
+}
+
+.x-btn-focus .x-btn-mr{
+	background-position: -9px -24px;
+}
+
+.x-btn-focus .x-btn-mc{
+	background-position: 0 -2168px;
+}
+
+.x-btn-focus .x-btn-bl{
+	background-position: -6px -3px;
+}
+
+.x-btn-focus .x-btn-br{
+	background-position: -9px -3px;
+}
+
+.x-btn-focus .x-btn-bc{
+	background-position: 0 -18px;
+}
+
+/*********************************************************************************
+	To fix a problem in IE (http://rowanw.com/bugs/overflow_relative.htm), all
+	divs and spans need to be set to have relative position and hidden overflow.
+	This is a quite odd thing, but appears not to cause any major side-effects,
+	and resolves a number of problems that Ext has.
+*********************************************************************************/
+/*  This causes issues with mobile using Ext 6.0 so we remove it
+div, span 
+{
+    position: relative;
+    overflow: hidden;
+}
+*/
+#HeaderPanel
+{
+    background: white;
+}
+
+#ContentPanel
+{
+    position: static;
+    overflow: visible;
+}
+
+div.PanelContent
+{
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+button.default
+{
+    font-weight: bold;
+}
+div.clear
+{
+    clear: both;
+}
+
+.floatcontainer:after
+{
+    content: ".";
+    display: block;
+    height: 0;
+    font-size: 0;
+    clear: both;
+    visibility: hidden;
+}
+.floatcontainer
+{
+    display: inline-block;
+}
+/* Hides from IE Mac \*/
+* html .floatcontainer
+{
+    height: 1%;
+}
+.floatcontainer
+{
+    display: block;
+}
+/* End Hack */
+
+a:active
+{
+    outline: none;
+}
+
+INPUT.empty
+{
+    color: #808080 !important;
+}
+.Loading
+{
+    border: 1px solid white;
+    padding: 5px;
+    font-weight: bold;
+	font-size: small;
+}
+
+.shr-zeroheight
+{
+    height: 0px;
+    border: none;
+}
+
+.shr-displaynone
+{
+    display: none;
+}
+
+.shr-login-panel
+{
+    padding: 8px 8px 0px 8px;
+    border-right: solid 2px black;
+}
+
+.shr-login-panel-default
+{
+    background-color: #dfe8f6;
+}
+
+.shr-login-accesswarning
+{
+    font-style: italic;
+    font-size: smaller;
+    padding-left: 5px;
+    padding-top: 50px;
+    padding-bottom: 10px;
+    clear: left;
+}
+.shr-login-change
+{
+    float: right;
+    padding-top: 20px;
+    font-size: smaller;
+}
+
+.shr-login-field INPUT
+{
+    width: 160px;
+}
+
+.shr-login-error
+{
+    margin-left: 10px;
+    padding-left: 20px;
+    padding-bottom: 15px;
+    background-image: url(Images/icon_warning.gif);
+    background-repeat: no-repeat;
+    color: Red;
+    font-size: small;
+    float: left;
+}
+
+.shr-login-error-noimage
+{
+    margin-left: 10px;
+    padding-left: 20px;
+    background-repeat: no-repeat;
+    color: Red;
+    font-size: small;
+}
+
+.shr-past-due
+{
+    background-repeat: no-repeat;
+    color: Red;
+    font-size: small;
+}
+
+.shr-usgovtrights
+{
+    vertical-align: middle;
+    text-align: center;
+    padding: 3px;
+}
+
+.shr-poweredby
+{
+    vertical-align: middle;
+    text-align: center;
+    float:right !important;
+    padding: 3px;
+}
+
+.UserControl
+{
+    padding: 10px 15px 0px 15px;
+}
+
+.CollapseExpandButton
+{
+    cursor: hand;
+    cursor: pointer;
+}
+
+.CollapseExpandAllButton
+{
+    padding: 3px;
+    margin-right: 15px;
+    float: right;
+    font-weight: bold;
+	font-size: small;
+    color: #336699;
+    display: block;
+    text-align: right;
+    text-decoration: underline;
+    white-space: nowrap;
+    cursor: hand;
+    cursor: pointer;
+}
+
+.RoutingCollapseExpand
+{
+    font-weight: bold;
+	font-size: small;
+    color: #336699;
+    margin-right: 10px;
+    text-align: right;
+    text-decoration: underline;
+    margin-left: 10px;
+    white-space: nowrap;
+    cursor: hand;
+    cursor: pointer;
+}
+
+.shr-routing-details .shr-field
+{
+    font-size: small;
+}
+
+.shr-routingdata .changed-record .sectionheading
+{
+    color: Blue;
+}
+
+.shr-routingdata .unmodified-record .sectionheading
+{
+    color: Black;
+}
+
+.shr-routingdata .data-header
+{
+    font-weight: bold;
+}
+
+.shr-routingdata .alt-row
+{
+    background: #EEEEEE;
+}
+
+.shr-routingdata .field-label
+{
+    padding-left: 10px;
+    width: 25%;
+    background: #DDDDDD;
+    border-bottom: solid 1px silver;
+    border-right: solid 1px silver;
+}
+
+.shr-routingdata .field-label, .shr-routingdata .field-value
+{
+    font-size: small;
+}
+
+.shr-routingdata .modified-field, .shr-routingdata .modified-field a
+{
+    color: Red;
+    font-weight: bold;
+}
+
+.QuickLinkGroup
+{
+    cursor: pointer;
+}
+
+.IsExpanded.QuickLinkGroup
+{
+    background-image: url(images/MenuGroupCollapse.gif);
+    background-repeat: no-repeat;
+    background-position: 4px 4px;
+}
+.IsCollapsed.QuickLinkGroup
+{
+    background-image: url(images/MenuGroupExpand.gif);
+    background-repeat: no-repeat;
+    background-position: 4px 4px;
+}
+
+.MenuGroup .QuickLinkGroupName A
+{
+    padding: 0px 3px 0px 3px;
+}
+
+.IsExpanded .CollapseExpandButton
+{
+    background-image: url(images/MenuGroupCollapse.gif);
+}
+.IsCollapsed .CollapseExpandButton
+{
+    background-image: url(images/MenuGroupExpand.gif);
+}
+
+.IsExpanded .CollapseExpandButton, .IsCollapsed .CollapseExpandButton
+{
+    background-repeat: no-repeat;
+    background-position: 5px 5px;
+    padding: 0 0 2px 20px;
+}
+
+.WhenCollapsed
+{
+    display: none;
+}
+.IsCollapsed .WhenCollapsed
+{
+    display: block;
+}
+.IsCollapsed span.WhenCollapsed
+{
+    display: inline;
+}
+.IsCollapsed .WhenExpanded
+{
+    display: none;
+}
+
+.HeaderPanel
+{
+    font-weight: bold;
+	font-size: medium;
+    overflow: hidden;
+}
+
+.HeaderPanelTop
+{
+    width: 100%;
+    text-align: right;
+    font-size: x-large;
+    font-weight: normal;
+    height: 63px;
+    overflow: visible;
+}
+.HeaderCompanyLogo
+{
+    float: left;
+}
+
+.CrumbLinks
+{
+    width: 100%;
+    background: url(images/module_banner.jpg) repeat;
+    color: White;
+    padding: 0px 10px 2px 10px;
+    font-size: larger;
+    font-weight: bold;
+}
+
+.CrumbLinks A
+{
+    font-size: large;
+    font-weight: normal;
+    color: White;
+}
+
+.FooterPanel
+{
+    font-size: small;
+    font-style: normal;
+    text-decoration: none;
+    vertical-align: text-bottom;
+    border-top: 2px solid #003263;
+    background: url(images/module_banner.jpg) repeat;
+    color: White;
+    padding: 2px 5px 2px 5px;
+}
+
+/* Begin Footer Control */
+.footerLeft
+{
+    float: left;
+}
+.footerRight
+{
+    float: right;
+}
+/* End Footer Control */
+
+.MyOpenTasks
+{
+}
+
+.MyOpenTasks A
+{
+    display: block;
+    font-size: small;
+    text-decoration: none;
+    color: Black;
+    padding: 3px 0px 0px 3px;
+    overflow-x: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis-word;
+}
+
+.SectionBody
+{
+    background: #f6f6f6;
+    padding: 10px 10px 0px 10px;
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+.SectionBody br
+{
+    clear: both;
+    height: 1px;
+}
+.shr-floatleft
+{
+    float: left;
+}
+
+.shr-floatright
+{
+    float: right;
+}
+
+.SectionHeader .DisplayMode
+{
+    float: right;
+}
+
+.shr-page-header .shr-field
+{
+    padding-bottom: 0px;
+}
+
+.draggableModule
+{
+    padding: 1px;
+}
+
+.PayStubSection
+{
+    padding-bottom: 50px;
+    border: solid 3px lightblue;
+    margin-bottom: 10px;
+    margin-right: 10px;
+}
+
+.PayStubItem
+{
+    width: 250px;
+    background-color: lightgrey;
+    border: solid 1px black;
+    margin-left: 10px;
+    margin-bottom: 10px;
+    padding: 1px;
+}
+
+.MenuGroup
+{
+    margin-left: 13px;
+}
+.MenuGroup UL
+{
+    margin-left: 10px;
+}
+
+.MenuGroupName
+{
+    font-weight: normal;
+	font-size: medium;
+    color: #15428b;
+    padding: 3px;
+}
+
+.MenuGroup A
+{
+    display: block;
+    font-size: small;
+    text-decoration: none;
+    color: Black;
+    padding: 2px 0px 2px 25px;
+    overflow-x: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis-word;
+    border: 1px solid transparent;
+}
+
+.MenuGroup A:hover
+{
+    color: #003366;
+    border: 1px solid #ddd;
+    background: #efefef url(ext/ext-6.0.0/classic/theme-classic/resources/images/grid/row-over.gif) repeat-x left top;
+}
+
+.QuickLinkImage
+{
+    width: 16px;
+    height: 20px;
+    padding-top: 2px;
+    cursor: pointer;
+}
+
+.MenuGroup.TopLevelMenuItem
+{
+    padding-top: 5px;
+    padding-bottom: 12px;
+}
+
+.TopLevelMenuText
+{
+    font: bold 14px/15px tahoma, arial, verdana, sans-serif;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    vertical-align: middle;
+    border: #d3e5ff 1px solid;
+    border-bottom: none;
+    background-color: #f6f6f6;
+}
+
+.TopLevelMenuText .CollapseExpandButton
+{
+    background-position: 5px 3px;
+}
+
+.SectionHeaderGroup
+{
+    line-height: 25px;
+    font-size: 16px;
+}
+
+.IsCollapsed
+{
+    margin-bottom: 0px;
+    margin-top: 0px;
+}
+
+.shr-print
+{
+    padding: 7px;
+    overflow: visible;
+}
+
+.shr-print-section
+{
+    border: 1px solid silver;
+    margin-bottom: 20px;
+}
+
+.shr-print-head
+{
+    background: #B0B0B0;
+    font-size: medium;
+    padding: 2px;
+    font-weight: bold;
+    margin-top: 20px;
+}
+
+.shr-print-subhead
+{
+    background: #DDDDDD;
+    font-size: smaller;
+    padding: 2px;
+}
+
+.shr-print-data
+{
+    vertical-align: top;
+    font-size: smaller;
+    padding: 1px 5px 1px 5px;
+}
+
+.modified-field
+{
+    text-decoration: underline;
+}
+
+.shr-print-data LI
+{
+    list-style-type: disc;
+    margin-left: 15px;
+    display: list-item;
+}
+
+.shr-print-section TD
+{
+    border-right: 1px solid silver;
+    border-bottom: 1px solid silver;
+}
+
+.shr-print-subhead TD, shr-print-data TD
+{
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.shr-print-row0
+{
+    background: #FFFFFF;
+}
+.shr-print-row1
+{
+    background: #EEEEEE;
+}
+
+.shr-print-subsection
+{
+    padding-left: 60px;
+}
+
+.SectionBody .shr-position-after
+{
+    padding-top: 12px;
+    min-height: 0px;
+}
+
+.SectionBody .shr-position-bottom
+{
+    padding-top: 20px;
+}
+
+.SectionBody .shr-no-padding-right
+{
+    padding-right: 0px;
+}
+
+.GridDataTable .x-form-fieldcontainer,
+.GridDataTable .x-form-fieldcontainer .x-box-inner,
+.GridDataTable .x-form-fieldcontainer .x-box-inner .x-box-target,
+.GridDataTable .x-field
+{
+    width: 100% !important;
+}
+
+.x-grid-item-focused .x-grid-cell-inner:before {     
+    border: none; 
+}
+
+.Panel
+{
+    padding: 5px 10px 0px 10px;
+}
+
+.TaskExecuteHeader
+{
+    width: 100%;
+    text-align: right;
+}
+
+.TaskExecuteHeader INPUT
+{
+    font-size: medium;
+    font-weight: bold;
+    background-color: White;
+    border: none;
+    cursor: pointer;
+    color: Blue;
+    text-align: left;
+}
+.TaskExecuteHeader INPUT.default
+{
+    font-weight: bold;
+    margin-left: 30px;
+}
+
+.TaskExecutionError
+{
+    padding: 3px 5px 3px 20px;
+    background: white url(images/icon_info.gif) no-repeat 2px 0px;
+    font-size: small;
+    margin: 5px 1px 1px 1px;
+    color: #204060;
+}
+
+.shr-cmd-info
+{
+    white-space: nowrap;
+    float: left;
+    cursor: pointer;
+    font-weight: bold;
+	font-size: small;
+    text-decoration: underline;
+    color: Blue;
+    padding: 2px 0 2px 20px;
+    font-weight: bold;
+    background: url(Images/icon_info.gif) no-repeat left center;
+}
+
+.shr-field-btn
+{
+    margin-top: 20px;
+}
+
+.shr-btn-ok
+{
+    background-image: url(../Images/Accept.png) !important;
+}
+
+.shr-btn-excel
+{
+    background-image: url(../Images/excel.gif) !important;
+}
+
+.shr-btn-check
+{
+    background-image: url(../Images/checkmark.gif) !important;
+}
+
+.shr-btn-calculator
+{
+    background-image: url(../Images/Calculator.gif) !important;
+}
+
+.shr-btn-cancel
+{
+    background-image: url(../Images/Stop.png) !important;
+}
+
+.shr-btn-add
+{
+    background-image: url(../Images/Add.gif) !important;
+}
+
+.shr-btn-viewdoc
+{
+    background-image: url(../Images/Documents_small.gif) !important;
+}
+
+.shr-btn-people
+{
+    background-image: url(../Images/PersonInformation.gif) !important;
+}
+
+.shr-btn-dependents
+{
+    background-image: url(../Images/Dependents.gif) !important;
+}
+
+.shr-btn-waiveallbenefits
+{
+    background-image: url(../Images/upload.png) !important;
+}
+
+.shr-btn-question
+{
+    background-image: url(../Images/FAQ_16.gif) !important;
+}
+
+.shr-btn-sendemail
+{
+    background-image: url(../Images/SendEmail.gif) !important;
+}
+
+.shr-command
+{
+    white-space: nowrap;
+    padding: 2px 20px 2px 0;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.shr-command-wrap 
+{
+    white-space: normal;
+    padding: 2px 20px 2px 0;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.TaskSubmit, .shr-cmd-ok, .shr-cmd-save
+{
+    white-space: nowrap;
+    padding: 2px 0 2px 20px;
+    font-weight: bold;
+    background: url(../Images/Accept.png) no-repeat left center;
+}
+
+.TaskDiscard, .shr-cmd-close, .shr-cmd-cancel
+{
+    white-space: nowrap;
+    padding: 2px 10px 2px 20px;
+    font-weight: bold;
+    background: url(../Images/Stop.png) no-repeat left center;
+    margin-left: 12px;
+}
+
+.shr-cmd-add
+{
+    white-space: nowrap;
+    padding: 2px 0 2px 20px;
+    font-weight: bold;
+}
+
+.shr-btn-logoff
+{
+    background-image: url(../Images/security.gif) !important;
+}
+
+.shr-btn-help
+{
+    background-image: url(../Images/help.gif) !important;
+}
+
+.shr-btn-refresh
+{
+    background-image: url(../Images/Refresh.png) !important;
+}
+
+.shr-btn-spell
+{
+    background-image: url(../Images/SpellCheck.gif) !important;
+}
+
+.shr-btn-email
+{
+    background-image: url(../Images/SendEmail.gif) !important;
+}
+
+.shr-cmd-undo
+{
+    white-space: nowrap;
+    padding: 2px 0 2px 20px;
+    font-weight: bold;
+    background: url(../Images/Undo.png) no-repeat left center;
+}
+
+.TaskLetter
+{
+    padding-left: 20px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-weight: bold;
+    background: url(../Images/WriteLetter.gif) no-repeat left center;
+    margin-left: 12px;
+}
+
+.EmailCommand
+{
+    padding-left: 20px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-weight: bold;
+    background: url(../Images/SendMail.gif) no-repeat left center;
+    margin-left: 12px;
+}
+
+.shr-btn-sendmail
+{
+    background-image: url(../Images/SendMail.gif) !important;
+}
+
+.PersonContextExisting,
+.CodeContextExisting
+{
+    padding-top: 20px;
+    padding-bottom: 10px;
+    font-weight: bold;
+    clear: both;
+}
+
+/* Picker Dialog styles */
+.DialogButton
+{
+    font-size: 70%;
+    width: 90px;
+}
+.DialogBody
+{
+    background-color: white;
+    height: 100%;
+    width: 100%;
+}
+.DialogLabel
+{
+    padding-left: 5px;
+    color: #336699;
+    font-size: small;
+}
+
+#PickerForm A
+{
+    text-decoration: none;
+    color: black;
+    cursor: pointer;
+}
+#PickerForm A:hover
+{
+    color: blue;
+}
+
+TABLE.SSGroup
+{
+    border: 0px;
+    margin-bottom: 0px;
+}
+
+.SSGroup TD.shr-group-contents
+{
+    border: 0px;
+}
+
+.SSGroup TD.shr-group-header-text, .SSGroup TD.shr-group-header-image, .SSGroup TD.shr-group-header-link, .SSGroup TD.shr-group-header-left, .SSGroup TD.shr-group-header-right
+{
+    height: 20px;
+    color: #000000;
+    background: #D2E0F2;
+    font-weight: bold;
+	font-size: small;
+}
+
+.SelfServiceDataSection
+{
+    width: 100%;
+}
+
+.SelfServiceDataLabel
+{
+    color: #000000;
+    font-weight: bold;
+    padding-right: 10px;
+    width: 25%;
+    font-size: small;
+    vertical-align: top;
+}
+
+.SelfServiceDataValue
+{
+    color: #000000;
+    font-size: small;
+    vertical-align: top;
+}
+
+.SelfServiceDataValue ol
+{
+    list-style:decimal;
+    padding: 0 0 0 15px;
+}
+
+.SelfServiceDataValue ul
+{
+    list-style:disc;
+    padding: 0 0 0 15px;
+}
+
+.SelfServiceRepeatingItemData
+{
+    color: #000000;
+    font-weight: bold;
+	font-size: small;
+}
+
+.RateCalculationsTable
+{
+    color: #336699;
+    font-size: smaller;
+}
+
+.PhoneDirectoryCommand
+{
+    padding: 0px 5px 0px 5px;
+}
+
+.shr-todo-title
+{
+}
+
+.shr-todo-noBorder .x-panel-body-default-framed {
+    border: 0px;
+}
+
+.shr-todo-step {
+    cursor: default;
+    padding: 2px;
+    border: solid 1px transparent;
+}
+
+.shr-todo-step-completed
+{
+    font-style:italic;
+    color: Gray;
+    cursor: default;
+}
+
+.shr-todo-step-overdue
+{
+    color: Red;
+    font-weight:bold;
+}
+
+.shr-todo-step-check
+{
+    float:left;
+    width:20px;
+    padding-top:1px;
+    padding-left: 5px;
+}
+
+.shr-todo-step-icon
+{
+    float:left;
+    width:16px;
+    height:16px;
+    padding-right:4px;
+}
+
+.shr-pointer-cursor {
+    cursor: pointer;
+}
+
+.shr-todo-step-name {
+    float: left;
+    width: 55%;
+    overflow: hidden;
+    font-size: small;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shr-todo-step-date
+{
+    float:left;
+    width:92px;
+    overflow:hidden;
+    text-align:right;
+    padding-left:10px;
+    font-size: small;
+    cursor: default;
+}
+
+.shr-todo-step-name-text {
+    float: left;
+    width: 57%;
+    overflow: hidden;
+    font-size: small;
+    cursor: default;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shr-todo-step-text
+{
+    cursor: default;
+    padding: 2px;
+    border: solid 1px transparent;
+}
+
+.shr-todo-step-mailappt
+{
+    cursor: pointer;
+    float:left;
+    width:16px;
+    margin: 0px 1px 0px 5px;
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+@media print
+{
+    .noprint
+    {
+        display: none;
+    }
+    div, span
+    {
+        overflow: visible;
+    }
+}
+
+.shr-task-nextpage
+{
+    float: right;
+    height: 16px;
+    width: 16px;
+    padding: 10px;
+    font-weight: bold;
+    background-image: url(../Images/Next.png);
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+
+.shr-tasksummary-nextstep
+{
+    background: url(images/bullet.gif) no-repeat 10px 6px;
+    margin-top: 5px;
+    margin-left: 5px;
+    padding-left: 25px;
+    display: block;
+}
+
+/* Open Enrollment styles */
+.OpenEnrollmentSummary
+{
+}
+
+.OEBenefitPlanType
+{
+    font-size: large;
+    font-weight: bold;
+    padding-left: 6px;
+    padding-top: 10px;
+    display: block;
+    width: 100%;
+}
+
+.OEDifferenceRow .shr-field
+{
+    border-top: solid 1px black;
+}
+
+.OEDifferenceRow .shr-field.OENoBorder
+{
+    border-top: none;
+}
+
+.OEEditWarning
+{
+    color: Red;
+    margin-left: 10px;
+    width: 500px;
+}
+.OEDetailComments
+{
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+.ColumnAlignCenter
+{
+    text-align: center;
+}
+
+.RecordAuditHistory .DetailGrid, .RecordAuditHistory .DetailGrid caption
+{
+    margin-left: 0px;
+}
+
+.shr-grid, .shr-list-select
+{
+    /* Force the control onto a new line to avoid strange floating behavior in task editor */
+    clear: both;
+}
+
+.absence-calendar-header
+{
+    font-size: larger;
+    font-weight: bold;
+    float: left;
+    padding: 4px 20px 20px 4px;
+}
+
+.shr-calendar
+{
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.shr-calendar TD
+{
+    vertical-align: top;
+    border: solid 1px #DADADA;
+    padding: 2px;
+}
+
+.shr-calendar-daynames
+{
+    background: url('webcontrols/images/Grid/grid-header.gif') repeat-x 0 100% #336699;
+    text-align: center;
+    font-weight: bold;
+    font-size: 14px;
+    color: #15428B;
+}
+
+.shr-calendar-week
+{
+    height: 60px;
+}
+
+.shr-calendar-eventhighlight
+{
+    font-style: italic;
+}
+
+.shr-calendar-eventtitle
+{
+    font-weight: bold;
+}
+
+.shr-calendar-eventtext
+{
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.shr-calendar-othermonth
+{
+    background: #DADADA;
+}
+
+.shr-calendar-datehead
+{
+    background: #EFEFEF;
+    font-weight: bold;
+    color: #15428B;
+    padding-left: 4px;
+}
+
+.shr-calendar-datehead-controls
+{
+    float: right;
+}
+
+.shr-calendar-nextmonth
+{
+    text-decoration: none;
+    font-size: smaller;
+    font-weight: bold;
+    float: left;
+    color: Blue;
+}
+
+.shr-calendar-prevmonth
+{
+    text-decoration: none;
+    font-size: smaller;
+    font-weight: bold;
+    float: left;
+    color: Blue;
+}
+
+.PrintCommand
+{
+    padding-left: 20px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-weight: bold;
+    background-image: url(../Help/Content/Resources/Images/print.gif);
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.shr-field-select
+{
+    font-size: normal;
+}
+
+.shr-field-select INPUT[type=checkbox]
+{
+    margin-right: 5px;
+}
+
+.StatusBarContainer
+{
+    position: relative;
+    width: 50%;
+    background: white;
+    border: solid 1px black;
+    clear: both;
+    text-align: left;
+    height: 20px;
+    overflow: hidden;
+}
+
+.StatusBarProgress
+{
+    top: 0px;
+    left: 0px;
+    height: 20px;
+    padding: 1px 1px 1px 1px;
+    background-color: #DDDDFF;
+    text-align: center;
+    clear: none;
+}
+
+.StatusBarPercent
+{
+    position: relative;
+    top: -100%;
+    right: -50%;
+}
+
+.shr-Error-Red
+{
+    color: red;
+}
+
+.shr-forecast-ital .shr-field .shr-field-label
+{
+    font-style: italic;
+}
+
+.shr-forecast-red .shr-field-label
+{
+    color: Red;
+}
+.shr-forecast-red
+{
+    color: Red;
+}
+.SendEmail
+{
+    padding-left: 20px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-weight: bold;
+    background-image: url(../Images/SendEmail.gif);
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.ForwardAppAttachmentCheckbox {
+    
+    padding-right : 10px;
+}
+
+.Clear
+{
+    padding-left: 20px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-weight: bold;
+    background-image: url(../Images/clear.gif);
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.LogicalDelete
+{
+    padding-left: 20px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-weight: bold;
+    background-image: url(../Images/LogicalDelete.gif);
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.shr-absence-row
+{
+    -moz-outline: none;
+    -moz-user-focus: normal;
+}
+
+.shr-absence-row td
+{
+    text-align: center;
+    line-height: 15px;
+    vertical-align: middle;
+    border-left: 1px solid #eee;
+    border-right: 1px solid #d0d0d0;
+    border-bottom: 1px solid #bbb;
+    padding: 5px;
+}
+
+.shr-absence-header
+{
+    background: #f6f6f6;
+    font-weight: bold;
+}
+
+.shr-absence-transaction-header
+{
+    background: #ebf3fd;
+    font-weight: bold;
+}
+
+.shr-absence-transaction-header th
+{
+    text-align: center;
+    line-height: 15px;
+    vertical-align: middle;
+    border-left: 1px solid #eee;
+    border-right: 1px solid #d0d0d0;
+    border-bottom: 1px solid #bbb;
+    padding: 5px;
+}
+
+.shr-absence-transaction-year-row
+{
+    background: #eee;
+}
+
+.shr-absence-transaction-year-row td
+{
+    padding: 2px 2px 2px 10px;
+    letter-spacing: 5px;
+    font-size: 18px;
+    color: #045FB4;
+    font-weight: bold;
+}
+
+.dd-item-normal
+{
+    border: solid 1px white;
+}
+
+.dd-item-normal:hover
+{
+    background-color: #EFEFEF;
+    cursor:move;
+}
+
+.loading-home-page
+{
+    font: normal 13px calibri;
+    -moz-outline: none;
+    -moz-user-focus: normal;
+}
+
+.shr-search-grid
+{
+    height: 280px;
+    overflow: auto;
+}
+
+.PageCommand
+{
+    padding-right: 5px;
+    float: left;
+}
+
+/*** Icon Button Styles ***/
+.shr-btn-print,
+.button-print
+{
+    background-image: url(../Images/Print.png) !important;
+}
+
+.shr-float-right
+{
+    float: right;
+}
+
+DIV#LnkAuditReport, #LnkAuditReport DIV
+{
+    overflow: visible;
+}
+
+.tPayStubs
+{
+    width: 100%;
+    border-bottom: 1px solid #d8d8d8;
+}
+.tPayStubs tr.header td, .tPayStubs tr.greyHeader td
+{
+    height: 25px;
+    vertical-align: middle;
+    font-size: medium;
+    color: Navy;
+    background-color: #f7f7f7;
+    border-top: 1px solid #d8d8d8;
+}
+
+.tPayStubs tr.rows td, .tPayStubs tr.altrows td
+{
+    height: 25px;
+    font-size: medium;
+    background-color: #fff;
+    vertical-align: middle;
+    border-top: 1px solid #d8d8d8;
+}
+
+.shr-field.shr-welcome-message
+{
+    font-size: small;
+    padding-top: 3px;
+    padding-right: 10px;
+}
+
+.shr-field.shr-header-search
+{
+    float: none;
+    display: inline-block;
+}
+
+.ext-ie7 .shr-field.shr-header-search
+{
+    display: inline;
+}
+
+.ext-safari .shr-field.shr-header-search,
+.ext-chrome .shr-field.shr-header-search
+{
+    display: inline-table;
+}
+
+.shr-field.shr-header-search .x-form-field-wrap
+{
+    float: none;
+    display: inline;
+}
+
+.iconSave
+{
+    background-image: url(../Images/Menu/Save.gif) !important;
+}
+
+.iconSaveBack
+{
+    background-image: url(../Images/Menu/SaveBack.gif) !important;
+}
+
+.iconDeleteRecord
+{
+    background-image: url(../Images/Menu/DeleteRecord.gif) !important;
+}
+
+.iconAdd
+{
+    background-image: url(../Images/Menu/Add.gif) !important;
+}
+
+.iconDelete
+{
+    background-image: url(../Images/Menu/Delete.gif) !important;
+}
+
+.iconUndelete
+{
+    background-image: url(../Images/Menu/Undelete.gif) !important;
+}
+
+.iconCloseWindow
+{
+    background-image: url(../Images/Menu/CloseWindow.gif) !important;
+}
+
+.iconRootGoal
+{
+    background-image: url(../Images/Menu/RootGoal.gif) !important;
+}
+
+.iconAssign
+{
+    background-image: url(../Images/AssignToSomeone.gif) !important;
+}
+
+.iconFilter
+{
+    background-image: url(../Images/Menu/Filter.png) !important;
+}
+
+.iconPreview
+{
+    background-image: url(../Images/Preview.png) !important;
+}
+
+.iconFileAttach
+{
+    background-image: url(../Images/Menu/Attach.gif) !important;
+}
+
+.iconPerson
+{
+    background-image: url(../Images/Portrait.gif) !important;
+}
+
+.iconUnassignedGoalPerson
+{
+    background-image: url(../Images/AddPeople.gif) !important;
+}
+
+.iconApplicantInformation
+{
+    background-image: url(../Images/PersonInformation.gif) !important;
+}
+
+.iconHirePerson
+{
+    background-image: url(../Images/HirePerson.gif) !important;
+}
+
+.iconHireHireManager
+{
+    background-image: url(../Images/PersonForwardHireManager.gif) !important;
+}
+
+.iconViewEmployeeHistory
+{
+    background-image: url(../Images/Portrait.gif) !important;
+}
+
+.iconQualifications
+{
+    background-image: url(../Images/PersonQualifications.gif) !important;
+}
+
+.iconEvaluation
+{
+    background-image: url(../Images/PersonEvaluation.gif) !important;
+}
+.iconOffer
+{
+    background-image: url(../Images/PersonOffer.gif) !important;
+}
+
+.iconDetails
+{
+    background-image: url(../Images/icon_info.gif) !important;
+}
+
+.iconEmail
+{
+    background-image: url(../Images/SendMail.gif) !important;
+}
+
+.iconPan
+{
+    background-image: url(../Images/PersonPan.gif) !important;
+}
+
+.iconForwardPerson
+{
+    background-image: url(../Images/PersonForward.gif) !important;
+}
+
+.iconPurgePerson
+{
+    background-image: url(../Images/PurgePerson.gif) !important;
+}
+
+.iconPullPerson,
+.iconPersonAdd
+{
+    background-image: url(../Images/PersonAdd.gif) !important;
+}
+
+.iconPersonApplication
+{
+    background-image: url(../Images/PersonViewApplication.gif) !important;
+}
+
+.iconFile
+{
+    background-image: url(../Images/File.gif) !important;
+}
+
+.iconSwap
+{
+    background-image: url(../Images/redo.gif) !important;
+}
+
+.iconAddExp
+{
+    background-image: url(../Images/AddExp.png) !important;
+}
+
+.iconOrExp
+{
+    background-image: url(../Images/OrExp.png) !important;
+}
+
+.iconChildExp
+{
+    background-image: url(../Images/spacer.gif) !important;
+}
+
+.iconManager
+{
+    background-image: url(../Images/AddPeople.gif) !important;
+}
+
+.iconSubordinate
+{
+    background-image: url(../Images/Portrait.gif) !important;
+}
+
+.iconSummary 
+{
+    background-image: url(../Images/Menu/Summary.gif) !important;
+}
+
+.iconTimesheetSummary
+{
+    background-image: url(../Images/TimesheetSummary.gif) !important;
+}
+
+.x-column-tree .x-tree-node .shr-goal-invalid SPAN
+{
+    color: Red;
+    font-style:italic;
+}
+
+.x-column-tree .x-tree-node .shr-goal-deleted SPAN
+{
+    text-decoration: line-through;
+}
+
+/* 
+	The Ext css sets "strong" to normal font-weight,
+	so we override that for the HtmlText control to let
+	the user create bold text.
+*/
+.HtmlText strong
+{
+    font-weight: bold;
+}
+
+/* Set the paragraph margins to the default values */
+.HtmlText p
+{
+    margin: 1em 0;
+}
+
+.HtmlText ol
+{
+    list-style:decimal;
+    padding: 0 0 0 15px;
+}
+
+.HtmlText ul
+{
+    list-style:disc;
+    padding: 0 0 0 15px;
+}
+
+.HtmlText img {
+    padding: 10px;
+}
+
+
+/* Copy of the Ext grid's group format, without the image and underline */
+.shr-grid-group-subhead
+{
+    color: #3764A0;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.shr-position-right-margin
+{
+    position: absolute;
+    right: 10px;
+}
+
+.PerformanceReview-ViewJournal
+{
+    background-image: url(../Images/Documents_small.gif) !important;
+    font-size: small;
+}
+
+.PerformanceReview-MaintainJournal
+{
+    background-image: url(../Images/NewDocument.gif) !important;
+    background-repeat: no-repeat;
+    padding: 0 10px 0 20px;
+    font-size: small;
+}
+
+.StandardCommandDisplay
+{
+    font-size: medium;
+    font-weight: bold;
+}
+
+.PerformanceReview-GroupHeader {
+    color: #3764A0;
+    font-size: large;
+    font-weight: bold;
+    border-bottom: solid 2px #3764A0;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.PerformanceReview-QuestionHeader {
+    background-color: #f6f6f6;
+    border-bottom: 2px solid #ececec;
+}
+
+.PerformanceReview-QuestionHeader DIV {
+    font-weight: bold;
+    white-space: normal; 
+}
+
+/* Add some top-padding to the checkbox control */
+.PerformanceReview-QuestionHeader .shr-field
+{
+    padding-top: 7px;
+}
+
+.ExpandCollapseAll
+{
+    padding: 4px 10px 0px 5px;
+    cursor: pointer;
+}
+
+.PerformanceReview-ReviewStatus
+{
+    font-size: medium;
+    font-weight: bold;
+}
+.PerformanceReview-GetSuggestedComment
+{
+    font-size: small;
+    position: relative;
+    right: 40px;
+}
+.PerformanceReview-GatherOverallComments
+{
+    font-size: small;
+    position: relative;
+    left: 250px;
+}
+
+.shr-people-selectperson
+{
+    float: left;
+}
+
+.shr-people-selectperson .shr-field SPAN.shr-field-label
+{
+    font: bold 14px/15px tahoma, arial, verdana, sans-serif;
+    color: #15428b;
+}
+
+.shr-btn-weather-work
+{
+    background-image: url(../Images/Company_small.png) !important;
+}
+
+.shr-btn-weather-home
+{
+    background-image: url(../Images/House_small.png) !important;
+}
+
+.shr-btn-delete 
+{
+    background: url(../Images/Menu/Delete.gif) no-repeat left center;
+}
+
+.shr-external-link
+{
+    padding: 10px;
+    font-size:16px;
+}
+
+.MissingQualification span
+{
+    font-style: italic;
+    color: Red;
+}
+
+.DeleteCommand
+{
+    white-space: nowrap;
+    padding: 2px 0 2px 17px;
+    margin-left: 10px;
+    font-weight: bold;
+    background: url(../Images/Menu/Delete.gif) no-repeat left center;
+}
+
+.shr-btn-logon
+{
+    background-image: url(../Images/Key_24.gif) !important;
+    padding-left: 34px;
+    height: 24px;
+}
+
+.shr-btn-logon-small
+{
+    background-image: url(../Images/Key_16.png) !important;
+}
+
+.shr-btn-newuser-small
+{
+    background-image: url(../Images/newperson_16.png) !important;
+}
+
+.shr-btn-newuser
+{
+    background-image: url(../Images/NewPerson.gif) !important;
+}
+
+.shr-btn-enroll
+{
+    background-image: url(../Images/PersonEnroll.gif) !important;
+}
+
+.ClassDetails-CourseName
+{
+    font-size: large;
+    font-weight: bold;
+    padding-top: 10px;
+    display: block;
+    width: 100%;
+}
+
+.ClassDetails-DataLabel
+{
+    font-weight: bold;
+    padding-right: 10px;
+}
+
+.ClassDetails-ViewAttachment
+{
+    padding-top: 20px;
+}
+
+.shr-calendar-legend
+{
+    float: left;
+    /* This combination of padding, width, height and font-size 
+        seems to make best use of the legend area when
+        the calendar is either narrow or wide
+    */
+    padding: 5px;
+    width: 17%;
+    font-size: 11px;
+    text-align: center;
+    border-right: solid 1px silver;
+    border-bottom: solid 1px silver;
+}
+
+
+.shr-mytraining-calendar-card
+{
+    background: #12c3f4;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 10px 15px 0 15px;
+    color: #f0f0f0;
+}
+
+.shr-training-calendar-item
+{
+    /* padding inside the colored background*/
+    padding: 2px;
+    border-radius: 10px;
+    border: 1px solid gray;
+}
+
+.shr-training-calendar-item-title
+{
+    /* leave room for the "edit" or "add" icon */
+    font-weight: bold;
+    padding-right: 16px;
+}
+
+.shr-task-validation-warning
+{
+    overflow: auto;
+}
+
+.shr-group-contents UL
+{
+}
+
+.shr-node-subordinate div
+{
+    font-size: medium;
+}
+
+.shr-node-supervisor div
+{
+    font-weight: bold;
+    font-size: medium;
+}
+
+.shr-pop-header-img {
+height:48px;
+margin:10px 0 0 20px;
+width:48px;
+}
+
+.shr-pop-header-text {
+height:48px;
+margin:5px;
+width:48px;
+}
+
+.shr-table {
+ width: 100%;
+}
+.shr-table .th {
+ font-weight: bold;
+}
+.shr-table .tr {
+
+}
+.shr-table  .td {
+ float: left;
+}
+
+.TaskDataDictionary {   
+    width: 99%;
+    background-color: #F0F2F5;
+    overflow: hidden;
+    table-layout: fixed;
+    font: calibri;
+    font-size: small;
+}
+
+.TaskDataDictionaryColumn1 {
+    width: 12%;
+    color: #336699;
+}
+
+.TaskDataDictionaryColumn2 {
+    width: 25%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.TaskDataDictionaryColumn3 {
+    width: 13%;
+    color: #336699;
+}
+
+.TaskDataDictionaryColumn4 {
+    width: 25%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.TaskDataDictionaryColumn5 {
+    width: 10%;
+    color: #336699;
+}
+
+.TaskDataDictionaryColumn6 {
+    width: 5%;
+}
+.OverviewItemLabel, .OverviewElementLabel, .OverviewRequiredIndicator, .OverviewElementPropertyLabel {
+	font-size: small;
+	font-weight: normal;
+	color: #336699;
+	float: left;
+}
+
+.OverviewTaskSection {
+	background-color: #EFF5FF;
+	margin-right: 20px;
+}
+
+.OverviewTaskGroup {
+	background-color: #F0F2F5;
+	margin-right: 20px;
+}
+
+.OverviewElementImage {
+	float: left;
+	top: 2px;
+	left: 5px;
+	padding-right: 5px;
+}
+
+.OverviewItemLabel, .OverviewItemContents, .OverviewRequiredIndicator, .OverviewElementLabel, .OverviewElementContents {
+	padding-top: 2px;
+}
+
+.OverviewItemLabel {
+	width: 110px;
+	clear: left;
+	border-top: 1px solid white;
+	padding-left: 8px;
+}
+
+.OverviewItemContents, .OverviewElementContents {
+	padding-left: 5px;
+	font-size: small;
+	font-weight: normal;
+	color: Black;
+	border-top: 1px solid white;
+	overflow: auto;
+}
+
+.OverviewElementLabel, .OverviewElementPropertyLabel {
+	width: 200px;
+	border-top: 1px solid white;
+}
+
+.OverviewRequiredIndicator {
+	padding-left: 15px;
+	clear: left; /* This is the first item in the line so force a new line before it */
+}
+
+.OverviewItemContents ul, .OverviewElementContents ul {
+	list-style-type: disc;
+    list-style-position: outside;
+    margin: 0px 0px 0px 15px;
+}
+.OverviewItemContents li, .OverviewElementContents li {
+    list-style-type: disc;
+    display: list-item;
+}
+.OverviewElementPropertyLabel {
+	padding-left: 100px;
+	padding-top: 3px;
+	font-size: 70%;
+}
+
+#OverviewPrintButton {
+	position: absolute;
+	top: 2px;
+	right: 25px;
+}
+.OverviewFunctionsOnly {
+	font-size: small;
+	padding-left: 3px;
+}
+
+.x-grid-action-delete
+{
+    background-image: url(../Images/Menu/Delete.gif) !important;
+}
+
+.x-grid-action-logicalundelete
+{
+    background-image: url(../Scripts/WebControls/images/Grid/logicalundelete.gif) !important;
+}
+
+.x-grid-action-logicaldelete
+{
+    background-image: url(../Scripts/WebControls/images/Grid/logicaldelete.gif) !important;
+}
+
+.x-grid-action-undelete 
+{
+    background-image: url(../Images/Menu/Undelete.gif) !important;
+}
+
+.shr-detail-grid
+{
+    padding: 1px 0px 20px 0px;
+}
+
+.shr-text-wrap div
+{
+	white-space: normal;
+}
+
+.shr-module-layout-panel-column
+{
+    vertical-align:top;
+    padding: 5px 5px 5px 5px;
+    display: inline-block; 
+}
+
+.show-list-items ol
+{
+    list-style:decimal;
+}
+
+.show-list-items ul
+{
+    list-style:disc;
+}
+
+.mobile-combo-box-field
+{
+    background-color: white !important;
+}
+
+ ::-ms-clear {
+      display: none;
+      width : 0;
+      height: 0;
+  }
+
+.goal-highlight
+{
+    background-color: whitesmoke;
+    color: lightgray;
+}
+
+div#SortingRecordsArea, div#GroupSortFieldsArea
+{
+	float: left;
+	margin: 10px;
+}
+
+div#SortingRecordsArea div#tree div div ul li
+{
+	font-size: small;
+}
+
+div.dataGrouping a span
+{
+	color: #336699;
+}
+.fieldset-openEnrollment
+{
+    height:auto;
+    border:0px !important;
+}
+.fieldset-openEnrollmentSingleHeight
+{
+    height:45px;
+    border:0px !important;
+}
+.instruction-openEnrollment
+{
+    color:Black;
+}
+.instruction-openEnrollmentBold
+{
+    color:Black;
+    font-weight: bold;
+}
+
+.shr-wizard div {
+    padding: 10px 12px 10px;
+    min-width: 50px;
+    margin-right: 5px;
+    font-weight:bold;
+    color:#15428B;
+    background: #CECFCF;
+    position: relative;
+    display: inline-block;
+    overflow:visible;
+}
+
+.shr-wizard{
+    cursor:pointer;
+}
+.shr-wizard div:before {
+    width: 0;
+    height: 0;
+    border-top: 20px inset transparent;
+    border-bottom: 20px inset transparent;
+    border-left: 20px solid #fff;
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+}
+.shr-wizard div:after {
+    width: 0;
+    height: 0;
+    border-top: 20px inset transparent;
+    border-bottom: 20px inset transparent;
+    border-left: 20px solid #CECFCF;
+    position: absolute;
+    content: "";
+    top: 0;
+    right: -20px;
+    z-index: 2;
+}
+.shr-wizard div:first-child:before,
+.shr-wizard div:last-child:after {
+    border: none;
+}
+.shr-wizard div:first-child {
+    -webkit-border-radius: 4px 0 0 4px;
+       -moz-border-radius: 4px 0 0 4px;
+            border-radius: 4px 0 0 4px;
+}
+.shr-wizard div:last-child {
+    -webkit-border-radius: 0 4px 4px 0;
+       -moz-border-radius: 0 4px 4px 0;
+            border-radius: 0 4px 4px 0;
+}
+.shr-wizard .shr-badge {
+    margin: 0 5px 0 18px;
+    position: relative;
+    top: 0px;
+}
+.shr-wizard div:first-child .shr-badge {
+    margin-left: 0;
+}
+.shr-wizard .shr-current {
+    background: #007ACC;
+    color: #fff;
+}
+.shr-wizard .shr-current:after {
+    border-left-color: #007ACC;
+}
+
+.shr-wizard div:hover {
+    background: #AEAFAF;
+}
+.shr-wizard div:before:hover {
+    background: #AEAFAF;
+}
+.shr-wizard div:hover:after {
+    border-left: 20px solid #AEAFAF;
+}
+
+.shr-wizard div.shr-current:hover {
+    background: #007ACC;
+}
+.shr-wizard div.shr-current:before:hover {
+    background: #007ACC;
+}
+.shr-wizard div.shr-current:hover:after {
+    border-left: 20px solid #007ACC;
+}
+
+/*******************************************
+ * 
+ * Ext 4.0 Upgrade Styles
+ *
+ ******************************************/
+
+.shr-module-layout-panel-column
+{
+    vertical-align:top;
+    padding: 5px 5px 5px 5px;   
+}
+.shr-toolbar-people-picker-list
+{
+    font-size:small;
+}
+
+.shr-preferred-language
+{
+    float: right;
+}
+
+#executePanelHeader 
+{
+    width: 100%; 
+    height: 27px;
+    padding:2px 5px 2px 0px;
+}
+
+/*Loading icon for personpicker search control,
+loading icon without the gray frame.
+*/
+
+.popup-loading
+{
+    background-color : #dfe8f6;
+}
+
+.popup-loading .x-mask-msg
+{
+    background-color : transparent;
+    border-style : none;
+}
+
+.popup-loading .x-mask-loading
+{
+    border-style : none;
+    background-color : transparent;
+}
+
+
+.gridNoDataFound .x-mask-msg-text {
+    background: transparent !important;
+    padding: 5px !important
+}
+/**/
+/*Edit Icon for My To-Do List steps
+*/
+.shr-todo-step-edit {
+    overflow: hidden;
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    float: right;
+    margin-right: 5px;
+}
+
+/**
+    Ext.ux.statusbar.StatusBar
+    busy icon.
+*/
+.x-status-busy {
+    padding-left: 25px;
+    background: transparent url(webcontrols/images/grid-loading.gif) no-repeat 3px 2px;
+}
+
+/**
+    Absence Plan Wizard styles
+	TO DO: Move this styles to the themer
+*/
+
+.wiz_indent50 
+{
+    margin-left: 50px;
+}
+
+.wiz_indent100 
+{
+    margin-left: 100px;
+}
+
+.wiz_indent-30 {
+    margin-left: -30px;
+}
+
+.wiz_indent-140 {
+    margin-left: -140px;
+}
+
+.wiz-height100 {
+    height: 100px;
+}
+
+.wiz_left-40
+{
+    left: -40px;
+}
+.wiz_left-100
+{
+    left: -100px;
+}
+
+.wiz_left-80 
+{
+    left: -80px;
+}
+
+.fieldsetNoLegend Legend
+{
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/**
+    Advanced Search styles
+	TO DO: Move this styles to the themer
+*/
+
+
+
+.x-accordion-item .x-accordion-hd
+{
+    border-bottom: 1px solid #f58220;
+	border-top: 0 !important;
+}
+
+.x-accordion-body
+{
+    background: #f6f6f6;
+}
+
+/*
+** Wrapping Column Headers in the Grid Panel
+** HCM-615 Address grid issues in salary planning where column headers cannot be seen
+*/
+.x-column-header-inner .x-column-header-text {
+    white-space: normal;
+}
+
+.x-column-header-inner {
+    line-height: normal;
+    text-align: center;
+}
+
+.shr-center-mask-text{
+    text-align: center;
+}
+
+.logout-text{
+    font-size: 15px;
+}
+
+.displayError-text {
+    color: red;
+    font-weight: bold;
+}
+
+.hide-header .x-column-header-text{
+    visibility:hidden;
+}
+
+.PayStubHistViewBtn {
+    top: 24px;
+}

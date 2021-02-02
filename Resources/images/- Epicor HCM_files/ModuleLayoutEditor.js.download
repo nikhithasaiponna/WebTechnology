@@ -1,0 +1,169 @@
+﻿/// <reference path="vswd-ext_2.2.js" />
+Ext.namespace('ModuleLayoutEditor', 'ModuleLayoutEditor.dd');
+
+ModuleLayoutEditor._columnContainerId = null;
+
+var _dropTarget = null; //This is the element that the dragged element is being dropped onto
+var _dragParent = null; //This is the element that is being dragged (not the proxy but the actual element) and is set in onInitDrag
+
+ModuleLayoutEditor.dd = function() {
+    // do NOT access DOM from here; elements don't exist yet
+ 
+    // private variables
+    var dropHandled = false;
+
+    return {
+        // public methods
+        init: function() {
+            // Define the draggable modules  
+            var dragZone1;
+            var modulesItems = Ext.get('ContentPanel').select('.draggableModule');
+            Ext.each(modulesItems.elements, function (el) {
+                dragZone1 = new ModuleLayoutEditor.dd.MyDragZone(el, { ddGroup: 'module', scroll: false, isTarget: false });
+            })
+
+            // Define where the draggable modules can be dropped
+            var dropTarget;
+            Ext.select('.draggableModule, .column').each(function(el){
+                dropTarget = new ModuleLayoutEditor.dd.MyDropTarget(el, { ddGroup: 'module', overClass: 'dd-over' });
+            });
+            
+        }
+    };
+}();
+
+ModuleLayoutEditor.removeCurrentDropTargetpreview = function () {
+    var previousDropTarget = Ext.select('.dd-item-hover');
+    Ext.each(previousDropTarget.elements, function (el) {
+        Ext.get(el).removeCls('dd-item-hover');
+    });
+};
+
+//This function adds a drop preview to the DOM when you move in to a drop target.
+ModuleLayoutEditor.createEnterPreview = function(parentEl, dragEl, targetEl )
+{   
+    //Remove any existing preview elements
+    ModuleLayoutEditor.removeCurrentDropTargetpreview();
+
+	//Set the default droptarget as the element we are currently over
+	_dropTarget = targetEl;
+	_dropTarget.addCls('dd-item-hover');
+};
+
+//This function 'resets' the drop preview when you move out of a drop target.  This
+//adds the preview of a field to the end of a group for example when you move off a field.  This
+//is necessary because the onEnter event does not fire for the group because we have never left it.
+ModuleLayoutEditor.createOutPreview = function(parentEl, dragEl )
+{
+    //Create a new preview element that will be added to the DOM
+	_dropTarget.removeCls('dd-item-hover');
+};
+ 
+ModuleLayoutEditor.onMouseOver = function(el) {
+    this.addCls('dd-item-hover');
+}
+
+ModuleLayoutEditor.onMouseOut = function(el) {
+    this.removeClass('dd-item-hover');
+}
+
+ModuleLayoutEditor.dd.MyDragZone = function(el, config) {
+    config = config || {};
+    Ext.apply(config, {
+        ddel: document.createElement('div')
+    });
+    ModuleLayoutEditor.dd.MyDragZone.superclass.constructor.call(this, el, config);
+};
+
+ModuleLayoutEditor.dd.MyDropTarget = function(el, config) {
+    ModuleLayoutEditor.dd.MyDropTarget.superclass.constructor.call(this, el, config);
+};
+
+Ext.extend(ModuleLayoutEditor.dd.MyDragZone, Ext.dd.DragZone, {
+    getDragData: function(e) {
+        var target = Ext.get(e.getTarget());
+        if (target.hasCls('leftDropZone')) {
+            return false;
+        }
+        return {ddel:this.ddel, item:target};
+    },
+    
+    onInitDrag: function()
+    {
+        dragEl = Ext.get(this.id);
+        var parentEl = dragEl.findParent('div', null, true);
+
+        this.ddel = dragEl.dom.cloneNode(true);
+        this.ddel.innerHTML = dragEl.dom.innerHTML;
+        this.ddel.className = this.dragData.item.dom.className;
+        this.ddel.style.width = dragEl.getWidth() + "px";
+        this.ddel.style.height = "113px";
+        this.proxy.update(this.ddel);
+        
+        _dragParent = dragEl;
+        _dragParent.setVisibilityMode( Ext.Element.DISPLAY );
+        _dragParent.addCls('dd-item-being-dragged');
+        ModuleLayoutEditor.dropHandled = false;
+    },
+  
+    //This function creates the drop preview element in response
+    //to a drag operation moving into a element.
+    onDragEnter: function(e, targetId)
+	{
+	    //Get the element we are dragging over and set the global dropTarget var
+		var target = Ext.get(targetId);
+		
+		//Get the element that is being dragged
+		var dragEl = Ext.get(this.getDragEl());
+        ModuleLayoutEditor.createEnterPreview(_dragParent, dragEl, target);
+	},
+
+	//This function creates the drop preview element in reponse to a drag
+	//operation moving out of an element.
+	onDragOut: function(e, targetId)
+	{	
+        var target = Ext.get(targetId);
+        this.lastTarget = null;
+		
+		//Get the element that is being dragged
+		var dragEl = Ext.get(this.getDragEl());
+		
+		//Create the preview
+        ModuleLayoutEditor.createOutPreview(_dragParent, dragEl);
+    },
+	
+    //This is called when and item is dropped on an area with no drop target 
+	onInvalidDrop: function(e)
+	{	
+	    if (_dragParent !== null) _dragParent.removeCls('dd-item-being-dragged');
+		this.hideProxy();
+    },
+
+    getRepairXY: function(e, data) {
+        data.item.highlight('#e8edff');
+        return data.item.getXY();
+    }
+});
+
+Ext.extend(ModuleLayoutEditor.dd.MyDropTarget, Ext.dd.DropTarget, {
+    notifyDrop: function(dd, e, data) {
+        if(_dropTarget != null)
+        {
+            this.el = _dropTarget;
+        }
+            
+        if (ModuleLayoutEditor._columnContainerId != null && !ModuleLayoutEditor.dropHandled)
+        {
+            __doPostBack(ModuleLayoutEditor._columnContainerId, 'ITEM_DROPPED,' + dd.id + ',' + this.el.id);
+            ModuleLayoutEditor.dropHandled = true;
+            return true;
+        }
+        else
+        {
+            if(_dragParent !== null) _dragParent.show();
+            ModuleLayoutEditor.dropHandled = true;
+            return false;
+        }
+      
+    }
+});

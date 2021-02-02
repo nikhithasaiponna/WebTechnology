@@ -1,0 +1,1870 @@
+﻿Ext.namespace('Shr.timesheets');
+Ext.namespace('Shr.timesheets.TimeEntry');
+
+Ext.define('Shr.timesheets.TimeEntry.TriggerField', {
+    extend: 'Ext.form.field.Picker',
+    alias: 'widget.shrTimeEntryTriggerField',
+    triggerCls: 'x-fa fa-pencil',
+    config: {
+        triggers: {
+            clear: {
+                cls: 'x-form-clear-trigger',
+                handler: function () { this.setValue(); }
+            }
+        }
+    },
+
+    onTriggerClick: function (e) {
+        var commentsEditField = this;
+        commentsEditField.popupEditing = true;
+        var editCommentsWin = new Ext.window.Window({
+            layout: 'fit',
+            modal: true,
+            resizable: false,
+            buttonAlign: 'left',
+            width: 450,
+            height: 350,
+            hidden: true,
+            floating: true,
+            fixed: true,
+            ownerCt: this.ownerCt,
+            items: [{ xtype: 'textarea', id: 'editComments'}],
+            buttons: [{
+                text: Shr.LABEL_SpellCheck,
+                hidden: Ext.isEmpty(commentsEditField.spellCheck),
+                handler: function () {
+                    if (!me.spellCheck) return;
+
+                    var spellCheck = GetRadSpell(me.spellCheck);
+                    if (!spellCheck) return;
+
+                    spellCheck._source = null;
+                    spellCheck.ControlToCheck = Ext.getCmp('editComments').el.id;
+                    spellCheck.StartSpellCheck();
+
+                    if (Ext.isIE7) {
+                        var spellCheckWnd = Ext.getBody().child('.RadETableWrapper');
+                        document.body.appendChild(spellCheckWnd.dom);
+                    }
+                }
+            }, '->', {
+                text: Ext.MessageBox.buttonText.ok,
+                handler: function () {
+                    var v = Ext.getCmp('editComments').getValue();
+                    commentsEditField.setValue(v);
+                    commentsEditField.fireEvent('change', commentsEditField, v, commentsEditField.startValue);
+                    editCommentsWin.close();
+                    editCommentsWin.destroy();
+                    commentsEditField.popupEditing = false;
+                    commentsEditField.focus();
+                }
+            }, {
+                text: Ext.MessageBox.buttonText.cancel,
+                handler: function () {
+                    editCommentsWin.close();
+                    editCommentsWin.destroy();
+                    commentsEditField.popupEditing = false;
+                    commentsEditField.focus();
+                }
+            }]
+        });
+
+        Ext.getCmp('editComments').setValue(commentsEditField.getValue());
+        editCommentsWin.center();
+        editCommentsWin.show(null, function () {
+            Ext.getCmp('editComments').focus();
+            editCommentsWin.setZIndex(9000);
+        });
+    }
+});
+
+Ext.define('Shr.timesheets.TimeEntry.GridPanel', {
+    extend: 'Ext.grid.Panel',
+    alias: 'widget.ShrTimeSheetTimeEntryGridPanel',
+    enableColumnMove: false,
+    enableColumnHide: false,
+    showEntryDate: true,
+    showSaveButtons: true,
+    editable: true,
+    showRevisions: false,
+    autoHeight: false,
+    selectedPeriod: null,
+    gridRowEditor: null,
+    addButton: null,
+    copyButton: null,
+    store: null,
+    layout: 'fit',
+    columnLabels: {},
+    commandLabels: {},
+    textLabels: {},
+    viewConfig: { forceFit: true, markDirty: false },
+    decimalPlacesToShow : 2,
+    features: [{
+        ftype: 'summary',
+        dock: 'bottom',
+        showSummaryRow: false
+    }],
+    isButtonDisabled: function () {
+        var me = this;
+        var isDisabled = false;
+        if ((me.metadata.isTimePeriodClosed == true) || (me.tabName != undefined && me.metadata.isApproved == true && Shr.panel.TimesheetSummary.canReviseApprovedPeriods == false) || (me.tabName == undefined && me.metadata.isSubmitted == true) || (me.metadata.allowEmployeeNewRecordEntryFlag == false && me.tabName != 'Edit')) {
+            isDisabled = true;
+        }
+        return isDisabled;
+    },
+    initComponent: function () {
+        var me = this;
+        this.title = this.metadata.title;
+		this.decimalPlacesToShow = this.metadata.showFourDecimals == true ? 4 : 2;
+        if (this.showRevisions === true) {
+            this.features[0].showSummaryRow = true;
+        }
+
+        var plugins = [];
+        var isDisabled = me.isButtonDisabled();
+
+        if (this.editable === true) {
+
+            this.addButton = new Ext.Button({
+                xtype: 'tbbutton',
+                iconCls: 'x-fa fa-plus',
+                text: this.commandLabels.add,
+                disabled: isDisabled,
+                handler: function () {
+                    me.addRecord(true);
+                }
+            });
+
+            if (!this.clockInClockOut) {
+                this.copyButton = new Ext.Button({
+                    xtype: 'tbbutton',
+                    iconCls: 'x-fa fa-files-o',
+                    text: this.commandLabels.copy,
+                    disabled: true,
+                    handler: function () {
+                        me.copyRecord(true, false);
+                    }
+                });
+            }
+
+
+            this.gridRowEditor = Ext.create('Ext.grid.plugin.RowEditing', {
+                clicksToMoveEditor: 1,
+                autoCancel: false,
+                gridPanel: me,
+                listeners: {
+                    beforeedit: function (editor, context, eOpts) {
+                        me.disableButtons();
+                    },
+                    canceledit: function (editor, context, eOpts) {
+                        me.enableButtons();
+                    },
+                    edit: function (editor, context, eOpts) {
+                        me.enableButtons();
+                    }
+                },
+                onEnterKey: function (e) {
+                    //Time Entry - Save record when enter key is used.
+                    var me = this;                        
+
+                    if (e.getKey() == e.ENTER) {
+                        me.grid.onGridEditorEdit(me, e, 0);
+                    }                    
+                }
+            });
+
+            plugins.push(this.gridRowEditor);
+
+            if (Ext.grid.RowEditor) {
+                Ext.apply(Ext.grid.RowEditor.prototype, {
+                    saveBtnText: me.commandLabels.save,
+                    cancelBtnText: me.commandLabels.cancel,
+                    saveAndAddBtnText: me.commandLabels.saveAndAdd,
+                    saveAndCopyBtnText: me.commandLabels.saveAndCopy,
+                    clockInClockOut: me.clockInClockOut
+                });
+            }
+        }
+
+        // Only show add on the edit tab if coming from timesheet summary
+        // If we are coming from the my timesheets control then we want to show the button as well(me.tabName == undefined)
+        // timesheetsToolBar
+        if ((me.tabName == 'Edit' || me.tabName == undefined) && me.tabName != 'SummaryReview' && me.addButton != null) {
+            me.addButton.setDisabled(false);
+            if ((me.metadata.isTimePeriodClosed == true) || (me.tabName != undefined && me.metadata.isApproved == true && Shr.panel.TimesheetSummary.canReviseApprovedPeriods == false) || (me.tabName == undefined && me.metadata.isSubmitted == true) || (me.metadata.allowEmployeeNewRecordEntryFlag == false && me.tabName != 'Edit')) {
+                me.addButton.setDisabled(true);
+            }
+            var timeEntryToolBar = new Ext.toolbar.Toolbar({
+                // make sure the id is unique since we will have more than
+                // grid in the panel ("summary" and "edit")
+                id: me.id + '-timeEntryToolBar',
+                magin: 10,
+                items: [
+                    this.addButton,
+                    {
+                        xtype: 'label',
+                        height: '100%',
+                        style: { "word-wrap": 'break-word' },
+                        html: this.config.metadata.warning
+                    }
+                ]
+            });
+        }
+
+        this.store = Ext.create('Ext.data.Store', {
+            storeId: 'summarytimeDetailStore',
+            fields: [
+                { name: 'id' },
+                { name: 'entryDate' },
+                { name: 'positionCode' },
+                { name: 'startTime' },
+                { name: 'overrideStartTime' },
+                { name: 'revisedStartTime' },
+                { name: 'endTime' },
+                { name: 'overrideEndTime' },
+                { name: 'revisedEndTime' },
+                { name: 'enteredHours' },
+                { name: 'overrideHours' },
+                { name: 'revisedHours' },
+                { name: 'calculatedHours' },
+                { name: 'timeType' },
+                { name: 'absenceLeaveRequest' },
+                { name: 'absenceReason' },
+                { name: 'comments' },
+                { name: 'revisedBy' },
+                { name: 'revisedByComments' },
+                { name: 'company' },
+                { name: 'costCenter' },
+                { name: 'department' },
+                { name: 'division' },
+                { name: 'functionalArea' },
+                { name: 'location' },
+                { name: 'organizationUnit' },
+                { name: 'project' },
+                { name: 'region' },
+                { name: 'section' },
+                { name: 'shift' },
+                { name: 'isDeleted' },
+                { name: 'isEmployeeEntered'}],
+            data: this.metadata.timeDetail
+        });
+
+        var config = {
+            plugins: plugins,
+            tbar: timeEntryToolBar,
+            stateful: false,
+            store: this.store
+        };
+
+        //*** Column Functions
+        this.canEditEntryDateAndTimeType = function (rec) {
+            // Conditionally allow the user to edit the entry date based upon
+            // the following criteria.  Any user with rights to access Timesheet 
+            // Summary can edit or delete person time detail up until the person 
+            // time group period.  Once a person's time group period has been 
+            // approved only users in a role with the "Can Review Approved Timesheets" 
+            // flag can delete or edit the timesheet.
+            if (this.showRevisions === true && rec.data.canEditDelete === true) {
+                return true;
+            }
+
+            // Can edit the entry date for a new record, one where the time 
+            // type is an absence type, or if we're not forcing override
+            // time (e.g., not COCI), or there is no base start time (e.g.,
+            // not a punched COCI record).
+            return rec.data.isNew
+                        || (rec.data.timeType != null && rec.data.timeType.isAbsenceType === true)
+                        || this.metadata.forceOverrideTimes !== true
+                        || Ext.isEmpty(rec.data.startTime);
+        }
+
+        this.formatTimeValue = function (entryDate, time, overrideTime) {
+            if (!Ext.isEmpty(overrideTime)) {
+                if (!Ext.isEmpty(time)) {
+                    return this.getFormattedDate(entryDate, overrideTime)
+                        + ' (' + this.getFormattedDate(entryDate, time) + ')';
+                } else {
+                    return this.getFormattedDate(entryDate, overrideTime)
+                    + ' (' + this.textLabels.overrideMsg + ')';
+                }
+            } else if (!Ext.isEmpty(time)) {
+                return this.getFormattedDate(entryDate, time);
+            } else {
+                return null;
+            }
+        };
+
+        this.canEditStartTime = function (rec) {
+            if (this.showRevisions === true) return false;
+            if (rec.data.timeType == null
+                    || Ext.isEmpty(rec.data.timeType.Code)
+                    || rec.data.timeType.isAbsenceType == true
+                    || Ext.isEmpty(rec.data.entryDate)) {
+
+                return false;
+            } else if (this.metadata.forceOverrideTimes == true
+                    && rec.data.isNew != true
+                    && this.metadata.editOverrideTimes != true) {
+
+                return false;
+            }
+
+            return true;
+        };
+
+        this.getFormattedDate = function (entryDate, value) {
+            if (Ext.isEmpty(value)) return null;
+            if (!Ext.isEmpty(entryDate)) {
+                // Display the value as either date+time or just time, depending
+                // on whether the entered date/time is on a different date.
+                return Ext.util.Format.date(value, (value.getDate() != entryDate.getDate())
+                ? Shr.DATE_FORMAT + ' ' + Shr.TIME_FORMAT
+                : Shr.TIME_FORMAT);
+            } else {
+                return Ext.util.Format.date(value, Shr.TIME_FORMAT);
+            }
+        };
+
+        this.canEditHours = function (rec) {
+            if (this.showRevisions === true) return false;
+
+            // Can edit the "hours" field if we're not showing times (so if
+            // hours-only) or if this is an absence time type as absences
+            // are always entered just as a duration, not start/end times.
+            return (rec.data.timeType != null && !Ext.isEmpty(rec.data.timeType.Code)
+                && (this.metadata.showTimes != true || rec.data.timeType.isAbsenceType == true));
+        };
+
+        this.getFormattedNumber = function (value) {
+            if (this.metadata.showFourDecimals == true) {
+                return Ext.util.Format.number(value, Shr.NUMBER_FORMAT_DECIMALFOUR);
+            }
+            else {
+                return Ext.util.Format.number(value, Shr.NUMBER_FORMAT_DECIMALTWO);
+            }
+        };
+
+        this.canEditRevisedHours = function (rec) {
+            // Can edit the "hours" field if we're not showing times (so if
+            // hours-only) or if this is an absence time type as absences
+            // are always entered just as a duration, not start/end times.
+            return (rec.data.timeType != null && !Ext.isEmpty(rec.data.timeType.Code)
+                && (this.metadata.showTimes != true || rec.data.timeType.isAbsenceType == true));
+        };
+
+        this.canEditAbsenceLeaveRequestAndAbsReason = function (rec) {
+            return (rec.data.timeType != null && !Ext.isEmpty(rec.data.timeType.Code)
+                && rec.data.timeType.isAbsenceType == true);
+        };
+
+        this.canEditComments = function (rec) {
+            return (this.showRevisions !== true && rec.data.timeType != null && !Ext.isEmpty(rec.data.timeType.Code));
+        };
+
+        this.canEditAllocationColumns = function (rec) {
+            return (rec.data.timeType != null && !Ext.isEmpty(rec.data.timeType.Code)
+                        && rec.data.timeType.hideAllocations != true);
+        }
+        //*** Columns Functions end
+
+        //*** Create Columns
+        this.columns = [];
+        // Add the entry date column when specified.
+        if (this.showEntryDate == true) {
+            this.columns.push({
+                xtype: 'datecolumn',
+                width: 140,
+                dataIndex: 'entryDate',
+                header: this.columnLabels['entryDate'],
+                editor: new Ext.form.DateField({ format: Shr.DATE_FORMAT, altFormats: Shr.ALT_DATE_FORMATS, selectOnFocus: true, msgTarget: 'side', showClear: false, invalidText: Shr.LABEL_InvalidText, formatText: '' }),
+                renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                    if (isNaN(value) || Ext.isEmpty(value)) return null;
+                    return Ext.util.Format.date(value);
+                }
+            });
+        }
+
+        this.columns.push({
+            header: this.columnLabels['timeType'],
+            dataIndex: 'timeType',
+            width: 170,
+            renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                if (Ext.isEmpty(value)) return value;
+                return !Ext.isEmpty(value.Code) ? value.Description : null;
+            },
+            editor: Ext.create('Shr.timesheets.TimeEntry.GridPanel.CodeColumnConfig', {
+                selectOnFocus: true,
+                typeAhead: true,
+                triggerAction: 'all',
+                lazyRender: true,
+                width: 170,
+                data: this.metadata.timeTypes
+            })
+        });
+
+        // If the time group is configured as an entry method that shows
+        // timed, not just hours-only, then add the state/end time columns
+        // along with the editor controls the enter values.
+        if (this.metadata.showTimes == true) {
+            this.columns.push({
+                dataIndex: this.metadata.forceOverrideTimes ? 'overrideStartTime' : 'startTime',
+                width: 120,
+                header: this.columnLabels['startTime'],
+                editor: new Ext.form.TimeField({ selectOnFocus: true }),
+                renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                    if (this.editable === true && this.canEditStartTime(record) == false) {
+                        metaData.style = 'background-color:#ccc;';
+                    }
+                    if (!Ext.isEmpty(record.data.revisedStartTime) && !Ext.isEmpty(record.data.overrideStartTime) && this.showRevisions === false) {
+                        return this.formatTimeValue(record.data.entryDate, record.data.overrideStartTime, record.data.revisedStartTime);
+                    }
+
+                    if (!Ext.isEmpty(record.data.revisedStartTime) && this.showRevisions === false) {
+                        return this.formatTimeValue(record.data.entryDate, record.data.startTime, record.data.revisedStartTime);
+                    }
+                    return this.formatTimeValue(record.data.entryDate, record.data.startTime, record.data.overrideStartTime);
+                }
+            });
+
+            if (this.showRevisions === true) {
+                this.columns.push({
+                    dataIndex: 'revisedStartTime',
+                    width: 120,
+                    header: this.columnLabels['revisedStartTime'],
+                    editor: new Ext.form.TimeField({ selectOnFocus: true }),
+                    renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                        return this.getFormattedDate(record.data.entryDate, record.data.revisedStartTime);
+                    }
+                });
+            }
+
+            this.columns.push({
+                dataIndex: this.metadata.forceOverrideTimes ? 'overrideEndTime' : 'endTime',
+                width: 120,
+                header: this.columnLabels['endTime'],
+                editor: this.metadata.allowMultiDayEntry == true
+                    ? new Shr.WebControls.DateTimeField({ selectOnFocus: true, showClear: false, format: Shr.DATE_FORMAT + ' ' + Shr.TIME_FORMAT })
+                    : new Ext.form.TimeField({ selectOnFocus: true }),
+                renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                    if (this.editable === true && this.canEditStartTime(record) == false) {
+                        metaData.style = 'background-color:#ccc;';
+                    }
+                    if (!Ext.isEmpty(record.data.revisedEndTime) && !Ext.isEmpty(record.data.overrideEndTime) && this.showRevisions === false) {
+                        return this.formatTimeValue(record.data.entryDate, record.data.overrideEndTime, record.data.revisedEndTime);
+                    }
+
+                    if (!Ext.isEmpty(record.data.revisedEndTime) && this.showRevisions === false) {
+                        return this.formatTimeValue(record.data.entryDate, record.data.endTime, record.data.revisedEndTime);
+                    }
+
+                    return this.formatTimeValue(record.data.entryDate, record.data.endTime, record.data.overrideEndTime);
+                }
+            });
+
+            if (this.showRevisions === true) {
+                this.columns.push({
+                    dataIndex: 'revisedEndTime',
+                    width: 120,
+                    header: this.columnLabels['revisedEndTime'],
+                    editor: this.metadata.allowMultiDayEntry == true
+                        ? new Shr.WebControls.DateTimeField({ selectOnFocus: true, showClear: false })
+                        : new Ext.form.TimeField({ selectOnFocus: true }),
+                    renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                        return this.getFormattedDate(record.data.entryDate, record.data.revisedEndTime);
+                    }
+                });
+            }
+        }
+
+        this.columns.push({
+            dataIndex: this.metadata.forceOverrideTimes ? 'overrideHours' : 'enteredHours',
+            width: 120,
+            header: this.columnLabels['hours'],
+            align: 'right',
+            xtype: 'numbercolumn',
+            editor: new Ext.form.NumberField({ selectOnFocus: true, style: 'text-align:left;', decimalPrecision: this.decimalPlacesToShow }),
+            renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                if (this.editable === true && this.canEditHours !== undefined && this.canEditHours(record) == false) {
+                    metaData.style = 'background-color:#ccc;';
+                }
+                if (!Ext.isEmpty(record.data.revisedHours) && this.showRevisions === false) {
+
+                    if (!Ext.isEmpty(record.data.overrideHours)) {
+                        metaData.attr = "title='" + this.textLabels.enteredHours + ": " + me.getFormattedNumber(record.data.enteredHours) + ";  " + this.textLabels.overrideHours + ": " + me.getFormattedNumber(record.data.overrideHours) + "'";
+                        return me.getFormattedNumber(record.data.revisedHours) + ' (' + me.getFormattedNumber(record.data.overrideHours) + ')';
+                    }
+                    if (!Ext.isEmpty(record.data.enteredHours)) {
+                        return me.getFormattedNumber(record.data.revisedHours) + ' (' + me.getFormattedNumber(record.data.enteredHours) + ')';
+                    }
+                    return me.getFormattedNumber(record.data.revisedHours);
+                }
+                else {
+                    if (!Ext.isEmpty(record.data.overrideHours)) {
+                        if (!Ext.isEmpty(record.data.enteredHours)) {
+                            metaData.attr = "title='" + this.textLabels.enteredHours + ": " + me.getFormattedNumber(record.data.enteredHours) + ";  " + this.textLabels.overrideHours + ": " + me.getFormattedNumber(record.data.overrideHours) + "'";
+                            return me.getFormattedNumber(record.data.overrideHours) + ' (' + me.getFormattedNumber(record.data.enteredHours) + ')';
+                        } else {
+                            return me.getFormattedNumber(record.data.overrideHours);
+                        }
+                    } else {
+                        return me.getFormattedNumber(record.data.enteredHours);
+                    }
+                }
+            },
+            summaryType: 'sum',
+            summaryRenderer: function (value, summaryData, field) {
+                return me.getFormattedNumber(value);
+            }
+        });
+
+        if (this.showRevisions === true) {
+            this.columns.push({
+                dataIndex: 'revisedHours',
+                width: 120,
+                header: this.columnLabels['revisedHours'],
+                align: 'right',
+                xtype: 'numbercolumn',
+                editor: new Ext.form.NumberField({ selectOnFocus: true, style: 'text-align:left;', decimalPrecision: this.decimalPlacesToShow }),
+                renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                    if (this.editable === true && this.canEditRevisedHours !== undefined && this.canEditRevisedHours(record) == false) {
+                        metaData.style = 'background-color:#ccc;';
+                    }
+                    return me.getFormattedNumber(value);
+                },
+                canEdit: function (rec) {
+                    // Can edit the "hours" field if we're not showing times (so if
+                    // hours-only) or if this is an absence time type as absences
+                    // are always entered just as a duration, not start/end times.
+                    return true;
+                },
+                summaryType: 'sum',
+                summaryRenderer: function (value, summaryData, field) {
+                    return me.getFormattedNumber(value);
+                }
+            });
+
+            this.columns.push({
+                dataIndex: 'calculatedHours',
+                width: 120,
+                header: this.columnLabels['calculatedHours'],
+                align: 'right',
+                xtype: 'numbercolumn',
+                renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                    if (this.editable === true) {
+                        metaData.style = 'background-color:#ccc;';
+                    }
+                    return me.getFormattedNumber(value);
+                },
+                summaryType: 'sum',
+                summaryRenderer: function (value, summaryData, field) {
+                    return me.getFormattedNumber(value);
+                }
+            });
+        }
+
+        this.columns.push({
+            dataIndex: 'absenceLeaveRequest',
+            width: 170,
+            header: this.columnLabels['absenceLeaveRequest'],
+            editor: Ext.create('Shr.timesheets.TimeEntry.GridPanel.CodeColumnConfig', {
+                selectOnFocus: true,
+                typeAhead: true,
+                triggerAction: 'all',
+                lazyRender: true,
+                data: this.metadata.leaveRequests
+            }),
+            renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                if (this.canEditAbsenceLeaveRequestAndAbsReason(record) == false) {
+                    metaData.style = 'background-color:#ccc;';
+                }
+                if (Ext.isEmpty(value)) return value;
+
+                return !Ext.isEmpty(value.Code) ? value.Description : null;
+            }
+        });
+
+        this.columns.push({
+            dataIndex: 'absenceReason',
+            width: 170,
+            header: this.columnLabels['absenceReason'],
+            editor: Ext.create('Shr.timesheets.TimeEntry.GridPanel.CodeColumnConfig', {
+                selectOnFocus: true,
+                typeAhead: true,
+                triggerAction: 'all',
+                lazyRender: true,
+                showDash: true,
+                hideCodes: true,
+                hideInactive: false,
+                dataType: 'AbsenceReason'
+            }),
+            renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                if (this.canEditAbsenceLeaveRequestAndAbsReason != null && this.canEditAbsenceLeaveRequestAndAbsReason(record) == false) {
+                    metaData.style = 'background-color:#ccc;';
+                }
+
+                if (Ext.isEmpty(value)) return value;
+                return !Ext.isEmpty(value.Value) ? value.Name : null;
+            }
+        });
+
+        this.columns.push({
+            dataIndex: 'comments',
+            width: 200,
+            header: this.columnLabels['comments'],
+            getCellEditor: function (rowIndex) {
+                var ed = Ext.grid.Column.prototype.getCellEditor.call(this, rowIndex);
+                ed.allowBlur = false;
+                return ed;
+            },
+            editor: Ext.create('Shr.timesheets.TimeEntry.TriggerField'),
+            renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                if (this.editable === true && this.canEditComments(record) == false) {
+                    metaData.style = 'background-color:#ccc;';
+                }
+                if (!Ext.isEmpty(value)) {
+                    metaData.attr = "title=\"" + value + "\"";
+                }
+                return value;
+            }
+        });
+
+        if (this.showRevisions === true) {
+            this.columns.push({
+                dataIndex: 'revisedBy',
+                width: 170,
+                header: this.columnLabels['revisedBy']
+            });
+
+            this.columns.push({
+                dataIndex: 'revisedByComments',
+                width: 200,
+                header: this.columnLabels['revisedByComments'],
+                editor: Ext.create('Shr.timesheets.TimeEntry.TriggerField'),
+                renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                    if (!Ext.isEmpty(value)) {
+                        metaData.attr = "title=\"" + value + "\"";
+                    }
+                    return value;
+                }
+            });
+        }
+
+        //// Add allocation columns based on config.metadata
+        if (this.metadata.showCompany == true) {
+            this.columns.push(Shr.timesheets.TimeEntry.GridPanel.AllocationColumnConfig2({
+                dataIndex: 'company',
+                width: 170,
+                xtype: 'combocolumn',
+                header: this.columnLabels['company'],
+                dataType: 'Company',
+                codeFiltering: this.metadata.codeFiltering
+            }));
+        }
+
+        if (this.metadata.showCostCenter == true) {
+            this.columns.push(Shr.timesheets.TimeEntry.GridPanel.AllocationColumnConfig2({
+                dataIndex: 'costCenter',
+                width: 170,
+                header: this.columnLabels['costCenter'],
+                dataType: 'CostCenter',
+                codeFiltering: this.metadata.codeFiltering
+            }));
+        }
+
+        if (this.metadata.showDepartment == true) {
+            this.columns.push(Shr.timesheets.TimeEntry.GridPanel.AllocationColumnConfig2({
+                dataIndex: 'department',
+                width: 170,
+                header: this.columnLabels['department'],
+                dataType: 'Department',
+                codeFiltering: this.metadata.codeFiltering
+            }));
+        }
+
+        if (this.metadata.showDivision == true) {
+            this.columns.push(Shr.timesheets.TimeEntry.GridPanel.AllocationColumnConfig2({
+                dataIndex: 'division',
+                width: 170,
+                header: this.columnLabels['division'],
+                dataType: 'Division',
+                codeFiltering: this.metadata.codeFiltering
+            }));
+        }
+
+        if (this.metadata.showFunctionalArea == true) {
+            this.columns.push(Shr.timesheets.TimeEntry.GridPanel.AllocationColumnConfig2({
+                dataIndex: 'functionalArea',
+                width: 170,
+                header: this.columnLabels['functionalArea'],
+                dataType: 'FunctionalArea',
+                codeFiltering: this.metadata.codeFiltering
+            }));
+        }
+
+        if (this.metadata.showLocation == true) {
+            this.columns.push(Shr.timesheets.TimeEntry.GridPanel.AllocationColumnConfig2({
+                dataIndex: 'location',
+                width: 170,
+                header: this.columnLabels['location'],
+                dataType: 'Location',
+                codeFiltering: this.metadata.codeFiltering
+            }));
+        }
+
+        if (this.metadata.showOrganizationUnit == true) {
+            this.columns.push(Shr.timesheets.TimeEntry.GridPanel.AllocationColumnConfig2({
+                dataIndex: 'organizationUnit',
+                width: 170,
+                header: this.columnLabels['organizationUnit'],
+                dataType: 'OrganizationUnit',
+                codeFiltering: this.metadata.codeFiltering
+            }));
+        }
+
+        if (this.metadata.showProject == true) {
+            this.columns.push({
+                dataIndex: 'project',
+                width: 170,
+                header: this.columnLabels['project'],
+                editor: Ext.create('Shr.timesheets.TimeEntry.GridPanel.CodeColumnConfig', {
+                    selectOnFocus: true,
+                    typeAhead: true,
+                    triggerAction: 'all',
+                    lazyRender: true,
+                    data: this.metadata.projects
+                }),
+                renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+                    if (this.editable === true && this.canEditAllocationColumns(record) == false) {
+                        metaData.style = 'background-color:#ccc;';
+                    }
+
+                    if (Ext.isEmpty(value)) return value;
+
+                    return !Ext.isEmpty(value.Code) ? value.Description : null;
+                }
+            });
+        }
+
+        if (this.metadata.showRegion == true) {
+            this.columns.push(Shr.timesheets.TimeEntry.GridPanel.AllocationColumnConfig2({
+                dataIndex: 'region',
+                width: 170,
+                header: this.columnLabels['region'],
+                dataType: 'Region',
+                codeFiltering: this.metadata.codeFiltering
+            }));
+        }
+
+        if (this.metadata.showSection == true) {
+            this.columns.push(Shr.timesheets.TimeEntry.GridPanel.AllocationColumnConfig2({
+                dataIndex: 'section',
+                width: 170,
+                header: this.columnLabels['section'],
+                dataType: 'Section',
+                codeFiltering: this.metadata.codeFiltering
+            }));
+        }
+
+        if (this.metadata.showShift == true) {
+            this.columns.push(Shr.timesheets.TimeEntry.GridPanel.AllocationColumnConfig2({
+                dataIndex: 'shift',
+                width: 170,
+                header: this.columnLabels['shift'],
+                dataType: 'Shift',
+                codeFiltering: this.metadata.codeFiltering
+            }));
+        }
+
+        if (this.editable === true) {
+            this.columns.push(Ext.create('Shr.timesheets.TimeEntry.columnAction', {
+                forceOverrideTimes: this.metadata.forceOverrideTimes,
+                showRevisions: this.showRevisions,
+                dataIndex: 'delete',
+                width: 40
+            }));
+        }
+        //  **Create Columns end
+        Ext.apply(this, config, this.initialConfig);
+
+        // If this is an editable grid and there are no records, then add a
+        // single new record by default to start editing with. Otherwise remove
+        // any records that don't have IDs (these will be "synthetic" overtime
+        // records returned as part of a period summary which can't be edited).
+        if (this.editable === true) {
+            if (this.store.getCount() == 0) {
+                me.addRecord.call(me, false);
+            } else {
+                this.store.each(function (r) {
+                    if (r.data.id === null) {
+                        this.store.remove(r);
+                    }
+                });
+            }
+        }
+
+        Shr.timesheets.TimeEntry.GridPanel.superclass.initComponent.call(this);
+    },
+
+    updateHours: function (record) {
+        // Don't update hours is the time type is blank or it's an absence type.
+        if (record.data.timeType == null
+            || Ext.isEmpty(record.data.timeType.Code)
+            || record.data.timeType.isAbsenceType === true) {
+
+            return;
+        }
+
+        var me = this;
+        var startTime = me.showRevisions && !Ext.isEmpty(record.data.revisedStartTime)
+            ? record.data.revisedStartTime
+            : !Ext.isEmpty(record.data.overrideStartTime) ? record.data.overrideStartTime : record.data.startTime;
+        var endTime = me.showRevisions && !Ext.isEmpty(record.data.revisedEndTime)
+            ? record.data.revisedEndTime
+            : !Ext.isEmpty(record.data.overrideEndTime) ? record.data.overrideEndTime : record.data.endTime;
+
+        var fieldName = me.showRevisions
+	        ? 'revisedHours'
+	        : me.metadata.forceOverrideTimes == true ? 'overrideHours' : 'enteredHours';
+
+        if (!Ext.isEmpty(startTime) != null && !Ext.isEmpty(endTime) != null && !Ext.isEmpty(record.data.timeType)) {
+            Ext.Ajax.request({
+                url: 'API/JsonFetcher.svc/Invoke',
+                params: {
+                    svcprovider: 'JsGetTimeEntryHours',
+                    timeGroupCode: this.metadata.timeGroupCode,
+                    timeTypeCode: record.data.timeType.Code,
+                    start: startTime,
+                    end: endTime
+                },
+                success: function (resp) {
+                    var result = Ext.decode(resp.responseText);
+                    record.set(fieldName, result.hours);
+
+                    me.gridRowEditor.grid.updateFieldValues(fieldName);
+                }
+            });
+        } else {
+            record.set(fieldName, null);
+            me.gridRowEditor.grid.updateFieldValues(fieldName);
+        }
+    },
+
+    updateFieldValues: function (dindex) {
+        if (!this.editing) return;
+        if (dindex == null || false === undefined) return;
+
+        var cm = this.columns,
+            field, val;
+        for (var i = 0, len = cm.length; i < len; i++) {
+            f = cm[i];
+            fdindex = cm[i].dataIndex;
+            if (fdindex == dindex && f !== undefined) {
+                val = this.preEditValue(this.editRecord, fdindex);
+                f.field.un('change', this.saveFieldValues);
+                f.field.un('select', this.saveFieldValues);
+                f.field.setValue(val);
+                f.field.on('change', this.saveFieldValues, this);
+                f.field.on('select', this.saveFieldValues, this);
+            }
+        }
+    },
+
+    synchDateTimeField: function (record, newValue, field) {
+        if (newValue == null) {
+            record.set(field, newValue);
+        } else if (Ext.isDate(newValue)) {
+            record.set(field, new Date(newValue.getFullYear(),
+                newValue.getMonth(),
+                newValue.getDate(),
+                record.data[field] != null ? record.data[field].getHours() : null,
+                record.data[field] != null ? record.data[field].getMinutes() : null,
+                record.data[field] != null ? record.data[field].getSeconds() : null,
+                record.data[field] != null ? record.data[field].getMilliseconds() : null));
+        }
+    },
+
+    onDeleteRow: function (cm, record) {
+        // Conditionally allow the user to delete person time detail based upon
+        // the following criteria.  Any user with rights to access Timesheet 
+        // Summary can edit or delete person time detail up until the person 
+        // time group period.  Once a person's time group period has been 
+        // approved only users in a role with the "Can Review Approved Timesheets" 
+        // flag can delete or edit the timesheet. 
+        if (record.data.canEditDelete === false)
+        {
+            Ext.Msg.alert(this.textLabels.deleteRecord, this.textLabels.notAuthorized, Ext.emptyFn);
+                    return false;
+        }
+
+        var me = this;
+        if (Ext.Msg.confirm(this.textLabels.deleteRecord, this.textLabels.deleteRecordMsg, function (btn, text) {
+            if (btn !== 'yes') return;
+
+            record.set('isDeleted', true);
+
+            var recordData = [];
+            recordData.push(record.data);
+            Ext.Ajax.request({
+                url: 'API/JsonFetcher.svc/Invoke',
+                params: {
+                    svcprovider: 'JsSaveDailyTimeDetail',
+                    records: Ext.util.JSON.encode(recordData),
+                    selectedPeriod: me.selectedPeriod
+                },
+                success: function (resp) {
+                    if (Ext.isEmpty(resp.responseText)) return;
+                    var result = Ext.decode(resp.responseText);
+
+                    if (result.success == true) {
+                        record.reject();
+                        me.store.remove(record);
+                        me.fireEvent('afteredit', me);
+                    }
+
+                    var myTimeEntryCalendar = Ext.getCmp('mytimeEntryCalendarPanel');
+                    if (myTimeEntryCalendar) {
+                        myTimeEntryCalendar.loadSummary(false);
+                    }
+                }
+            });
+
+        }));
+
+        return false;
+    },
+
+    doResize: function (comp, adjWidth, adjHeight, rawWidth, rawHeight) {
+        if (this.gridRowEditor !== null) {
+            this.gridRowEditor.verifyLayout();
+            console.log('inside doresize after VerifyLayout');
+        }
+    },
+
+    addRecord: function (startEditing) {
+        if (startEditing != false) {
+
+            var editRecord = new Ext.data.Record({
+                isNew: true,
+                positionCode: this.metadata.positionCode,
+                jobTitle: this.metadata.title,
+                entryDate: this.entryDate
+            });
+            this.startEdit(editRecord);
+        }
+    },
+    copyRecord: function (startEditing, ignoreDate) {
+        var selection = this.getSelectionModel().getSelection();
+        if (selection.length > 0) {
+            if (startEditing != false) {
+
+                var editRecord = selection[0].copy(null);
+                editRecord.data.isNew = true;
+                if (ignoreDate && this.showEntryDate) {
+                    editRecord.data.entryDate = null;
+                }
+                this.startEdit(editRecord);
+            }
+        }
+    },
+    startEdit: function (editRecord) {
+        this.store.add(editRecord);
+        this.gridRowEditor.startEdit(editRecord);
+        this.disableButtons();
+        this.view.refresh();
+    },
+    preEditValue2: function (r, field) {
+        var value = r.data[field];
+        return this.autoEncode && typeof value === 'string' ? Ext.util.Format.htmlDecode(value) : value;
+    },
+
+    preEditValue: function (r, field) {
+        var me = this,
+            value = this.preEditValue2(r, field);
+
+        if (!Ext.isEmpty(value)) return value;
+
+        // Default the values on start/end time fields so on entry of
+        // the base time values we default to the entry date, and on
+        // entry of override fields we default to the base values.
+        if (field == 'startTime') {
+            if (r.data.timeType == null || Ext.isEmpty(r.data.timeType.Code) || r.data.timeType.isAbsenceType === true) return null;
+            return me.entryDate;
+        } else if (field == 'endTime') {
+            if (r.data.timeType == null || Ext.isEmpty(r.data.timeType.Code) || r.data.timeType.isAbsenceType === true) return null;
+            return null;
+        } else if (field == 'overrideStartTime') {
+            if (r.data.timeType == null || Ext.isEmpty(r.data.timeType.Code) || r.data.timeType.isAbsenceType === true) return null;
+            return r.data.startTime != null ? r.data.startTime : r.data.entryDate;
+        } else if (field == 'overrideEndTime') {
+            if (r.data.timeType == null || Ext.isEmpty(r.data.timeType.Code) || r.data.timeType.isAbsenceType === true) return null;
+            return r.data.endTime != null ? r.data.endTime : null;
+        } else if (field == 'timeType') {
+            if (r.data.timeType === undefined) {
+                r.data.timeType = '';
+            }
+        } else {
+            return value;
+        }
+    },
+
+    saveFieldValues: function (f) {
+        var cm = this.columns,
+            fields = this.items.items;
+        for (var i = 0, len = cm.length; i < len; i++) {
+            if ((f == null || f === undefined || cm[i].field == f) && cm[i].field !== undefined) {
+                var dindex = cm[i].field.dataIndex;
+                var value = cm[i].field.getValue();
+                if (dindex != value) {
+
+                    var oldValue = this.editRecord.data[dindex];
+
+                    value = this.postEditValue(value, oldValue, this.editRecord, dindex);
+                    this.editRecord.set(dindex, value);
+
+                    this.changeField(value, oldValue, this.editRecord, dindex);
+
+                    this.updateFieldState();
+                }
+            }
+        }
+    },
+
+    changeField: function (value, oldvalue, r, field) {
+        var me = this;
+        if (field == 'startTime' || field == 'endTime' || field == 'overrideStartTime' || field == 'overrideEndTime'
+            || field == 'revisedStartTime' || field == 'revisedEndTime') {
+            me.updateHours.call(me, r);
+        } else if (field == 'entryDate') {
+            if (me.metadata.showTimes !== true || Ext.isEmpty(value)) return;
+
+            // If there is no time type set, or it's an absence type with no
+            // time, then exit, as we don't need to set the start/end times.
+            if (r.data.timeType == null || Ext.isEmpty(r.data.timeType.Code) || r.data.timeType.isAbsenceType === true)
+                return;
+
+            // Update the date portion of start/end time fields to make them
+            // be on the same day as the entry date. In case of override, the
+            // "base" times don't need to change as can't change date if this
+            // is a record that has base times.
+            if (me.showRevisions) {
+                //The system should not auto - update the Revised Start Time and End Time when the user does not edit that field.
+                //BUT if there is a value then sync it
+                if (Ext.isEmpty(r.data.revisedStartTime)) {
+                    //newValue
+                    me.synchDateTimeField(r, null, 'revisedStartTime');
+                }
+                else {
+                    me.synchDateTimeField(r, value, 'revisedStartTime');
+                }
+                if (Ext.isEmpty(r.data.revisedEndTime)) {
+                    //newValue
+                    me.synchDateTimeField(r, null, 'revisedEndTime');
+                }
+                else {
+                    me.synchDateTimeField(r, value, 'revisedEndTime');
+                }            } else if (me.metadata.forceOverrideTimes) {
+                me.synchDateTimeField(r, value, 'overrideStartTime');
+                me.synchDateTimeField(r, value, 'overrideEndTime');
+            } else {
+                me.synchDateTimeField(r, value, 'startTime');
+                me.synchDateTimeField(r, value, 'endTime');
+            }
+        }
+    },
+
+    canceleditRow: function (ed, rec) {
+        var me = this;
+        if (rec.data.isNew == true && rec.dirty == false) {
+            rec.reject();
+            me.store.remove(rec);
+        }
+
+        if (me.metadata.isTimePeriodClosed == false && me.metadata.isSubmitted == false) {
+            me.addButton.enable();
+        }
+    },
+
+    updateFieldState: function () {
+        var cm = this.columns;
+        this.setFieldState(this.editRecord);
+    },
+
+    disableEditing: function () {
+        var me = this,
+            columns = this.columns;
+
+        for (var i = 0, len = columns.length; i < len; i++) {
+            var field = columns[i].field;
+
+            if (field === undefined) continue;
+            switch (field.dataIndex) {
+                case 'entryDate':
+                    field.setReadOnly(true);
+                    break;
+                case 'revisedHours':
+                case 'timeType':
+                    field.disable();
+                    field.setReadOnly(true);
+                    break;
+                default:
+                    if (field.disable)
+                        field.disable();
+            }
+        }
+    },
+
+    isRecordEditable: function (record) {
+        var r, ret = true;
+
+        //We are going to allow to edit, unless we specifically say otherwise.
+        if (Ext.isEmpty(record.data) || record.data.isNew || Ext.isEmpty(record.data.timeType))
+            return ret;
+
+        r = record.data;
+
+        if (!Ext.isEmpty(r.timeType.isEditable))
+            ret = r.timeType.isEditable;
+        else
+            if (!Ext.isEmpty(record.previousValues) && !Ext.isEmpty(record.previousValues.timeType) && !Ext.isEmpty(record.previousValues.timeType.isEditable))
+                ret = record.previousValues.timeType.isEditable;
+
+        return ret;
+    },
+
+    setFieldState: function (record, isInitialized) {
+        var me = this,
+            columns = this.columns;
+
+        if (!this.isRecordEditable(record)) {
+            this.disableEditing();
+            return false;
+        }
+
+        for (var i = 0, len = columns.length; i < len; i++) {
+            var field = columns[i].field;
+
+            if (field === undefined) continue;
+            switch (field.dataIndex) {
+                case 'entryDate':
+                    if (me.canEditEntryDateAndTimeType(record) == true) {
+                        field.enable();
+                        field.setReadOnly(false);
+                    }
+                    else
+                        field.setReadOnly(true);
+                    break;
+                case 'timeType':
+                    if (me.canEditEntryDateAndTimeType(record) == true) {
+                        field.enable();
+                        field.setReadOnly(false);
+                    }
+                    else {
+                        field.disable();
+                        field.setReadOnly(true);
+                    }
+                    break;
+                case 'startTime':
+                case 'endTime':
+                    if (me.canEditStartTime(record) == true)
+                        field.enable();
+                    else
+                        field.disable();
+                    break;
+                case 'revisedStartTime':
+                case 'revisedEndTime':
+                    field.enable();
+                    break;
+                case 'overrideHours':
+                case 'enteredHours':
+                    if (me.canEditHours(record) == true)
+                        field.enable();
+                    else
+                        field.disable();
+                    break;
+                case 'revisedHours':
+                    if (me.canEditRevisedHours(record) == true) {
+                        field.enable();
+                        field.setReadOnly(false);
+                    }
+                    else {
+                        field.disable();
+                        field.setReadOnly(true);
+                    }
+                    break;
+                case 'absenceLeaveRequest':
+                case 'absenceReason':
+                    if (me.canEditAbsenceLeaveRequestAndAbsReason(record) == true)
+                        field.enable();
+                    else
+                        field.disable();
+                    break;
+                case 'comments':
+                    if (me.canEditComments(record) == true)
+                        field.enable();
+                    else
+                        field.disable();
+                    break;
+                case 'company':
+                case 'costCenter':
+                case 'department':
+                case 'division':
+                case 'functionalArea':
+                case 'location':
+                case 'organizationUnit':
+                case 'project':
+                    if (me.canEditAllocationColumns(record) == true)
+                        field.enable();
+                    else
+                        field.disable();
+                    break;
+                case 'revisedByComments':
+                    field.enable();
+                    break;
+            }
+        }
+    },
+
+    postEditValue: function (value, originalValue, r, field) {
+        var me = this,
+            value = Shr.timesheets.TimeEntry.GridPanel.postEditValue(value, originalValue, r, field);
+        if (field == 'timeType') {
+            for (var i = 0; i < me.metadata.timeTypes.length; i++) {
+                if (value && value !== null && me.metadata.timeTypes[i].Code == value.Code) {
+                    var timeType = me.metadata.timeTypes[i];
+                    delete timeType.id;
+                    r.set(field, timeType);
+
+                    if (me.metadata.showTimes === true) {
+                        // If setting the type to an absence type then clear all
+                        // entered times, as times are irrelevant for an absence.
+                        //
+                        // If not an absence type and we're setting times then
+                        // synchronize the entered time with the entry date.
+                        if (timeType.isAbsenceType === true) {
+                            me.synchDateTimeField(r, null, 'revisedStartTime');
+                            me.synchDateTimeField(r, null, 'revisedEndTime');
+                            me.synchDateTimeField(r, null, 'overrideStartTime');
+                            me.synchDateTimeField(r, null, 'overrideEndTime');
+                            me.synchDateTimeField(r, null, 'startTime');
+                            me.synchDateTimeField(r, null, 'endTime');
+                        } else {
+                            // Update the date portion of start/end time fields to make them
+                            // be on the same day as the entry date. In case of override, the
+                            // "base" times don't need to change as can't change date if this
+                            // is a record that has base times.
+                            var entryDate = r.data.entryDate;
+                            if (me.showRevisions) {
+                                //The system should not auto - update the Revised Start Time when the user does not edit that field.
+                                //BUT if there is a value then sync it
+                                if (Ext.isEmpty(r.data.revisedStartTime)) {
+                                    //newValue
+                                    me.synchDateTimeField(r, null, 'revisedStartTime');
+                                }
+                                else {
+                                    me.synchDateTimeField(r, entryDate, 'revisedStartTime');
+                                }
+                            } else if (me.metadata.forceOverrideTimes) {
+                                me.synchDateTimeField(r, entryDate, 'overrideStartTime');
+                            } else {
+                                //If the entry date has not been set yet (when copying happens)
+                                //default to today's date.
+                                //The date portion will be updated once the entry date is entered
+                                if (entryDate == null)
+                                {
+                                    me.synchDateTimeField(r, new Date(), 'startTime');
+                                }
+                                else
+                                {
+                                    me.synchDateTimeField(r, entryDate, 'startTime');
+                                }
+                            }
+                        }
+                    }
+
+                    return timeType;
+                }
+            }
+        } else if (field == 'startTime' || field == 'overrideStartTime' || field == 'revisedStartTime'
+            || ((field == 'endTime' || field == 'overrideEndTime' || field == 'revisedEndTime') && me.metadata.allowMultiDayEntry !== true)) {
+            // If no time type is set, they shouldn't be able to
+            // edit the start/end times, so just return null.
+            if (r.data.timeType == null || Ext.isEmpty(r.data.timeType.Code)) return null;
+
+            // Convert the value for the time editor to include both entry 
+            // date and time, not just a string with the entered time.
+            
+			//If the entry date has not been set yet (when copying happens)
+            //default to today's date.
+            //The date portion will be updated once the entry date is entered
+            if (r.data.entryDate == null)
+            {
+                return new Date(Ext.Date.format(new Date(), Shr.DATE_FORMAT) + ' ' + Ext.Date.format(value, Shr.TIME_FORMAT));
+            }
+            else
+            {
+                return new Date(Ext.Date.format(r.data.entryDate, Shr.DATE_FORMAT) + ' ' + Ext.Date.format(value, Shr.TIME_FORMAT));
+            }
+		}
+        return value;
+    },
+    onGridEditorCancel: function (editor) {
+        var record = editor.grid.record;
+        if (record.data.isNew) {
+            editor.grid.store.remove(record);
+        }
+    },
+    onGridEditorEdit: function (editor, context, options) {
+        //options 0 = save only, 1 = save and add new, 2 = save, copy and add new record
+        var me = this;
+        this.editing = false;
+        // Set Shr.panel.TimesheetSummary.dataEdited to true so Summary tab
+        // requests the new data
+        if (typeof Shr.panel.TimesheetSummary.dataEdited != "undefined") {
+            Shr.panel.TimesheetSummary.dataEdited = true;
+        }
+
+        // Save any pending changes for the record and make sure there are any
+        // as if there aren't then we can just hide the row edit bar and exit.
+        //We no longer execute the code below because save happens when the user moves off of
+        //the field.  If the code is executed then change events fire unnecessarily which at times can cause issue
+        //with the calculation of hours
+        if (editor.grid.record.data.isNew !== true && !editor.grid.isDirty()) {
+            editor.grid.fireEvent('afteredit', me);
+            me.processCommand(options);
+            return;
+        }
+
+        //we want the updateHours function to kick in and set the value for the change event
+        // for edit record, so give it a second or so before we go updating the database        
+        editor.grid.updateDatabase(options);
+    },
+
+    updateDatabase: function (options) {
+        //options 0 = save only, 1 = save and add new, 2 = save, copy and add new record
+        var me = this;
+
+        // Call the JsSaveDailyTimeDetail method to save the changes. If
+        // the save succeeds then hide the edit bar and exit, otherwise
+        // display any warning messages from saving and leave edit open.
+        var recordData = [];
+        recordData.push(this.editRecord.data);
+
+        /** ## The "id" Field and `idProperty`
+        *
+        * A Model definition always has an *identifying field* which should yield a unique key
+        * for each instance. By default, a field named "id" will be created with a
+        * {@link Ext.data.Field#mapping mapping} of "id". This happens because of the default
+        * {@link #idProperty} provided in Model definitions. However when is a new record the ID field 
+        * must be null.*/
+        if (this.editRecord.id.toString().length < 36)
+            delete recordData[0].id;
+
+        Ext.Ajax.request({
+            url: getPathRoot() + '/API/JsonFetcher.svc/Invoke',
+            params: {
+                svcprovider: 'JsSaveDailyTimeDetail',
+                records: Ext.util.JSON.encode(recordData),
+                selectedPeriod: me.selectedPeriod,
+                isRevision: me.showRevisions
+            },
+            success: function (resp) {
+                if (Ext.isEmpty(resp.responseText)) return;
+                var result = Ext.decode(resp.responseText);
+
+                if (result.success == true) {
+                    if (me.editRecord) {
+                        var changes = me.editRecord.getChanges();
+                        var r = me.record;
+
+                        r.beginEdit();
+                        Ext.iterate(changes, function (name, value) {
+                            r.set(name, value);
+                        });
+                        r.endEdit(true);
+
+                        // // To prevent inserting a new record multiple times if
+                        // // the user edits and saves it more than once, the call
+                        // // to save will pass back the Id of the new record which
+                        // // we set on it and mark the record as not being new.
+                        if (result.newRecordId !== null && r.data.isNew === true) {
+                            r.data.id = result.newRecordId;
+                            r.data.isNew = false;
+                        }
+
+                        r.commit();
+                        me.processCommand(options);
+                    }
+
+                } else {
+                    // In the event of errors, still editing the row.
+                    me.editing = true;
+
+                    // Show the errors
+                    var messages = Ext.decode(resp.responseText).messages;
+                    var displayMessage = "";
+                    var positionLoop = "";
+                    Ext.each(messages, function (op) {
+                        if (positionLoop != op.name) {
+                            //do not end previous list if this is the first of the lists
+                            if (positionLoop != "")
+                                displayMessage += '</ul><br><br>';
+                            positionLoop = op.name;
+                            displayMessage += me.textLabels.saveErrorMsg1 + op.name + " <br /><ul>";
+                        }
+                        displayMessage += '<li>' + op.message + '</li>';
+                    });
+                    //end the last list if needed
+                    if (displayMessage != "")
+                        displayMessage += '</ul>';
+                    Ext.Msg.show({
+                        title: me.textLabels.saveErrorMsg2,
+                        msg: displayMessage,
+                        width: 400,
+                        modal: true,
+                        buttons: Ext.Msg.OK,
+                        icon: Ext.MessageBox.INFO
+                        //,
+                        //fn: function (btn) {
+                        //    // Explicitly destroy the message box.
+                        //    Ext.Msg.destroy();
+                        //}
+                    });
+                }
+
+                var myTimeEntryCalendar = Ext.getCmp('mytimeEntryCalendarPanel');
+                if (myTimeEntryCalendar) {
+                    myTimeEntryCalendar.loadSummary(false);
+                }
+            }
+        });
+
+
+    },
+    getColumnIndex: function (dataIndex) {
+        var me = this;
+        var gridColumns = me.headerCt.getGridColumns();
+        for (var i = 0; i < gridColumns.length; i++) {
+            if (gridColumns[i].dataIndex == dataIndex) {
+                return i;
+            }
+        }
+    },
+
+    processCommand: function (options) {
+        var me = this;
+        me.gridRowEditor.cancelEdit();
+
+        //fixing ext-bug, we need to reset tabindex to -1 for the delete button.
+        if (me.gridRowEditor) {
+            var row = me.gridRowEditor.context.rowIdx;
+            var col = me.getColumnIndex('delete');
+            var currentCell = me.view.getCell(row, col);
+            if (currentCell && currentCell.el) {
+                currentCell.el.dom.firstChild.firstChild.tabIndex = -1;
+            }
+            
+        }
+        //options 0 = don't add, 1 = add new, 2 = copy and add new record
+        switch (options) {
+            case 0:
+                break;
+            case 1:
+                me.addRecord(true);
+                break;
+            case 2:
+                me.copyRecord(true, true);
+                break;
+            default:
+                break;
+        }
+    },
+
+    isDirty: function () {
+        if (this.confirmChanges == false || this.editRecord == null || !this.editRecord.dirty) return false;
+
+        var r = this.record;
+        var cm = this.columns;
+        for (var i = 0, len = cm.length; i < len; i++) {
+            var dindex = cm[i].field.dataIndex;
+            var val = this.editRecord.data[dindex];
+            var oldVal = this.record.data[dindex];
+
+            if (val != oldVal && (!Ext.isEmpty(val) || !Ext.isEmpty(oldVal))) {
+                if (cm[i].field === undefined) continue;
+
+                if (cm[i].field.valueField === undefined || cm[i].field.valueField == null) return true;
+
+                //for fields where we have objects in the value, we want to get the value field,
+                // however, datetime fields already have the value in them and we do not need
+                // to get another value (primarily because the value then set becomes undefined)
+                if (val != null && dindex.indexOf("Time") == -1)
+                    val = cm[i].field.valueField;
+                if (oldVal != null && dindex.indexOf("Time") == -1)
+                    oldVal = oldVal[cm[i].field.valueField];
+
+                if ((!Ext.isEmpty(val) || !Ext.isEmpty(oldVal))
+                    && val != oldVal) {
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    },
+
+    listeners: {
+        beforeedit: function (editor, context) {
+            var me = this;
+
+            var form = editor.getEditor().form;
+
+            if (this.setFieldState(context.record, true) == false)
+                return false;
+
+            this.editing = true;
+            this.record = context.record;
+
+            if (me.showSaveButtons !== false) {
+                this.editRecord = this.record.copy();
+                this.editRecord.commit(false);
+            } else {
+                this.editRecord = this.record;
+            }
+
+            var cm = me.columns,
+                fields = me.items.items,
+                f, val;
+            for (var i = 0, len = cm.length; i < len; i++) {
+                f = cm[i];
+                if (f !== undefined) {
+                    val = this.preEditValue(context.record, f.dataIndex);
+                    f.field.un('change', this.saveFieldValues);
+                    f.field.un('select', this.saveFieldValues);
+                    f.field.setValue(val);
+                    f.field.on('change', this.saveFieldValues, this);
+                    f.field.on('select', this.saveFieldValues, this);
+                }
+            }
+        },
+        select: function (grid, record, index, eOpts) {
+            this.copyButtonSelectionChange();
+        },
+        deselect: function (grid, record, index, eOpts) {
+            this.copyButtonSelectionChange();
+        }
+    },
+    copyButtonSelectionChange: function () {
+        var me = this;
+        if (me.copyButton != null)
+        {
+			var selection = me.getSelection();
+			if (selection) {
+				if (!me.clockInClockOut) {
+					var disabled = me.isButtonDisabled() || selection.length <= 0;
+					me.copyButton.setDisabled(disabled);
+				}
+			}
+		}
+    },
+    disableButtons: function () {
+        this.addButton.setDisabled(true);
+        if (this.copyButton) {
+            this.copyButton.setDisabled(true);
+        }
+
+    },
+    enableButtons: function () {
+        this.addButton.setDisabled(this.isButtonDisabled());
+        this.copyButtonSelectionChange();
+    }
+});
+
+Shr.timesheets.TimeEntry.GridPanel.AllocationColumnConfig2 = function (config) {
+    return {
+        dataIndex: config.dataIndex,
+        width: config.width,
+        header: config.header,
+        dataType: config.dataType,
+        editor: Ext.create('Shr.timesheets.TimeEntry.GridPanel.CodeColumnConfig', {
+            selectOnFocus: true,
+            typeAhead: true,
+            triggerAction: 'all',
+            lazyRender: true,
+            hideCodes: true,
+            hideInactive: false,
+            showDash: true,
+            dataType: config.dataType,
+            allowBlank: true,
+            codeFiltering: config.codeFiltering
+        }),
+        renderer: function (value, metaData, record, rowIndex, colIndex, store) {
+            if (this.canEdit != null && this.canEdit(record) == false) {
+                metaData.style = 'background-color:#ccc;';
+            }
+
+            if (!value) return null;
+            return !Ext.isEmpty(value.Value) ? value.Name : null;
+        }
+    };
+};
+
+Ext.define('Shr.timesheets.TimeEntry.columnAction', {
+    extend: 'Ext.grid.column.Action',
+    alias: 'widget.shrTimesheetsTimeEntry.actioncolumn',
+    width: 30,
+    align: 'center',
+
+    constructor: function (config) {
+        var me = this;
+        me.initialConfig = config;
+        me.callParent(arguments);
+    },
+
+    handler: function (grid, rowIndex, colIndex, item, e) {
+        var me = this;
+        var rec = grid.store.getAt(rowIndex);
+        if (rec == null) return;
+
+        if (!this.isRecordEditable(rec)) return;
+
+        // If forcing override times (not allowing edit of base
+        // times), and this record has base times and isn't new
+        // then don't allow them to delete the record.
+        if (me.forceOverrideTimes == true
+            && rec.data.isNew != true
+            && (!Ext.isEmpty(rec.data.startTime)
+            || !Ext.isEmpty(rec.data.endTime))) {
+
+            return;
+        }
+
+        if (rec.data.isDeleted == true) {
+            rec.set('isDeleted', false);
+            grid.grid.getView().removeRowClass(rowIndex, 'shr-linethrough');
+        } else if (rec.data.isNew == true) {
+            rec.reject();
+            grid.grid.store.remove(rec);
+        } else if (grid.grid.onDeleteRow(me, rec) !== false) {
+            rec.set('isDeleted', true);
+            grid.grid.getView().addRowClass(rowIndex, 'shr-linethrough');
+        }
+    },
+    getClass: function (v, meta, rec) {
+        var me = this;
+        // Conditionally show delete X icon based upon the following criteria.  
+        // Any user with rights to access Timesheet Summary can edit or delete 
+        // person time detail up until the person time group period.  Once a 
+        // person's time group period has been approved only users in a role 
+        // with the "Can Review Approved Timesheets" flag can delete or edit 
+        // the timesheet.
+        if (me.showRevisions === true && rec.data.canEditDelete === true) {
+            if (rec.data.isDeleted == true) {
+                return 'x-fa fa-undo darkblue-text';
+            } else {
+                return 'x-fa fa-times red-text';
+            }
+        }
+
+        // If forcing override times (not allowing edit of base
+        // times), and this record has base times and isn't new
+        // then don't allow them to delete the record.
+        if (me.forceOverrideTimes == true
+                        && rec.data.isNew != true
+                        && (!Ext.isEmpty(rec.data.startTime)
+                        || !Ext.isEmpty(rec.data.endTime))) {
+
+            return;
+        }
+
+        if (rec.data.isDeleted == true) {
+            return 'x-fa fa-undo darkblue-text';
+        } else {
+            return 'x-fa fa-times red-text';
+        }
+    },
+
+    isRecordEditable: function (record) {
+        var r, ret = true;
+
+        if (Ext.isEmpty(record.data) || Ext.isEmpty(record.data.timeType))
+            return false;
+
+        r = record.data;
+
+        if (!Ext.isEmpty(r.timeType.isEditable))
+            ret = r.timeType.isEditable;
+        else
+            if (!Ext.isEmpty(record.previousValues) && !Ext.isEmpty(record.previousValues.timeType) && !Ext.isEmpty(record.previousValues.timeType.isEditable))
+                ret = record.previousValues.timeType.isEditable;
+
+        return ret;
+    }
+});
+
+Shr.timesheets.TimeEntry.GridPanel.postEditValue = function (value, originalValue, r, field) {
+    return typeof value == 'string' ? Ext.util.Format.htmlEncode(value) : value;
+};
+
+
+if (!Ext.ClassManager.isCreated('shrTimesheetcomboboxfieldModel')) {
+    Ext.define('shrTimesheetcomboboxfieldModel', {
+        extend: 'Ext.data.Model',
+        idProperty: 'Value', // this is important!  If it is NOT assigned then the combobox will not sync with the current value at load time
+        fields: [
+        { name: 'Name' },
+        { name: 'Value' }],
+    });
+}
+
+if (!Ext.ClassManager.isCreated('shrTimesheetcomboboxfieldModelCode')) {
+    Ext.define('shrTimesheetcomboboxfieldModelCode', {
+        extend: 'Ext.data.Model',
+        idProperty: 'Code', // this is important!  If it is NOT assigned then the combobox will not sync with the current value at load time
+        fields: [
+        { name: 'Code' },
+        { name: 'Description' }],
+    });
+}
+
+Ext.define('Shr.timesheets.TimeEntry.GridPanel.CodeColumnConfig', {
+    extend: 'Ext.form.field.ComboBox',
+    alias: 'widget.shrTimesheetcomboboxfield',
+
+    constructor: function (config) {
+        var me = this;
+
+        me.selectOnFocus = config.selectOnFocus;
+        me.typeAhead = config.typeAhead;
+        me.triggerAction = config.triggerAction;
+        me.lazyRender = config.lazyRender;
+        me.minChars = 0;
+        me.matchFieldWidth = false;
+
+        if (config.data != null) {
+            me.store = Ext.create('Ext.data.Store', {
+                model: 'shrTimesheetcomboboxfieldModelCode',
+                data: config.data
+            }),
+            me.valueField = 'Code',
+            me.displayField = 'Description'
+        } else if (config.dataType != null) {
+            var dataTypeStore = new Ext.data.JsonStore({
+                model: 'shrTimesheetcomboboxfieldModel',
+                proxy: {
+                    type: 'ajax',
+                    pageParam: false, //to remove param "page"
+                    startParam: false, //to remove param "start"
+                    limitParam: false, //to remove param "limit"
+                    url: getPathRoot() + '/API/JsonFetcher.svc/Invoke',
+                    actionMethods: {
+                        read: 'POST'
+                    },
+                    reader: {
+                        type: 'json',
+                        rootProperty: 'items'
+                    },
+                    extraParams: {
+                        svcprovider: 'JsSearchByDataType',
+                        dataType: config.dataType,
+                        sortProperty: config.sortProperty == null ? '' : config.sortProperty,
+                        query: config.lastQuery == null ? '' : config.lastQuery,
+                        filter: config.filter == null ? '' : config.filter,
+                        codeFiltering: config.codeFiltering,
+                        currentValue: config.initialValue == null ? '' : config.initialValue,
+                        preFilterName: config.preFilter == null ? '' : config.preFilter,
+                        includeDash: config.showDash,
+                        hideCodes: config.hideCodes,
+                        hideInactive: config.hideInactiveCodes
+                    }
+                },
+                rootProperty: 'items',
+                autoLoad: true,
+                autoDestroy: true
+            });
+
+            me.store = dataTypeStore,
+            me.valueField = 'Value',
+            me.displayField = 'Name'
+        }
+        this.callParent(arguments);
+    },
+    onLoad: function () {
+        if (!this.hasFocus) {
+            return;
+        }
+        this.setPickerWidth();
+    },
+    //If the picker is shorter the minWidth should be the same as the fields width and also we set the width as string in order to override the 'auto' immediately.
+    //If the picker is longer we need to set the pickers width as it's own to let it run trough runLayout.
+    setPickerWidth: function () {
+        var picker = this.getPicker(),
+            fieldWidth = this.bodyEl.getWidth();
+
+        picker.setMinWidth(fieldWidth);
+        picker.setWidth('auto');
+
+        if (picker.getWidth() < fieldWidth) {
+            picker.setWidth(fieldWidth + 'px');
+        } else {
+            picker.setWidth(picker.getWidth() + 20)  // IE and FF need extra padding or else they wrap
+        }
+    },
+
+    getValue: function () {
+        var val = this.exporter(Shr.WebControls.ComboBoxField.superclass.getValue.call(this), this.getRawValue());
+        if (this.isSameValue(val, this.startValue))
+            return this.startValue; // For change detection
+        if (val === null || val.Code === null || val.Value === null) return null;
+        return val;
+    },
+
+    exporter: function (value, display) {
+        var ret = {};
+        if (value != null && typeof (value) === 'object') {
+            if (value.Code && value.Description) {
+                ret[this.valueField] = value.Code;
+                ret[this.displayField] = value.Description;
+                if (display == "[object Object]") {
+                    this.setValue(value.Code);
+                }
+            }
+            else {
+                ret[this.valueField] = value.Value;
+                ret[this.displayField] = value.Name;
+                if (display == "[object Object]") {
+                    this.setRawValue(value.Name);
+                    this.setValue(value.Value);  // new
+                }
+            }
+        }
+        else if (value != this.dataIndex) {
+            ret[this.valueField] = value;
+            ret[this.displayField] = display;
+        }
+        else {
+            ret = null;
+        }
+        return ret;
+    },
+
+    isSameValue: function (val1, val2) {
+        if (typeof (val1) != typeof (val2))
+            return false;
+        if (val1 == null)
+            return val2 == null;
+        if (typeof (val1) != 'object')
+            return val1 == val2;
+
+        for (var x in val1) {
+            if (val1[x] != val2[x])
+                return false;
+        }
+        for (var y in val2) {
+            if (val1[y] != val2[y])
+                return false;
+        }
+
+        return true;
+    }
+});

@@ -1,0 +1,1304 @@
+/*!
+ * Ext JS Library 6.0.0
+ * Copyright(c) 2006-2015 Ext JS, Inc.
+ * licensing@extjs.com
+ * http://www.extjs.com/license
+ */
+html,body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,form,fieldset,input,p,blockquote,th,td{margin:0;padding:0;}
+
+img,body,html{border:0}
+                                                                                                                                                                                       
+.x-form-add-trigger
+{
+    background-image: url(images/add-trigger.gif);
+}
+
+.x-box-target{
+	height: inherit;
+}
+
+
+
+.ext-ie .x-row-editor .x-form-text {
+    margin:0 !important; 
+}
+.x-row-editor-header {
+    height:2px;
+    overflow:hidden;
+    background: transparent url(images/row-editor-bg.gif) repeat-x 0 0;
+}
+.x-row-editor-footer {
+    height:3px;
+    overflow:hidden;
+    background: transparent url(images/row-editor-bg.gif) repeat-x 0 -2px;
+}
+.ext-ie .x-row-editor-footer {
+    margin-top:-1px;
+}
+
+.ext-strict .x-small-editor .x-form-text
+{
+    vertical-align: top;
+}
+
+.x-row-editor-body {
+    overflow:hidden;
+    zoom:1;
+    background: #ebf2fb;
+    padding-top:2px;
+}
+.x-row-editor .x-btns {
+    position:absolute;
+    top:28px;
+    left:20px;
+    padding-left:5px;
+    background: transparent url(images/row-editor-btns.gif) no-repeat 0 0;
+}
+
+.x-row-editor .x-btns .x-plain-bwrap {
+    padding-right:5px;
+    background: transparent url(images/row-editor-btns.gif) no-repeat right -31px;
+}
+.x-row-editor .x-btns .x-plain-body {
+    background: transparent url(images/row-editor-btns.gif) repeat-x 0 -62px;
+    height:31px;
+}
+.x-row-editor .x-btns .x-table-layout-cell {
+    padding:3px;
+}
+
+/* Fixes for IE6/7 trigger fields */
+.ext-ie6 .x-row-editor .x-form-field-wrap .x-form-trigger, .ext-ie7 .x-row-editor .x-form-field-wrap .x-form-trigger {
+  top: 1px;
+}
+
+.ext-ie6 .x-row-editor .x-form-field-trigger-wrap, .ext-ie7 .x-row-editor .x-form-field-trigger-wrap {
+  margin-top: -1px;
+}
+
+.x-row-editor DIV.x-form-display-field
+{
+    vertical-align: middle;
+    padding-left: 5px;
+    text-overflow: ellipsis;
+    padding-right: 3px;
+    white-space: nowrap;
+    overflow:hidden;
+    -o-text-overflow: ellipsis;
+}
+
+.errorTip .x-tip-body ul{
+    list-style-type:disc;
+    margin-left:15px;
+}
+
+/* need to override ext's default for strong, em */
+em {
+  font-style:italic;
+}
+strong {
+  font-weight: bold;
+}
+
+
+
+.x-form-file-wrap {
+    position: relative;
+    height: 22px;
+}
+.x-form-file-wrap .x-form-file {
+	position: absolute;
+	right: 0;
+	-moz-opacity: 0;
+	filter:alpha(opacity: 0);
+	opacity: 0;
+	z-index: 2;
+    height: 22px;
+}
+.x-form-file-wrap .x-form-file-btn {
+	position: absolute; 
+	right: 0;
+	z-index: 1;
+	
+}
+.x-form-file-wrap .x-form-file-text {
+    position: absolute;
+    left: 0;
+    z-index: 3;
+    color: #777;
+}
+
+.new{
+    background-image:url(../../Images/Menu/new.gif) !important;
+}
+
+.copy{
+    background-image:url(../../Images/Menu/copy.gif) !important;
+}
+
+.assign{
+    background-image:url(../../Images/Menu/AssignGoal.gif) !important;
+}
+
+.delete{
+    background-image:url(../../Images/Menu/Delete.gif) !important;
+}
+
+.undelete{
+    background-image:url(../../Images/Menu/Undelete.gif) !important;
+}
+
+.homemenu {
+    background-image: url(../../Images/Menu/home.gif) !important;
+}
+
+.reset{
+    background-image:url(../../Images/Menu/Reset.png) !important;
+}
+
+.filter{
+    background-image:url(../../Images/Menu/Filter.png) !important;
+}
+
+.preview{
+    background-image:url(../../Images/Preview.png) !important;
+}
+
+.fileattach{
+    background-image:url(../../Images/Menu/Attach.gif) !important;
+}
+
+.IE7Toolbar table 
+{
+   table-layout:auto;
+}
+
+.IE7Toolbar td {
+    vertical-align: middle;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+
+.menu-title{
+    background: #ebeadb url(../../resources/images/default/grid/grid3-hrow.gif) repeat-x;
+    border-bottom:1px solid #99bbe8;
+    color:#15428b;
+    font:bold 10px tahoma,arial,verdana,sans-serif;
+    display:block;
+    padding:3px;
+}
+
+#tree-goals .x-panel-header {
+    background: none;
+    font-size:small;
+    font-weight:normal;
+}
+
+#subgoal-details .x-panel-header {
+    background: none;
+    font-size:small;
+    font-weight:normal;
+}
+
+#viewEmployeeGoals .x-panel-header {
+    font-size:medium;
+    font-weight:normal;
+}
+
+#viewOptions .x-panel-header {
+    font-size:medium;
+    font-weight:normal;
+}
+
+#sub-goals-toolbar .x-toolbar {
+    border:0;
+}
+
+#subgoal-details 
+{
+    background: #fff;
+} 
+
+.error-row {
+        background-color:pink !important
+}
+
+.deleted-row TD{
+         text-decoration:line-through !important;
+}
+
+.x-grid3-row TD
+{ 
+    font-family: Arial;
+    font-size:12px !important;
+}
+
+.x-grid3-hd-row TD
+{
+    color:#15428B;
+    font-family:tahoma,arial,verdana,sans-serif;
+    font-size:12px;
+    font-size-adjust:none;
+    font-style:normal;
+    font-variant:normal;
+    font-weight:bold;
+    line-height:15px;
+}
+
+#goal-details 
+{
+    background:#fff;
+}
+
+.x-grid3-subtable-outertable 
+{
+    border-top:solid 2px #B3C5E1;
+    padding: 3px 0 3px 0;
+}
+
+.x-grid3-row-subtable{
+    border-bottom: solid 1px #B3C5E1;
+    padding: 3px 0 3px 0;
+    font-size:10px;
+}
+
+.x-grid3-subtable-row-alt td
+{
+    font-size:small;
+}
+
+
+.x-tab-panel-header {
+border-top:0 none;
+}
+
+
+.progressBar {
+    height: 20px;
+    border: 1px solid #86898d;
+    background: #fff;
+    position: relative;
+    width: 100px;
+}
+.progressBar .percentageText {color:#000;line-height:18px;width:100px;text-align:center;position:absolute;top:0px;left:0px;z-index:10}
+
+.progressBar .bar {
+	overflow:hidden;
+	position:absolute;
+	top:0px;
+	left:0px;
+	height:18px;
+}
+
+.progressBar .greenbar {
+	overflow:hidden;
+	position:absolute;
+	top:0px;
+	left:0px;
+	background:green url('../../Images/progress-green.png') repeat-x left center;
+	height:18px;
+}
+
+.progressBar .yellowbar {
+	overflow:hidden;
+	position:absolute;
+	top:0px;
+	left:0px;
+	background:yellow url('../../Images/progress-yellow.png') repeat-x left center;
+	height:18px;
+}
+
+
+.progressBar .redbar {
+	overflow:hidden;
+	position:absolute;
+	top:0px;
+	left:0px;
+	background:red url('../../Images/progress-red.png') repeat-x left center;
+	height:18px;
+}
+
+.review-resume-subgrid .x-grid3-cell-inner{
+    padding-left:10px;
+}
+.review-resume-subgrid .x-form-field-wrap 
+{
+}
+
+.x-grid3-row-no-checker{
+   background: #ebeadb url('../../Images/boldcheckmark.gif') no-repeat;
+}
+
+/* safari scroll bar fix for corporate goals and query builder, and.. */
+.ext-safari .x-grid-panel .x-panel-body {
+    overflow:auto !important;
+}
+
+/*!
+ * Ext JS Library 3.2.1
+ * Copyright(c) 2006-2010 Ext JS, Inc.
+ * licensing@extjs.com
+ * http://www.extjs.com/license
+ */
+.x-column-tree .x-panel-header {
+	padding: 3px 0px 0px 0px;
+	border-bottom-width: 0px;
+}
+
+.x-column-tree .x-panel-header .x-panel-header-text {
+	margin-left: 3px
+}
+
+.x-column-tree .x-tree-node {
+    zoom:1;
+}
+.x-column-tree .x-tree-node-el {
+    /*border-bottom:1px solid #eee; borders? */
+    zoom:1;
+}
+.x-column-tree .x-tree-selected {
+    background: #d9e8fb;
+}
+.x-column-tree  .x-tree-node a {
+    line-height:18px;
+    vertical-align:middle;
+}
+.x-column-tree  .x-tree-node a span{
+	
+}
+.x-column-tree  .x-tree-node .x-tree-selected a span{
+	background:transparent;
+}
+
+.x-tree-col {
+    float:left;
+    overflow:hidden;
+    padding:0 1px;
+    zoom:1;
+}
+
+/*
+* mlavender - Handle IE7 spacing issue where extra space gets
+* inserted to the left of each tree node, causing columns to
+* stack because there isn't enough allocated space.
+
+This code causes the tree to display jumbled text after several expand and collapses
+when running in IE compatibility mode (which is IE7 by default)
+Adding overflow:visible to .x-tree-col-text below fixes this issue
+.ext-ie7 DIV.x-tree-root-node {
+    overflow:visible;
+}
+*/
+.x-tree-col-text, .x-tree-hd-text {
+    color:#000;
+    overflow:visible;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    padding:3px 3px 3px 5px;
+    white-space: nowrap;
+    font:normal 11px arial, tahoma, helvetica, sans-serif;
+}
+
+.x-tree-headers {
+	margin-top: 3px;
+	background: #f9f9f9 url(../../../resources/images/default/grid/grid3-hrow.gif) repeat-x 0 bottom;
+	cursor:default;
+    zoom:1;
+}
+
+.x-tree-hd {
+    float:left;
+    overflow:hidden;
+    border-left:1px solid #eee;
+    border-right:1px solid #d0d0d0;
+}
+
+/*******************************************
+ * 
+ * Ext Calendar styles
+ *
+ ******************************************/
+
+/* -----------------------------------------
+ * Shared calendar view containers 
+ */
+.x-panel-tbar .ext-cal-toolbar {
+    padding: 3px;
+    border-bottom-width: 0 !important;
+}
+.x-panel-tbar .ext-cal-toolbar .x-btn button {
+    font-weight: bold;
+    color: #555;
+}
+.x-panel-tbar .ext-cal-toolbar .x-toolbar-cell {
+    padding: 0 3px;
+}
+
+.ext-cal-ct {
+    position: relative;
+    font-family: helvetica, arial, sans-serif;
+    border-bottom:1px solid #ddd;
+    border-right:1px solid #ddd;
+}
+.ext-cal-ct img {
+    border:0 none;
+}
+.ext-cal-inner-ct {
+    height: 100%;
+    line-height: 14px;
+    position: relative;
+    background: #eee;
+    white-space: nowrap;
+}
+.ext-cal-ct td,
+.ext-cal-mdv td {
+    font-size: 11px;
+}
+
+/* Background layout table for week rows */
+.ext-cal-bg-tbl {
+    height:100%;
+    left:0;
+    position:absolute;
+    table-layout:fixed;
+    top:0;
+    width:100%;
+}
+
+/* Month names subheader */
+.ext-cal-hd-days-tbl {
+    background: #EFEFEF;
+    color: #555;
+    table-layout: fixed;
+    top: 18px;
+    width: 100%;
+    font-size: 12px;
+    line-height: 12px;
+}
+
+.ext-cal-month-hd .ext-cal-hd-days-tbl {
+    border-top: 1px solid #99BBE8;
+}
+.x-calendar-nonav .ext-cal-month-hd .ext-cal-hd-days-tbl {
+    border-top: 0;
+}
+.ext-cal-month-hd .ext-cal-hd-day {
+    border-left: 1px solid #DDD;
+}
+
+.ext-cal-hd-ct {
+    border-bottom: 1px solid #bcf;
+}
+.ext-cal-hd-day {
+    text-align: center;
+    padding: 4px 0;
+    white-space: nowrap;
+}
+
+/* -----------------------------------------
+ * Day/week-specific styles
+ */
+.ext-cal-dayview .ext-cal-hd-days-tbl {
+    table-layout: fixed;
+    width: 100%;
+    background-color: #CDDCEF;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 14px;
+    height: 100%;
+}
+.ext-cal-hd-days-td {
+    padding-bottom: 2px;
+}
+.ext-cal-dayview .ext-cal-hd-ct {
+    height: 100%;
+}
+.ext-cal-dayview .ext-cal-gutter {
+    width: 50px;
+}
+.ext-cal-dayview .ext-cal-gutter-rt {
+    width: 15px;
+}
+.ext-ie .ext-cal-dayview .ext-cal-gutter-rt {
+    width: 16px;
+}
+.ext-cal-hd-ad {
+    background-color: #fff;
+    font-size: 11px;
+    line-height: 14px;
+    border-color: #e3e9ff #e3e9ff #e3e9ff #e3e9ff;
+    border-style: solid;
+    border-width: 0 1px 1px 0;
+}
+.ext-cal-hd-ad-inner {
+    position: relative;
+    height: 100%;
+}
+.x-calendar-nonav .ext-cal-hd-ad-inner {
+    margin-top: 3px;
+}
+.x-calendar-nonav .ext-cal-hd-ct {
+    border-top: 1px solid #99BBE8;
+}
+.ext-cal-dayview .ext-cal-dtitle {
+    padding: 8px 1px 2px;
+} 
+.ext-cal-hd-ad-bg-tbl {
+    position: absolute;
+    left: 0;
+    table-layout: fixed;
+    width: 100%;
+}
+.ext-cal-hd-ad .st-c {
+    padding: 1px 1px 0 1px
+}
+.ext-cal-dayview .ext-cal-body-ct {
+    position: relative;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    padding: 0;
+    line-height: normal;
+}
+.ext-cal-dayview .ext-cal-body-ct .ext-cal-bg-tbl {
+    height: 1008px;
+}
+.ext-cal-dayview .ext-cal-bg-tbl {
+    background-color: #fff;
+    margin-top: -1px;
+    border-bottom: 1px solid #bcf;
+    border-right: 1px solid #bcf;
+}
+.ext-cal-dayview .ext-cal-bg-rows {
+    position: relative;
+    margin-left: 1px;
+    top: 1px;
+}
+.ext-cal-dayview .ext-cal-bg-rows-inner {
+    position: absolute;
+    width: 100%;
+}
+.ext-ie .ext-cal-dayview .ext-cal-bg-rows-inner,
+.ext-gecko .ext-cal-dayview .ext-cal-bg-rows-inner {
+    top: -1px; /* row line alignment fix */
+}
+.ext-cal-dayview .ext-cal-bg-row {
+    height: 42px;
+}
+.ext-cal-dayview .ext-cal-bg-row-div {
+    border-bottom: 1px dotted #ddd;
+    border-top: 1px solid #ddd;
+    font-size: 1px;
+    height: 20px;
+    margin-bottom: 20px;
+}
+.ext-cal-dayview .ext-row-1 {
+    border-top: 0;
+}
+.ext-cal-day-times {
+    background-color: #f6f9fc;
+    color: #666;
+    padding: 1px 0 0 0;
+    text-align: right;
+    vertical-align: top;
+}
+.ext-cal-day-time-inner {
+    height: 38px;
+    border-bottom: 1px solid #ddd;
+    padding: 3px 4px 0 0;
+}
+.ext-cal-day-col {
+    border-left: 1px solid #ddd;
+    vertical-align: top
+}
+.ext-cal-day-col-inner {
+    position: relative;
+    cursor: default;
+}
+.ext-cal-day-col-gutter {
+    position: relative;
+    margin-right: 15px;
+    height: 1008px;
+}
+.ext-ie .ext-cal-day-col-gutter,
+.ext-opera .ext-cal-day-col-gutter {
+    margin-right: 10px;
+}
+.ext-ie6 .ext-cal-day-col-gutter {
+    zoom: 1
+}
+
+/* -----------------------------------------
+ * Month-specific styles
+ */
+.ext-cal-monthview .ext-cal-hd-ct {
+    left: 0;
+    top: 0;
+    position: absolute;
+    width: 100%;
+    background: #95B8EF;
+}
+.ext-cal-monthview .ext-cal-body-ct {
+    background: #fff;
+    bottom: 0;
+    left: 0;
+    border:0;
+    overflow: hidden;
+    position: absolute;
+    top: 20px;
+    width: 100%;
+}
+
+.ext-cal-monthview .ext-cal-noheader .ext-cal-hd-ct {
+    display: none;
+}
+.ext-cal-monthview .ext-cal-noheader .ext-cal-body-ct {
+    top: 0;
+}
+
+/* Month view week link boxes */
+.ext-cal-monthview .ext-cal-week-link,
+.ext-cal-monthview .ext-cal-week-link-hd {
+    width: 20px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: #EFEFEF;
+    border-top: 1px solid #DDD;
+    border-right: 1px solid #DDD;
+    font-size: 10px;
+    color: #999;
+    padding: 3px 0 0;
+    text-align: center;
+    cursor: pointer;
+}
+.ext-cal-monthview .ext-cal-week-link-hd {
+    border-top: 1px solid #99BBE8;
+}
+.x-calendar-nonav .ext-cal-monthview .ext-cal-week-link-hd {
+    border-top: 0;
+}
+.ext-cal-week-links .ext-cal-bg-tbl {
+    left: 20px;
+}
+.ext-cal-week-links .ext-cal-evt-tbl,
+.ext-cal-week-links .ext-cal-hd-days-tbl {
+    margin-left: 20px;
+}
+.ext-cal-monthview .ext-week-link-over {
+    background: #E0E7EF;
+}
+
+
+/* Hide the nav bar if specified */
+.ext-cal-hide-navbar .ext-cal-hd-ct {
+    height: 25px;
+}
+.ext-cal-hide-navbar .ext-cal-body-ct {
+    top: 24px;
+}
+
+/* Outer wrapping div for week rows */
+.ext-cal-wk-ct {
+    left: 0;
+    overflow: hidden;
+    position: absolute;
+    width: 100%;
+    height: 100px;
+}
+.ext-cal-monthview .ext-cal-wk-ct {
+    height: 100%;
+}
+/* Background table cell */
+.ext-cal-day {
+    border-left: 1px solid #ddd;
+    cursor: pointer;
+}
+.ext-cal-day-first {
+    /*border-left: 1px solid #BBCCFF;*/
+   border-left: 0;
+}
+
+.ext-cal-ev,
+.ext-cal-dtitle {
+    cursor: pointer;
+}
+.ext-day-over {
+    background: #D1EAEF !important;
+}
+/* Event container table */
+.ext-cal-evt-tbl {
+    position:relative;
+    table-layout:fixed;
+    width:100%;
+}
+
+/* Event title cell (includes today, prev & next month) */
+td.ext-cal-dtitle {
+    font-family: helvetica, arial, sans-serif;
+    border-top:1px solid #ddd;
+    color: #666;
+    line-height:14px;
+    overflow:hidden;
+    text-align:right;
+    font-size: 11px;
+    padding-top: 1px;
+    padding-right: 1px;
+    padding-left: 1px;
+}
+td.ext-cal-dtitle-first {
+    border-top: 1px solid #DDD;
+}
+td.ext-cal-dtitle div {
+    padding: 2px 4px 1px;
+}
+/* Today's title cell */
+td.ext-cal-dtitle-today div {
+    color: #BFA52F;
+    white-space: nowrap;
+}
+/* Today time span */
+.ext-cal-dtitle-time {
+    font-size: 11px;
+}
+/* Today's background cell */
+.ext-cal-day-today {
+    background: #FFF4BF;
+}
+/* Prev/next month title cells */
+.ext-cal-dtitle-prev div,
+.ext-cal-dtitle-next div {
+    color: #bbb;
+}
+/* Prev/next month background cells */
+.ext-cal-day-prev,
+.ext-cal-day-next {
+    background: #EFEFEF;
+}
+/* Event cells */
+.ext-cal-ev {
+    font-family:Verdana,sans-serif;
+    padding:1px 1px 0 2px;
+    vertical-align:top;
+}
+/* Event overflow more link */
+.ext-cal-ev-more {
+	text-align: center;
+}
+.ext-cal-ev-more a,
+.ext-cal-ev-more a:visited {
+    font-family: verdana;
+    color: #777;
+    font-size: 10px;
+	cursor: pointer;
+}
+/* More view */
+.ext-cal-mvd-tbl {
+	width: 100%;
+	table-layout: fixed;
+}
+
+.ext-cal-evt {
+    cursor:pointer;
+}
+
+/* Default rounded event div (Gecko/Webkit/W3C) */
+.ext-cal-evr { /* rounded */
+    -moz-border-radius:5px;
+    -webkit-border-radius:5px;
+    border-radius:5px;
+    overflow:hidden;
+    padding: 2px 1px 2px 5px;
+    white-space:nowrap;
+	text-overflow: ellipsis;
+    border: 0;
+}
+.ext-cal-day-col .ext-cal-evr {
+    border-width: 1px;
+    border-style: solid;
+}
+/* Nested event divs (IE/Opera) */
+.ext-cal-evo { /* outer */
+    border-top: 1px solid;
+    border-bottom: 1px solid;
+    border-right: 0;
+    border-left: 0;
+    margin: 0 1px;
+    cursor: pointer;
+    position: relative;
+}
+.ext-cal-day-col .ext-cal-evo  {
+    height: 100%;
+}
+.ext-cal-evm { /* middle */
+    border-left: 1px solid;
+    border-right: 1px solid;
+    border-top: 0;
+    border-bottom: 0;
+    margin: 0 -1px;
+    zoom: 1;
+    padding-left: 3px;
+}
+.ext-cal-evi { /* inner */
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Day view event styles */
+.ext-cal-day-col .ext-cal-evt {
+    position: absolute;
+    overflow: hidden;
+    cursor: default;
+    color: #fff;
+    -moz-user-select: none;
+}
+.ext-cal-evt dl {
+    margin: 0;
+    overflow: hidden;
+    border-width: 0 1px;
+    border-style: solid;
+}
+.ext-ie6 .ext-cal-evt dl {
+    zoom: 1
+}
+.ext-cal-evt dd {
+    margin: 0;
+    overflow: hidden;
+    font-size: 11px;
+    text-align: left;
+    word-wrap: break-word;
+}
+.ext-cal-evdm {
+    border: 1px solid;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px
+}
+.ext-cal-evdm dt {
+    margin-top: 0
+}
+.ext-cal-day-col .ext-cal-evt a:link,
+.ext-cal-day-col .ext-cal-evt a:visited,
+.ext-cal-day-col .ext-cal-evt a:active {
+    text-decoration: none;
+    color: #fff
+}
+
+.ext-cal-evb {
+    height: 1px;
+    overflow: hidden;
+    margin: 0 1px;
+    border-top-width: 1px;
+    border-top-style: solid;
+}
+.ext-opera .ext-cal-evb,
+.ext-strict .ext-ie .ext-cal-evb {
+    height: 0;
+}
+
+/* Event spanning -- overrides rounded corners */
+.ext-cal-ev-spanboth,
+.ext-cal-ev-spanleft,
+.ext-cal-ev-spanright {
+    -moz-border-radius:0;
+    -webkit-border-radius:0;
+    border-radius:0;
+	position: relative;
+}
+.ext-cal-ev-spanleft {
+    -moz-border-radius-topright:5px;
+    -moz-border-radius-bottomright:5px;
+    -webkit-border-top-right-radius:5px;
+    -webkit-border-bottom-right-radius:5px;
+    border-top-right-radius:5px;
+    border-bottom-right-radius:5px;
+    padding-left:5px;
+}
+.ext-cal-ev-spanright {
+    -moz-border-radius-topleft:5px;
+    -moz-border-radius-bottomleft:5px;
+    -webkit-border-top-left-radius:5px;
+    -webkit-border-bottom-left-radius:5px;
+    border-top-left-radius:5px;
+    border-bottom-left-radius:5px;
+    padding-right:5px;
+}
+/* IE/ Opera: */
+.ext-cal-ev-spanboth .ext-cal-evm {
+	margin: 0;
+}
+.ext-cal-ev-spanright .ext-cal-evm {
+	margin: 0 0 0 -1px;
+}
+.ext-cal-ev-spanleft .ext-cal-evm {
+	margin: 0 -1px 0 0;
+}
+
+.ext-cal-spl,
+.ext-cal-spr {
+/*    background-image:url(images/calendar-sprites.gif);
+    background-repeat:no-repeat;
+    display: inline-block;
+    height: 15px;
+    line-height: 15px;
+    width: 2px;
+	position: absolute;
+	top: 0;*/
+}
+.ext-cal-spl {
+    background-position:-1px -11px;
+    left: 0;
+}
+.ext-cal-spr {
+    background-position:0 -11px;
+    right: -2px;
+}
+.ext-ie .ext-cal-spr {
+    right: -5px;
+}
+
+/* Generic calendar icons */
+.ext-cal-ic {
+    background-image:url(images/calendar-sprites.gif);
+    background-repeat:no-repeat;
+    display:inline-block;
+    height:11px;
+    line-height:11px;
+    margin-left:4px;
+    width:14px;
+}
+.ext-cal-ic-rcr {
+    background-position:0 0;
+}
+.ext-cal-ic-rem {
+    background-position:-14px 0;
+}
+
+/* Calendar DD styles */
+.ext-cal-dd-sel-ct {
+    display: block;
+    z-index: 10;
+    position: absolute;
+    height: 0;
+    left: 0;
+    top: 0;
+    width: 0;
+}
+.ext-cal-dd-sel {
+    background-color: #C3D9FF;
+    font-size: 0;
+    line-height: 0;
+    opacity: 0.5;
+    position: absolute;
+}
+
+/* Webkit/Gecko: */
+.ext-evt-over,
+/* IE/Opera: */
+.ext-evt-over .ext-cal-evm {
+    opacity: .8;
+    filter: alpha(opacity=80);
+}
+
+/* Calendar Picker */
+.ext-calendar-picker .x-form-text {
+    padding-left: 23px;
+}
+.ext-calendar-picker .x-combo-list-item {
+    padding-left: 24px;
+}
+.ext-cal-picker-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 5px;
+    -moz-border-radius:8px;
+    -webkit-border-radius:8px;
+    border-radius:8px;
+    float: left;
+}
+/* This is the selected icon that always shows: */
+.ext-cal-picker-mainicon {
+    float: none;
+    position: absolute;
+    top: 3px;
+    left: 4px;
+}
+
+/*
+ * Event resize handle
+ */
+.ext-evt-rsz {
+    position: absolute;
+    bottom: 0;
+    height: 5px;
+    line-height: 5px;
+    width: 100%;
+    margin-left: -5px;
+    text-align: center; /* needed for IE quirks mode */
+    cursor: s-resize;
+}
+.ext-gecko .ext-evt-rsz,
+.ext-webkit .ext-evt-rsz {
+    cursor: ns-resize;
+}
+.ext-evt-rsz-h {
+    display: none;
+    border-top:3px double;
+    border-color: white;
+    font-size:0;
+    height:0;
+    line-height:0;
+    margin-left:auto;
+    margin-right:auto;
+    width:20px;
+    opacity:.5;
+    -moz-opacity:.5;
+    -khtml-opacity:.5;
+    /* no opacity for ie by default */
+}
+.ext-evt-over .ext-evt-rsz-h {
+    display: block;
+}
+.ext-ie .ext-evt-rsz-h {
+    border-color: #ccc;
+}
+.ext-strict .ext-ie8 .ext-evt-rsz-h {
+    border-color: #fff;
+    filter:alpha(opacity=50);
+}
+
+/* 
+ * Calendar event colors 
+ */
+.ext-cal-evr,
+.ext-cal-evi,
+.ext-cal-evt dl {
+	color: #fff;
+}
+
+.ext-color-1,
+.ext-ie .ext-color-1-ad,
+.ext-opera .ext-color-1-ad {
+	color: #306da6;
+}
+.ext-cal-day-col .ext-color-1,
+.ext-dd-drag-proxy .ext-color-1,
+.ext-color-1-ad,
+.ext-color-1-ad .ext-cal-evm,
+.ext-color-1 .ext-cal-picker-icon,
+.ext-color-1-x dl,
+.ext-color-1-x .ext-cal-evb {
+	background: #306da6;
+}
+.ext-color-1-x .ext-cal-evb,
+.ext-color-1-x dl {
+    border-color: #29527A;
+}
+
+.ext-color-2,
+.ext-ie .ext-color-2-ad,
+.ext-opera .ext-color-2-ad {
+	color: #86a723;
+}
+.ext-cal-day-col .ext-color-2,
+.ext-dd-drag-proxy .ext-color-2,
+.ext-color-2-ad,
+.ext-color-2-ad .ext-cal-evm,
+.ext-color-2 .ext-cal-picker-icon,
+.ext-color-2-x dl,
+.ext-color-2-x .ext-cal-evb {
+	background: #86a723;
+}
+.ext-color-2-x .ext-cal-evb,
+.ext-color-2-x dl {
+    border-color: #711616;
+}
+.ext-color-3,
+.ext-ie .ext-color-3-ad,
+.ext-opera .ext-color-3-ad {
+    color: #b6a980;
+}
+.ext-cal-day-col .ext-color-3,
+.ext-dd-drag-proxy .ext-color-3,
+.ext-color-3-ad,
+.ext-color-3-ad .ext-cal-evm,
+.ext-color-3 .ext-cal-picker-icon,
+.ext-color-3-x dl,
+.ext-color-3-x .ext-cal-evb {
+    background: #b6a980;
+}
+.ext-color-3-x .ext-cal-evb,
+.ext-color-3-x dl {
+    border-color: #8C500B;
+}
+
+.ext-cal-day-col .ext-cal-evt {
+    position: absolute;
+}
+.ext-cal-day-col .ext-cal-evr,
+.ext-cal-day-col .ext-cal-evi {
+    white-space: normal;
+}
+
+/* Shim for drag/drop operations on calendar views */
+.ext-dd-shim {
+    z-index:1000;
+    overflow:hidden;
+    position:absolute;
+    left:0;top:0;
+    opacity:.40;
+    -moz-opacity:.40;
+	-khtml-opacity:.40;
+    filter:alpha(opacity=40);
+	background: #C3D9FF;
+}
+
+.ext-cal-event-win a:link,
+.ext-cal-event-win a:visited {
+    color: #15428B;
+}
+
+/* StatusProxy override styles */
+.ext-dd-ghost-ct {
+	color:#000;
+	font: normal 11px arial, helvetica, sans-serif;
+	border: 1px solid;
+    border-color: #ddd #bbb #bbb #ddd;
+	background-color:#fff;
+	padding:3px;
+	padding-left:20px;
+	white-space: nowrap;
+}
+.ext-dd-ghost-ct .x-dd-drag-ghost{
+	border: 0;
+	background: none;
+	padding: 0;
+	width: 150px;
+}
+.ext-dd-ghost-ct .ext-evt-rsz {
+    display: none;
+}
+
+/*******************************************
+ * 
+ * Calendar navigation picker styles
+ * 
+ ******************************************/
+.ext-cal-nav-picker {
+    border-style: none none solid;
+    border-color: #99BBE8;
+}
+.ext-cal-nav-picker .x-date-left,
+.ext-cal-nav-picker .x-date-middle,
+.ext-cal-nav-picker .x-date-right {
+    background: url(../ext/ext-3.4.2/resources/images/default/toolbar/bg.gif) repeat-x;
+}
+.ext-cal-nav-picker .x-date-left a {
+    background-image: url(../ext/ext-3.4.2/resources/images/default/grid/page-prev.gif);
+}
+.ext-cal-nav-picker .x-date-right a {
+    background-image: url(../ext/ext-3.4.2/resources/images/default/grid/page-next.gif);
+}
+.ext-cal-nav-picker .x-date-middle {
+    padding: 3px 0;
+}
+.ext-cal-nav-picker .x-date-middle .x-btn-text {
+    color: #555;
+    font-weight: bold;
+}
+.ext-cal-nav-picker .x-date-middle .x-btn-mc em.x-btn-arrow {
+    background-image: url(../ext/ext-3.4.2/resources/images/default/button/arrow.gif);
+    background-position: right 4px;
+}
+.ext-cal-nav-picker .x-date-inner {
+    border-top: 1px solid #BBCCFF;
+}
+.ext-cal-nav-picker .x-date-inner th {
+    background: none;
+    border-bottom: 1px solid #BBCCFF;
+}
+.ext-cal-nav-picker .x-date-inner .x-date-today a {
+    border-color: #BFA52F;
+    background: #FFF4BF;
+}
+
+/*******************************************
+ * 
+ * Calendar form styles
+ *
+ ******************************************/
+.ext-gecko .ext-cal-event-win .x-window-body .x-form-item {
+    overflow: hidden;
+}
+.ext-evt-edit-form .x-form-item {
+    margin-bottom: 8px;
+}
+.ext-evt-edit-form .x-panel-bbar .x-toolbar {
+    border-bottom: 1px solid #99BBE8;
+}
+.ext-evt-edit-form .x-panel-header {
+    background: transparent url(images/ext-cal-edit-hd.png) repeat-x;
+    padding: 9px 0 4px !important;
+    font-size: 13px !important;
+    font-family: helvetica, arial, sans-serif;
+    border-top: 0;
+    border-bottom: 1px solid #BBCCFF;
+}
+.ext-evt-edit-form .x-panel-fbar {
+    padding: 5px 10px;
+    background: #DFE8F6;
+    border: 1px solid #BBCCFF;
+}
+
+/*******************************************
+ * 
+ * DateRangeField styles
+ *
+ ******************************************/
+.ext-dt-range label {
+    font-size: 12px;
+}
+.ext-dt-range .x-form-check-wrap {
+    white-space: nowrap;
+}
+.ext-dt-range .x-table-layout-cell {
+    padding-right: 5px;
+}
+
+/* [OPTIONAL] -- may be used for either Ext.grid.GroupSummary / Ext.ux.grid.GridSummary plugins */
+.x-grid3-summary-row{border-left:1px solid #fff;border-right:1px solid #fff;color:#333;background:#ccc;}
+
+.x-grid3-summary-row .x-grid3-cell-inner{font-weight:bold;padding-bottom:4px;}
+.x-grid3-cell-first .x-grid3-cell-inner{padding-left:16px;}
+.x-grid-hide-summary .x-grid3-summary-row{display:none;}
+.x-grid3-summary-msg{padding:4px 16px;font-weight:bold;}
+
+
+/* [REQUIRED] (by Ext.ux.grid.GridSummary plugin) */
+.x-grid3-gridsummary-row-inner{overflow:hidden;width:100%;}/* IE6 requires width:100% for hori. scroll to work */
+.x-grid3-gridsummary-row-offset{width:10000px;}
+.x-grid-hide-gridsummary .x-grid3-gridsummary-row-inner{display:none;}
+
+/* override the base Ext style for 5.10 compatibility*/
+.x-fieldset
+{
+    border: 1px solid #B3C5E1;
+}
+
+.x-fieldset legend
+{
+    font-weight: bold;
+}
+/*/*This override is to fix an issue with Firefox when checking checkboxes in a grid (see ivantage-ext.js) */
+.x-gecko .x-selmodel-checkonly .x-grid-checkcolumn {
+    pointer-events: none;
+}
+
+/* This override is needed for the expand/collapse dropdowns on sub-menu items (groups) */
+.x-tool-collapse-top {
+    color:#12c3f4;
+}
+.x-tool-expand-bottom {
+    color:#12c3f4;
+}

@@ -1,0 +1,208 @@
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:7 */
+.x-android-3 .x-surface-wrap,
+.x-android-3 .x-surface-wrap > * {
+    -webkit-perspective: 1;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:11 */
+.x-draw-container {
+    position: relative;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+    -ms-user-select: none;
+    cursor: default;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:16 */
+.x-draw-container .x-inner {
+    overflow: hidden;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:21 */
+.x-surface-canvas {
+    position: absolute;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:25 */
+.x-chart-image {
+    width: 100%;
+    height: auto;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:30 */
+.x-legend-container {
+    display: inline-block;
+    line-height: 0;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    -ms-border-radius: 3px;
+    -o-border-radius: 3px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    background: #fff;
+    -webkit-box-shadow: rgba(255, 255, 255, 0.6) 0 1px 1px;
+    -moz-box-shadow: rgba(255, 255, 255, 0.6) 0 1px 1px;
+    box-shadow: rgba(255, 255, 255, 0.6) 0 1px 1px;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:44 */
+.x-legend {
+    padding: 5px;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:48 */
+.x-legend-item {
+    padding: 0.8em 1em 0.8em 1.8em;
+    color: #333;
+    background: rgba(255, 255, 255, 0);
+    max-width: 16em;
+    min-width: 0;
+    font-size: 12px;
+    font-family: tahoma, arial, verdana, sans-serif;
+    line-height: 12px;
+    font-weight: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:64 */
+.x-legend-inactive {
+    -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=30)";
+    opacity: 0.3;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:68 */
+.x-legend-item-marker {
+    position: absolute;
+    width: 0.8em;
+    height: 0.8em;
+    -webkit-border-radius: 0.4em;
+    -moz-border-radius: 0.4em;
+    -ms-border-radius: 0.4em;
+    -o-border-radius: 0.4em;
+    border-radius: 0.4em;
+    -webkit-box-shadow: rgba(255, 255, 255, 0.3) 0 1px 0, rgba(0, 0, 0, 0.4) 0 1px 0 inset;
+    -moz-box-shadow: rgba(255, 255, 255, 0.3) 0 1px 0, rgba(0, 0, 0, 0.4) 0 1px 0 inset;
+    box-shadow: rgba(255, 255, 255, 0.3) 0 1px 0, rgba(0, 0, 0, 0.4) 0 1px 0 inset;
+    left: 0.7em;
+    top: 0.85em;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:80 */
+.x-rtl > * > .x-legend-item {
+    padding: 0.8em 1.8em 0.8em 1em;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:84 */
+.x-rtl > * > * > .x-legend-item-marker {
+    right: 0.7em;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:88 */
+.x-legend,
+.x-legend-panel {
+    background: #fff;
+    outline: none;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:93 */
+.x-legend.x-docked-top .x-legend-item,
+.x-legend.x-docked-bottom .x-legend-item,
+.x-legend-panel.x-docked-top .x-legend-item,
+.x-legend-panel.x-docked-bottom .x-legend-item {
+    border-left: 1px solid rgba(204, 204, 204, 0.5);
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:95 */
+.x-legend.x-docked-top .x-legend-item:first-child,
+.x-legend.x-docked-bottom .x-legend-item:first-child,
+.x-legend-panel.x-docked-top .x-legend-item:first-child,
+.x-legend-panel.x-docked-bottom .x-legend-item:first-child {
+    border-left: none;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:100 */
+.x-legend.x-docked-top.x-rtl .x-legend-item:first-child,
+.x-legend.x-docked-bottom.x-rtl .x-legend-item:first-child,
+.x-legend-panel.x-docked-top.x-rtl .x-legend-item:first-child,
+.x-legend-panel.x-docked-bottom.x-rtl .x-legend-item:first-child {
+    border-left: 1px solid rgba(204, 204, 204, 0.5);
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:103 */
+.x-legend.x-docked-top.x-rtl .x-legend-item:last-child,
+.x-legend.x-docked-bottom.x-rtl .x-legend-item:last-child,
+.x-legend-panel.x-docked-top.x-rtl .x-legend-item:last-child,
+.x-legend-panel.x-docked-bottom.x-rtl .x-legend-item:last-child {
+    border-left: none;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:110 */
+.x-legend.x-docked-left .x-legend-item,
+.x-legend.x-docked-right .x-legend-item,
+.x-legend-panel.x-docked-left .x-legend-item,
+.x-legend-panel.x-docked-right .x-legend-item {
+    border-top: 1px solid rgba(204, 204, 204, 0.5);
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:112 */
+.x-legend.x-docked-left .x-legend-item:first-child,
+.x-legend.x-docked-right .x-legend-item:first-child,
+.x-legend-panel.x-docked-left .x-legend-item:first-child,
+.x-legend-panel.x-docked-right .x-legend-item:first-child {
+    border-top: none;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:116 */
+.x-legend.x-docked-left .x-legend-inner,
+.x-legend.x-docked-right .x-legend-inner,
+.x-legend-panel.x-docked-left .x-legend-inner,
+.x-legend-panel.x-docked-right .x-legend-inner {
+    display: -webkit-box;
+    -webkit-box-align: center;
+    -webkit-box-pack: center;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:124 */
+.x-legend.x-horizontal {
+    white-space: nowrap;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:126 */
+.x-legend.x-horizontal .x-legend-item {
+    display: inline-block;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:131 */
+.x-chart-toolbar {
+    position: absolute;
+    z-index: 9;
+    display: -webkit-box;
+    display: -moz-box;
+    display: -ms-box;
+    display: box;
+    padding: 0.6em;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:137 */
+.x-chart-toolbar .x-button {
+    margin: 0.2em;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:141 */
+.x-chart-toolbar[data-side=left],
+.x-chart-toolbar[data-side=right] {
+    top: 0;
+    -webkit-box-orient: vertical;
+    -moz-box-orient: vertical;
+    -ms-box-orient: vertical;
+    box-orient: vertical;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:146 */
+.x-chart-toolbar[data-side=left] {
+    left: 0;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:150 */
+.x-chart-toolbar[data-side=right] {
+    right: 0;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:154 */
+.x-chart-toolbar[data-side=top],
+.x-chart-toolbar[data-side=bottom] {
+    -webkit-box-orient: horizontal;
+    -moz-box-orient: horizontal;
+    -ms-box-orient: horizontal;
+    box-orient: horizontal;
+    right: 0;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:159 */
+.x-chart-toolbar[data-side=top] {
+    top: 0;
+}
+/* /Users/space/buildAgent/work/3262ec34fea3d07/sencha/ext/packages/charts/sass/src/chart/AbstractChart.scss:163 */
+.x-chart-toolbar[data-side=bottom] {
+    bottom: 0;
+    -webkit-box-orient: horizontal;
+    -moz-box-orient: horizontal;
+    -ms-box-orient: horizontal;
+    box-orient: horizontal;
+}
